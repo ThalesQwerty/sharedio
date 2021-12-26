@@ -1,0 +1,7 @@
+test/
+node_modules/
+components/
+public/
+pages/
+worker/
+next-env.d.ts

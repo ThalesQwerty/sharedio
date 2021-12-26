@@ -1,0 +1,38 @@
+{
+  "name": "shared-io",
+  "version": "1.0.0",
+  "description": "Object-oriented websocket",
+  "main": "dist/index.js",
+  "types": "dist/index.d.ts",
+  "scripts": {
+    "build": "tsc",
+    "test": "jest --detectOpenHandles"
+  },
+  "keywords": [
+    "socket"
+  ],
+  "author": "thalesqwerty",
+  "license": "ISC",
+  "devDependencies": {
+    "@types/chai": "^4.2.21",
+    "@types/jest": "^27.0.1",
+    "@types/mocha": "^9.0.0",
+    "chai": "^4.3.4",
+    "express": "^4.17.1",
+    "fs": "0.0.1-security",
+    "http": "0.0.1-security",
+    "https": "^1.0.0",
+    "jest": "^27.1.1",
+    "ts-jest": "^27.0.5",
+    "ts-node": "^10.2.1",
+    "websocket": "^1.0.34"
+  },
+  "dependencies": {
+    "difference-json": "^1.0.6",
+    "json-difference": "^1.0.4",
+    "lodash": "^4.17.20",
+    "reflect-metadata": "^0.1.13",
+    "typescript": "^4.4.3",
+    "ws": "^7.3.1"
+  }
+}
