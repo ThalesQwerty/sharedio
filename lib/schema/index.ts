@@ -1,2 +1,2 @@
-export * from './HasId';
-export * from './User';
+export * from "./HasId";
+export * from "./User";

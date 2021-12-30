@@ -9,25 +9,31 @@ export class HasId {
     /**
      * The random and unique hex ID associated with this object
      */
-    public get id():string { return this._id };
-    private _id:string;
+    public get id(): string {
+        return this._id;
+    }
+    private _id: string;
 
     /**
      * Returns if this SharedIO object is the same object as another one.
      */
     public is(object: HasId) {
-        return (object && this.id && this.id === object.id) ? true : false;
+        return object && this.id && this.id === object.id
+            ? true
+            : false;
     }
 
-    protected static list:HasId[] = [];
+    protected static list: HasId[] = [];
 
     /**
      * Finds a SharedIO object by its ID
      */
-    public static find<T extends HasId = HasId>(id: string): T|null {
+    public static find<T extends HasId = HasId>(
+        id: string,
+    ): T | null {
         if (!id) return null;
 
-        const found = this.list.filter(object => object.id === id);
+        const found = this.list.filter((object) => object.id === id);
         return found ? (found[0] as T) : null;
     }
 
