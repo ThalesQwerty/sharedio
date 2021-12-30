@@ -20,6 +20,8 @@
     "@types/chai": "^4.2.21",
     "@types/jest": "^27.0.1",
     "@types/mocha": "^9.0.0",
+    "@types/websocket": "^1.0.4",
+    "@types/ws": "^8.2.2",
     "chai": "^4.3.4",
     "eslint": "^8.5.0",
     "eslint-config-prettier": "^8.3.0",

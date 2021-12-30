@@ -1,7 +1,7 @@
-import { KeyValue } from "../utils/KeyValue";
-
-declare function require(name: string): any;
-const WS = require("ws");
+import { KeyValue, RandomHex } from "../utils";
+import { User } from "../schema";
+import { Client } from ".";
+import WS from "ws";
 
 interface ServerConfig {
   debug?: boolean;
@@ -33,13 +33,16 @@ const DEFAULT_TICK_RATE = 64;
 export class Server {
   static current: Server;
 
-  private ws: any = undefined;
+  private ws?: WS.Server;
   private tickIntervalRef: any = undefined;
 
   public get config() {
     return this._config;
   }
   private _config: ServerConfig;
+
+  private _users: User[] = [];
+  public get users() { return this._users };
 
   /**
    * Server's default room.
@@ -88,17 +91,14 @@ export class Server {
     this._config = config;
   }
 
-  private _users:any[] = [];
-  public get users() { return this._users };
-
-    /**
+  /**
    * Closes the server and disconnects all users
    */
-     stop(): Server {
-      this.ws?.close();
-      clearInterval(this.tickIntervalRef);
-      return this;
-    }
+  stop(): Server {
+    this.ws?.close();
+    clearInterval(this.tickIntervalRef);
+    return this;
+  }
 
   /**
    * Initializes the server
@@ -120,15 +120,21 @@ export class Server {
       this._lastTickTimestamp = new Date().getTime();
     }, 1000 / this.tickRate);
 
-    wss.on("connection", (ws: any) => {
-      console.log("New user connected");
+    wss.on("connection", (ws: WS.WebSocket) => {
+      const newUser = new User(
+        new Client(ws, this),
+        this
+      );
 
-      const userIndex = this._users.length;
-      this._users.push(ws);
+      this._users.push(newUser);
+
+      newUser.client.send({
+        userId: newUser.id,
+        token: newUser.token
+      });
 
       ws.on("close", () => {
-        console.log("User disconnected");
-        this._users.splice(userIndex, 1);
+        this._users = this._users.filter(user => user.id !== newUser.id);
       })
     });
 
