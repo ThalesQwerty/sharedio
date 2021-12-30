@@ -1,5 +1,5 @@
 {
-  "name": "shared-io",
+  "name": "sharedio",
   "version": "1.0.0",
   "description": "Object-oriented websocket",
   "main": "dist/index.js",
@@ -7,6 +7,7 @@
   "scripts": {
     "build": "tsc",
     "test": "jest --detectOpenHandles",
+    "dev": "ts-node test/manual",
     "lint": "eslint --ignore-path .gitignore --ext .js,.jsx,.ts,.tsx .",
     "lint:fix": "eslint --fix --ignore-path .gitignore --ext .js,.jsx,.ts,.tsx ."
   },
