@@ -1,6 +1,7 @@
 import { HasId } from ".";
-import { Client, Server } from "../connection";
+import { Server, Client } from "../connection";
 import { RandomHex } from "../utils";
+import WS from "ws";
 
 export class User extends HasId {
     /**
@@ -27,7 +28,29 @@ export class User extends HasId {
     }
     private _token: string;
 
-    constructor(client: Client, server: Server) {
+    private _online: boolean = false;
+    public get online() {
+        return this._online;
+    }
+
+    /**
+     * Attempts to use an access token to reconnect an user. Returns the user if successful, returns null otherwise.
+     */
+    public static auth(
+        ws: WS.WebSocket,
+        server: Server,
+        token: string | null,
+    ): User | null {
+        const user = server.users.filter(
+            (user) => user.token === token,
+        )[0];
+        if (!user) return null;
+
+        user.client.reset(ws);
+        return user;
+    }
+
+    constructor(server: Server, client: Client) {
         super();
 
         this._client = client;

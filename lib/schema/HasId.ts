@@ -23,7 +23,20 @@ export class HasId {
             : false;
     }
 
-    protected static list: HasId[] = [];
+    /**
+     * Lists every object that has an ID
+     */
+    public static get list() {
+        return this._list;
+    }
+    private static _list: HasId[] = [];
+
+    /**
+     * Lists every object that has an ID and belongs to a certain class
+     */
+    public static only(type: new (...params: any[]) => HasId) {
+        return this.list.filter((object) => object instanceof type);
+    }
 
     /**
      * Finds a SharedIO object by its ID

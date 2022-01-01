@@ -1,13 +1,14 @@
-import { KeyValue, RandomHex } from "../utils";
+import { KeyValue } from "../utils";
 import { User } from "../schema";
-import { Client } from ".";
+import { Request, AuthRequest, Client } from ".";
 import WS from "ws";
+
+const DEFAULT_PORT = 3000;
+const DEFAULT_TICK_RATE = 64;
 
 interface ServerConfig {
     debug?: boolean;
     port?: number;
-    //   mainRoom?: typeof Room;
-    //   entities: { [k: string]: typeof Entity };
     wsOptions?: KeyValue;
 
     /**
@@ -15,20 +16,28 @@ interface ServerConfig {
      */
     tickRate?: number;
 
-    // on?: {
-    //   connection?: (user: User) => void,
-    //   disconnection?: (user: User) => void,
-    //   message?: (user: User, message: KeyValue) => void,
+    on?: {
+        /**
+         * This function will be called whenever an user connects
+         */
+        connection?: (user: User) => void;
 
-    //   /**
-    //    * This function will be called every server tick
-    //    */
-    //   tick?: (server: Server) => void|(() => void),
-    // },
+        /**
+         * This function will be called whenever an user disconnects
+         */
+        disconnection?: (user: User) => void;
+
+        /**
+         * This function will be called whenever a message is recieved from an user's websocket client
+         */
+        message?: (user: User, message: Request) => void;
+
+        /**
+         * This function will be called every server tick
+         */
+        tick?: (server: Server) => void | (() => void);
+    };
 }
-
-const DEFAULT_PORT = 3000;
-const DEFAULT_TICK_RATE = 64;
 
 export class Server {
     static current: Server;
@@ -41,9 +50,26 @@ export class Server {
     }
     private _config: ServerConfig;
 
-    private _users: User[] = [];
+    /**
+     * Lists all users (including offline ones) on the server
+     */
     public get users() {
         return this._users;
+    }
+    private _users: User[] = [];
+
+    /**
+     * Lists all online users on the server
+     */
+    public get onlineUsers() {
+        return this._users.filter((user) => user.client.online);
+    }
+
+    /**
+     * Lists all offline users on the server
+     */
+    public get offlineUsers() {
+        return this._users.filter((user) => !user.client.online);
     }
 
     /**
@@ -130,22 +156,33 @@ export class Server {
         }, 1000 / this.tickRate);
 
         wss.on("connection", (ws: WS.WebSocket) => {
-            const newUser = new User(new Client(ws, this), this);
+            const newClient = new Client(ws, this, ({ token }) => {
+                const newUser =
+                    User.auth(ws, this, token) ||
+                    new User(this, newClient);
 
-            this._users.push(newUser);
+                newUser.client.send({
+                    userId: newUser.id,
+                    token: newUser.token,
+                });
 
-            newUser.client.send({
-                userId: newUser.id,
-                token: newUser.token,
-            });
+                if (
+                    !this._users.filter((user) => user.is(newUser))[0]
+                ) {
+                    this._users.push(newUser);
+                }
 
-            ws.on("close", () => {
-                this._users = this._users.filter(
-                    (user) => user.id !== newUser.id,
-                );
+                return {
+                    close: () => {},
+                    message: (request) => {
+                        this._config.on?.message?.(newUser, request);
+                    },
+                };
             });
         });
 
         return this;
     }
+
+    private auth() {}
 }
