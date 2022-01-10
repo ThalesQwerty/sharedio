@@ -42,13 +42,41 @@ interface ServerConfig {
 export class Server {
     static current: Server;
 
-    private ws?: WS.Server;
+    private wss?: WS.Server;
     private tickIntervalRef: any = undefined;
 
     public get config() {
         return this._config;
     }
     private _config: ServerConfig;
+
+    public get port() {
+        return this.wss?.options.port;
+    }
+
+    public get host() {
+        return this.wss?.options.host;
+    }
+
+    public get path() {
+        const path = this.wss?.options.path;
+        if (!path) return "";
+        if (path[0] !== "/") return `/${path}`;
+        return path;
+    }
+
+    public get url() {
+        if (!this.port || !this.host) return undefined;
+        return `ws://${this.host}${this.path}:${this.port}`;
+    }
+
+    /**
+     * Verifies if the server is currently online
+     */
+    public get isOnline() {
+        return this._isOnline;
+    }
+    private _isOnline: boolean = false;
 
     /**
      * Lists all users (including offline ones) on the server
@@ -114,75 +142,102 @@ export class Server {
     }
     private _serverStartTimestamp: number = 0;
 
-    constructor(config: ServerConfig) {
+    constructor(config: ServerConfig = {}) {
         Server.current = this;
 
         config.port ??= DEFAULT_PORT;
         config.tickRate ??= DEFAULT_TICK_RATE;
+        config.debug ??= false;
 
         this._config = config;
     }
 
-    /**
-     * Closes the server and disconnects all users
-     */
-    stop(): Server {
-        this.ws?.close();
-        clearInterval(this.tickIntervalRef);
-        return this;
+    private log(message: any) {
+        if (this._config.debug) console.log(message);
     }
 
     /**
      * Initializes the server
      */
     start(): Server {
+        this.stop();
+
         const wss = new WS.Server({
             port: this.config.port,
             ...this.config.wsOptions,
         });
-        this.ws = wss;
+        this.wss = wss;
+        this._isOnline = true;
 
-        console.log(
+        this.log(
             `SharedIO server running on port ${this.config.port}`,
         );
 
         this._serverStartTimestamp = this._lastTickTimestamp =
             new Date().getTime();
 
-        this.tickIntervalRef = setInterval(() => {
-            this._ticks++;
+        this.tickIntervalRef = setInterval(
+            this.tick,
+            1000 / this.tickRate,
+        );
 
-            this._lastTickTimestamp = new Date().getTime();
-        }, 1000 / this.tickRate);
-
-        wss.on("connection", (ws: WS.WebSocket) => {
-            const newClient = new Client(ws, this, ({ token }) => {
-                const newUser =
-                    User.auth(ws, this, token) ||
-                    new User(this, newClient);
-
-                newUser.client.send({
-                    userId: newUser.id,
-                    token: newUser.token,
-                });
-
-                if (
-                    !this._users.filter((user) => user.is(newUser))[0]
-                ) {
-                    this._users.push(newUser);
-                }
-
-                return {
-                    close: () => {},
-                    message: (request) => {
-                        this._config.on?.message?.(newUser, request);
-                    },
-                };
-            });
-        });
+        wss.on("connection", (ws) => this.handleNewConnection(ws));
+        wss.on("close", () => this.handleServerStop(wss));
 
         return this;
     }
 
-    private auth() {}
+    /**
+     * Closes the server and disconnects all users
+     */
+    stop(): Server {
+        this._isOnline = false;
+        this.wss?.close();
+        clearInterval(this.tickIntervalRef);
+        return this;
+    }
+
+    /**
+     * This function is executed every server tick
+     */
+    private tick() {
+        this._ticks++;
+        this._lastTickTimestamp = new Date().getTime();
+    }
+
+    /**
+     * This function is executed whenever a new client connects to the server
+     */
+    private handleNewConnection(ws: WS.WebSocket) {
+        const newClient = new Client(ws, this, ({ token }) => {
+            const newUser =
+                User.auth(ws, this, token) ||
+                new User(this, newClient);
+
+            newUser.client.send({
+                userId: newUser.id,
+                token: newUser.token,
+            });
+
+            if (!this._users.filter((user) => user.is(newUser))[0]) {
+                this._users.push(newUser);
+            }
+
+            return {
+                close: () => {},
+                message: (request) => {
+                    this._config.on?.message?.(newUser, request);
+                },
+            };
+        });
+    }
+
+    /**
+     * This function is executed when the server stops
+     */
+    private handleServerStop(wss: WS.Server) {
+        this._isOnline = false;
+        wss.removeAllListeners();
+        this.log("SharedIO server has stopped");
+    }
 }
