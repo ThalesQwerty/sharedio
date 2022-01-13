@@ -211,10 +211,11 @@ export class Server {
     private handleNewConnection(ws: WS.WebSocket) {
         const newClient = new Client(ws, this, ({ token }) => {
             const newUser =
-                User.auth(ws, this, token) ||
+                User.auth(newClient, this, token) ||
                 new User(this, newClient);
 
             newUser.client.send({
+                action: "auth",
                 userId: newUser.id,
                 token: newUser.token,
             });

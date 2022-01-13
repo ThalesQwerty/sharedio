@@ -37,7 +37,7 @@ export class User extends HasId {
      * Attempts to use an access token to reconnect an user. Returns the user if successful, returns null otherwise.
      */
     public static auth(
-        ws: WS.WebSocket,
+        client: Client,
         server: Server,
         token: string | null,
     ): User | null {
@@ -46,7 +46,7 @@ export class User extends HasId {
         )[0];
         if (!user) return null;
 
-        user.client.reset(ws);
+        user._client = client;
         return user;
     }
 
