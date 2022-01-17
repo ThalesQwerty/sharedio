@@ -1,7 +1,7 @@
 import WS from "ws";
 import { Server, Request, AuthRequest, PongRequest } from "./";
 import { KeyValue, RandomHex } from "../utils";
-import { HasId } from '../schema/HasId';
+import { HasId } from "../schema/HasId";
 
 const PING_SAMPLE_TIME = 1;
 
@@ -39,11 +39,14 @@ export class Client extends HasId {
      * Calculates the connection latency (in microseconds)
      */
     public get ping() {
-        this._lastPings = this._lastPings.filter(time => time >= this.server.time - PING_SAMPLE_TIME);
+        this._lastPings = this._lastPings.filter(
+            (time) => time >= this.server.time - PING_SAMPLE_TIME,
+        );
         const numPings = this._lastPings.length;
         if (!numPings) return 1000 * PING_SAMPLE_TIME - 1;
 
-        const latency = 1000 * (this.server.time - this._lastPings[0]);
+        const latency =
+            1000 * (this.server.time - this._lastPings[0]);
         return Math.round(latency / numPings);
     }
 
@@ -53,7 +56,7 @@ export class Client extends HasId {
     public get packetLoss() {
         if (!this._packetsSent) return 0;
         if (!this._packetsReceived) return 1;
-        return 1 - (this._packetsReceived / this._packetsSent);
+        return 1 - this._packetsReceived / this._packetsSent;
     }
 
     private _lastPings: number[] = [];
@@ -69,7 +72,7 @@ export class Client extends HasId {
         server: Server,
         auth: (request: AuthRequest) => ClientListeners,
     ) {
-        super();
+        super("Client");
         this._listeners.auth = auth;
         this._server = server;
         this._online = false;
@@ -97,7 +100,8 @@ export class Client extends HasId {
         ws.on("close", () => {
             this._online = false;
             this._listeners.close?.();
-            if (this._packetTimeout) clearTimeout(this._packetTimeout);
+            if (this._packetTimeout)
+                clearTimeout(this._packetTimeout);
             ws.removeAllListeners();
             this.log(`Disconnected`);
         });
@@ -149,7 +153,7 @@ export class Client extends HasId {
             this._currentPacketId = RandomHex(8);
             if (match) {
                 this._lastPings.push(this.server.time);
-                this._packetsReceived ++;
+                this._packetsReceived++;
             }
         }
 
@@ -159,9 +163,9 @@ export class Client extends HasId {
             action: "ping",
             packetId: this._currentPacketId,
             roundTripTime: this.ping,
-            packetLossRatio: this.packetLoss
+            packetLossRatio: this.packetLoss,
         });
-        this._packetsSent ++;
+        this._packetsSent++;
 
         if (this._packetTimeout) clearTimeout(this._packetTimeout);
         this._packetTimeout = setTimeout(() => {

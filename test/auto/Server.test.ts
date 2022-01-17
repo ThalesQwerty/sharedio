@@ -5,7 +5,7 @@ jest.setTimeout(30000);
 
 const server = new Server({
     port: 8080,
-    debug: false
+    debug: false,
 });
 
 const SERVER_URL = `ws://localhost:${server.config.port}`;
@@ -96,7 +96,6 @@ describe("Server", () => {
             }, 500);
         };
     });
-
 
     it("Counts users correctly", (done) => {
         const totalUsers = 10;

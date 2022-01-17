@@ -1,5 +1,5 @@
 import { KeyValue } from "../utils";
-import { User } from "../schema";
+import { User, HasId, Entity } from "../schema";
 import { Request, AuthRequest, Client } from ".";
 import WS from "ws";
 
@@ -39,7 +39,7 @@ interface ServerConfig {
     };
 }
 
-export class Server {
+export class Server extends HasId {
     static current: Server;
 
     private wss?: WS.Server;
@@ -100,12 +100,10 @@ export class Server {
         return this._users.filter((user) => !user.client.online);
     }
 
-    /**
-     * Server's default room.
-     *
-     * All users automatically join this room when they connect to the server.
-     */
-    // public mainRoom: Room;
+    public get entities() {
+        return this._entities;
+    }
+    private _entities: Entity[] = [];
 
     /**
      * How many tick events will happen per second
@@ -143,6 +141,8 @@ export class Server {
     private _serverStartTimestamp: number = 0;
 
     constructor(config: ServerConfig = {}) {
+        super("Server");
+
         Server.current = this;
 
         config.port ??= DEFAULT_PORT;
@@ -240,5 +240,24 @@ export class Server {
         this._isOnline = false;
         wss.removeAllListeners();
         this.log("SharedIO server has stopped");
+    }
+
+    /**
+     * Creates a new entity
+     */
+    public createEntity(Type: typeof Entity): Entity {
+        const newEntity = new Type(this, Type.name);
+        this._entities.push(newEntity);
+        return newEntity;
+    }
+
+    /**
+     * Deletes an entity
+     */
+    public deleteEntity(entity: Entity): Entity {
+        this._entities = this._entities.filter(
+            (currentEntity) => !currentEntity.is(entity),
+        );
+        return entity;
     }
 }

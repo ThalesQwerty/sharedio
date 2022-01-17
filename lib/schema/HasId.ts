@@ -6,6 +6,8 @@ const ID_CHAR_LENGTH = 32;
  * Base class for all objects that have a random and unique hex ID associated with them
  */
 export class HasId {
+    private _prefix = "";
+
     /**
      * The random and unique hex ID associated with this object
      */
@@ -55,16 +57,18 @@ export class HasId {
      */
     protected resetId() {
         let id = "";
+        let prefix = this._prefix ? this._prefix + "_" : "";
 
         do {
             id = RandomHex(ID_CHAR_LENGTH);
-            this._id = id;
+            this._id = prefix + id;
         } while (id in HasId.list);
 
         HasId.list.push(this);
     }
 
-    public constructor() {
+    public constructor(prefix: string = "") {
+        this._prefix = prefix;
         this._id = "placeholder";
         this.resetId();
     }
