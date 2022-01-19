@@ -51,7 +51,7 @@ export class User extends HasId {
     }
 
     constructor(server: Server, client: Client) {
-        super();
+        super("User");
 
         this._client = client;
         this._server = server;

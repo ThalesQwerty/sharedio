@@ -20,6 +20,7 @@
     "devDependencies": {
         "@types/chai": "^4.2.21",
         "@types/jest": "^27.0.1",
+        "@types/lodash": "^4.14.178",
         "@types/mocha": "^9.0.0",
         "@types/ws": "^8.2.2",
         "chai": "^4.3.4",
@@ -39,7 +40,7 @@
     "dependencies": {
         "difference-json": "^1.0.6",
         "json-difference": "^1.0.4",
-        "lodash": "^4.17.20",
+        "lodash": "^4.17.21",
         "reflect-metadata": "^0.1.13",
         "typescript": "^4.4.3",
         "ws": "^7.3.1"
