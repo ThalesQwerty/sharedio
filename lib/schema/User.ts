@@ -1,7 +1,9 @@
-import { HasId } from ".";
+import { Entity, HasId } from ".";
 import { Server, Client } from "../connection";
-import { RandomHex } from "../utils";
+import { KeyValue, RandomHex, Difference } from "../utils";
 import WS from "ws";
+
+import * as _ from "lodash";
 
 export class User extends HasId {
     /**
@@ -33,6 +35,9 @@ export class User extends HasId {
         return this._online;
     }
 
+    private _currentView: KeyValue = {};
+    private _newView: KeyValue = {};
+
     /**
      * Attempts to use an access token to reconnect an user. Returns the user if successful, returns null otherwise.
      */
@@ -56,5 +61,27 @@ export class User extends HasId {
         this._client = client;
         this._server = server;
         this._token = RandomHex();
+    }
+
+    public snapshot() {
+        this.resetView();
+        this.server.entities.forEach(entity => {
+            this._newView[entity.id] = Entity.serialize(entity);
+        })
+
+        const difference = Difference(this._currentView, this._newView);
+
+        if (difference.add || difference.remove) {
+            this.client.send({
+                action: "view",
+                ...difference
+            })
+        }
+
+        this._currentView = _.cloneDeep(this._newView);
+    }
+
+    public resetView() {
+        this._newView = {};
     }
 }

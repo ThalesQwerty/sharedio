@@ -159,12 +159,12 @@ export class Client extends HasId {
 
         this.log(`Sending ping: ${this._currentPacketId}`);
 
-        this.send({
-            action: "ping",
-            packetId: this._currentPacketId,
-            roundTripTime: this.ping,
-            packetLossRatio: this.packetLoss,
-        });
+        // this.send({
+        //     action: "ping",
+        //     packetId: this._currentPacketId,
+        //     roundTripTime: this.ping,
+        //     packetLossRatio: this.packetLoss,
+        // });
         this._packetsSent++;
 
         if (this._packetTimeout) clearTimeout(this._packetTimeout);

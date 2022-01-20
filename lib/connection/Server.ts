@@ -177,7 +177,7 @@ export class Server extends HasId {
             new Date().getTime();
 
         this.tickIntervalRef = setInterval(
-            this.tick,
+            () => this.tick(),
             1000 / this.tickRate,
         );
 
@@ -202,6 +202,15 @@ export class Server extends HasId {
      */
     private tick() {
         this._ticks++;
+
+        this.entities.forEach(entity => {
+            entity.tick();
+        });
+
+        this.onlineUsers.forEach(user => {
+            user.snapshot();
+        })
+
         this._lastTickTimestamp = new Date().getTime();
     }
 
@@ -222,10 +231,14 @@ export class Server extends HasId {
 
             if (!this._users.filter((user) => user.is(newUser))[0]) {
                 this._users.push(newUser);
+                this._config.on?.connection?.(newUser);
             }
 
             return {
-                close: () => {},
+                close: () => {
+                    this._config.on?.disconnection?.(newUser);
+                    newUser.resetView();
+                },
                 message: (request) => {
                     this._config.on?.message?.(newUser, request);
                 },
@@ -248,6 +261,7 @@ export class Server extends HasId {
     public createEntity(Type: typeof Entity): Entity {
         const newEntity = new Type(this, Type.name);
         this._entities.push(newEntity);
+        newEntity.init();
         return newEntity;
     }
 
@@ -258,6 +272,7 @@ export class Server extends HasId {
         this._entities = this._entities.filter(
             (currentEntity) => !currentEntity.is(entity),
         );
+        entity.gone();
         return entity;
     }
 }
