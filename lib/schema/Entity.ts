@@ -1,6 +1,8 @@
 import { User, HasId } from ".";
 import { Server } from "../connection";
-import { KeyValue } from "../utils/KeyValue";
+import { KeyValue } from "../types/KeyValue";
+import { SerializedEntity } from "../types";
+import { GetAttributeRules } from '../utils/GetAttributeRules';
 
 import * as _ from "lodash";
 interface EntityDefaultAttributes {
@@ -27,7 +29,7 @@ interface EntityDefaultAttributes {
     /**
      * This function is called right after this entity is created
      */
-    init: () => void;
+    init: (initialState: KeyValue) => void;
 
     /**
      * This function is called every server tick
@@ -59,13 +61,6 @@ interface EntityDefaultAttributes {
 
 type EntityDefaultAttributeName = (keyof EntityDefaultAttributes)|(keyof HasId)|"resetId";
 
-export interface SerializedEntity {
-    owner: string|null,
-    id: string,
-    state: KeyValue,
-    actions: string[]
-}
-
 export class Entity extends HasId implements EntityDefaultAttributes {
     public static defaultAttributes: EntityDefaultAttributeName[] = [
         "owner",
@@ -94,11 +89,11 @@ export class Entity extends HasId implements EntityDefaultAttributes {
     /**
      * Returns a serialized version of an entity
      */
-    public static serialize(entity: Entity): SerializedEntity {
+    public static serialize(entity: Entity, viewer: User): SerializedEntity {
         const clone = this.clone(entity);
 
         const serialized: SerializedEntity = {
-            owner: null,
+            owned: false,
             id: "",
             state: {},
             actions: []
@@ -115,7 +110,7 @@ export class Entity extends HasId implements EntityDefaultAttributes {
                     serialized.id = clone.id;
                     break;
                 case "owner":
-                    serialized.owner = clone.owner?.id ?? null;
+                    serialized.owned = clone.owner?.id && clone.owner.is(viewer) ? true : false;
                     break;
             }
             removeAttribute(defaultAttribute);
@@ -124,8 +119,14 @@ export class Entity extends HasId implements EntityDefaultAttributes {
         for (const attributeName in clone) {
             if (this.defaultAttributes.indexOf(attributeName as EntityDefaultAttributeName) < 0) {
                 const attribute = (clone as any)[attributeName];
-                if (typeof attribute === "function") serialized.actions.push(attributeName);
-                else serialized.state[attributeName] = attribute;
+
+                const rules = GetAttributeRules(attributeName);
+                const { parsedName: name } = rules;
+
+                if (rules.visibility === "public" || (rules.visibility === "private" && serialized.owned)) {
+                    if (typeof attribute === "function") serialized.actions.push(name);
+                    else serialized.state[name] = attribute;
+                }
             }
         }
 
@@ -147,17 +148,18 @@ export class Entity extends HasId implements EntityDefaultAttributes {
     }
     private _server: Server;
 
-    constructor(server: Server, type: string) {
+    constructor(server: Server, type: string, owner: User|null = null) {
         super(type);
         this._server = server;
         this._type = type;
+        this._owner = owner;
     }
 
     public create(): boolean {
         return true;
     }
 
-    public init() {}
+    public init(initialState: KeyValue) {}
 
     public tick() {}
 

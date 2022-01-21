@@ -1,5 +1,5 @@
 import { JsonDiffer } from "json-difference";
-import { KeyValue } from "./KeyValue";
+import { KeyValue } from "../types";
 
 export interface KeyValueDiff {
     add?: KeyValue;

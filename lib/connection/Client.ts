@@ -1,6 +1,7 @@
 import WS from "ws";
 import { Server, Request, AuthRequest, PongRequest } from "./";
-import { KeyValue, RandomHex } from "../utils";
+import { RandomHex } from "../utils";
+import { KeyValue } from "../types";
 import { HasId } from "../schema/HasId";
 
 const PING_SAMPLE_TIME = 1;

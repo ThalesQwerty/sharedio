@@ -1,4 +1,4 @@
-import { KeyValue } from "../utils";
+import { KeyValue } from "../types";
 import { User, HasId, Entity } from "../schema";
 import { Request, AuthRequest, Client } from ".";
 import WS from "ws";
@@ -258,10 +258,15 @@ export class Server extends HasId {
     /**
      * Creates a new entity
      */
-    public createEntity(Type: typeof Entity): Entity {
-        const newEntity = new Type(this, Type.name);
+    public createEntity(Type: typeof Entity, initialState: KeyValue = {}, owner: User|null = null): Entity {
+        const newEntity = new Type(this, Type.name, owner);
         this._entities.push(newEntity);
-        newEntity.init();
+        newEntity.init(initialState);
+
+        Object.keys(initialState).forEach(key => {
+            (newEntity as any)[key] = initialState[key];
+        });
+
         return newEntity;
     }
 

@@ -1,6 +1,7 @@
 import { Entity, HasId } from ".";
 import { Server, Client } from "../connection";
-import { KeyValue, RandomHex, Difference } from "../utils";
+import { RandomHex, Difference } from "../utils";
+import { KeyValue } from "../types";
 import WS from "ws";
 
 import * as _ from "lodash";
@@ -66,7 +67,7 @@ export class User extends HasId {
     public snapshot() {
         this.resetView();
         this.server.entities.forEach(entity => {
-            this._newView[entity.id] = Entity.serialize(entity);
+            this._newView[entity.id] = Entity.serialize(entity, this);
         })
 
         const difference = Difference(this._currentView, this._newView);
