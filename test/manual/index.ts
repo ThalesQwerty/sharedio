@@ -1,32 +1,32 @@
-import { Server, Entity } from "../../lib";
-import * as _ from "lodash";
+import { Server, Entity, Public, Private, Readonly, Internal } from "../../lib";
 class Player extends Entity {
-    name = "Thales";
-    power = 9001;
+    @Public name = "Thales";
+    @Public power = 9001;
 
-    // Only the owner can see this
-    _secret = "Shh...";
+    @Private secret = "Shh...";
 
-    // No one can see this
-    __internalState = 0;
+    @Internal serverSide = 0;
 
-    // This is readonly
-    IMMUTABLE = "Hello World!";
+    @Readonly immutable = "Hello World!";
 
-    // This is readonly and only the owner can see this
-    _IMMUTABLE_SECRET = "Hello Person!";
+    @Private @Readonly immutableSecret = "Hello Person!";
 
     shoot() {
         // pew
     }
 
+    @Private
+    shootPrivately() {
+        // pew (privately)
+    }
+
     init() {
-        // setInterval(() => {
-        //     this.power = Math.floor(Math.random() * 10000);
-        // }, 1000);
-        // setTimeout(() => {
-        //     this.server.deleteEntity(this);
-        // }, 30000);
+        setInterval(() => {
+            this.power = Math.floor(Math.random() * 10000);
+        }, 1000);
+        setTimeout(() => {
+            this.server.deleteEntity(this);
+        }, 30000);
     }
 }
 
@@ -37,6 +37,6 @@ const server = new Server({
             const owned = server.createEntity(Player, {name: "You", power: 0}, user);
             const notOwned = server.createEntity(Player, {name: "They", power: 0});
         }
-    }
+    },
+    debug: true
 }).start();
-
