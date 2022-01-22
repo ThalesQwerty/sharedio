@@ -208,7 +208,7 @@ export class Server extends HasId {
         });
 
         this.onlineUsers.forEach(user => {
-            user.snapshot();
+            user.view.update();
         })
 
         this._lastTickTimestamp = new Date().getTime();
@@ -237,7 +237,7 @@ export class Server extends HasId {
             return {
                 close: () => {
                     this._config.on?.disconnection?.(newUser);
-                    newUser.resetView();
+                    newUser.view.reset();
                 },
                 message: (request) => {
                     this._config.on?.message?.(newUser, request);

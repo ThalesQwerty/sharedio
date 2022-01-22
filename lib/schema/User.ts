@@ -1,9 +1,6 @@
-import { Entity, HasId } from ".";
+import { HasId, View } from ".";
 import { Server, Client } from "../connection";
-import { RandomHex, Difference } from "../utils";
-import { KeyValue } from "../types";
-import WS from "ws";
-
+import { RandomHex } from "../utils";
 import * as _ from "lodash";
 
 export class User extends HasId {
@@ -36,8 +33,17 @@ export class User extends HasId {
         return this._online;
     }
 
-    private _currentView: KeyValue = {};
-    private _newView: KeyValue = {};
+    public get view() { return this._view };
+    private _view:View;
+
+    constructor(server: Server, client: Client) {
+        super("User");
+
+        this._client = client;
+        this._server = server;
+        this._token = RandomHex();
+        this._view = new View(this);
+    }
 
     /**
      * Attempts to use an access token to reconnect an user. Returns the user if successful, returns null otherwise.
@@ -54,35 +60,5 @@ export class User extends HasId {
 
         user._client = client;
         return user;
-    }
-
-    constructor(server: Server, client: Client) {
-        super("User");
-
-        this._client = client;
-        this._server = server;
-        this._token = RandomHex();
-    }
-
-    public snapshot() {
-        this.resetView();
-        this.server.entities.forEach(entity => {
-            this._newView[entity.id] = Entity.serialize(entity, this);
-        })
-
-        const difference = Difference(this._currentView, this._newView);
-
-        if (difference.add || difference.remove) {
-            this.client.send({
-                action: "view",
-                ...difference
-            })
-        }
-
-        this._currentView = _.cloneDeep(this._newView);
-    }
-
-    public resetView() {
-        this._newView = {};
     }
 }
