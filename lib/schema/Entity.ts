@@ -4,77 +4,42 @@ import { KeyValue } from "../types/KeyValue";
 
 import * as _ from "lodash";
 interface EntityDefaultAttributes {
-    /**
-     * Returns the name of this entity's type
-     */
     type: string;
-
-    /**
-     * Returns the user who created this entity
-     */
     owner: User | null;
-
-    /**
-     * Returns this entity's server
-     */
     server: Server | null;
 
-    /**
-     * This function is called before an user attempts to create this entity
-     */
-    create: () => boolean;
-
-    /**
-     * This function is called right after this entity is created
-     */
-    init: (initialState: KeyValue) => void;
-
-    /**
-     * This function is called every server tick
-     */
-    tick: () => void;
-
-    /**
-     * This function is called before an user reads this entity's properties
-     */
-    read: () => void;
-
-    /**
-     * This function is called after an user updates this entity's properties and before the changes are propagated
-     */
-    update: () => void;
-
-    /**
-     * This function is called before an user attempts to delete this entity
-     */
-    delete: () => boolean;
-
-    /**
-     * This function is called right after this entity gets deleted
-     */
-    gone: () => void;
+    _create: () => boolean;
+    _init: (initialState: KeyValue) => void;
+    _tick: () => void;
+    _read: () => void;
+    _update: () => void;
+    _delete: () => boolean;
+    _gone: () => void;
 
     constructor?: Function;
 }
 
-export type EntityDefaultAttributeName = (keyof EntityDefaultAttributes)|(keyof HasId)|"resetId";
+export type EntityDefaultAttributeName =
+    | keyof EntityDefaultAttributes
+    | keyof HasId
+    | "resetId";
 
 export class Entity extends HasId implements EntityDefaultAttributes {
     public static defaultAttributes: EntityDefaultAttributeName[] = [
         "owner",
         "type",
         "server",
-        "init",
-        "tick",
-        "read",
-        "update",
-        "create",
-        "delete",
-        "gone",
+        "_init",
+        "_tick",
+        "_read",
+        "_update",
+        "_create",
+        "_delete",
+        "_gone",
         "id",
         "is",
         "constructor",
-        "resetId"
+        "resetId",
     ];
 
     /**
@@ -110,28 +75,71 @@ export class Entity extends HasId implements EntityDefaultAttributes {
     }
     private _server: Server;
 
-    constructor(server: Server, type: string, owner: User|null = null) {
+    constructor(
+        server: Server,
+        type: string,
+        owner: User | null = null,
+    ) {
         super(type);
         this._server = server;
         this._type = type;
         this._owner = owner;
     }
 
-    public create(): boolean {
+    /**
+     * @SharedIO Hook Function
+     *
+     * Called before an user attempts to create this entity.
+     * The return value (true or false) will determine whether or not the user will be able to create a new instance of this entity.
+     */
+    public _create(): boolean {
         return true;
     }
 
-    public init(initialState: KeyValue) {}
+    /**
+     * @SharedIO Hook Function
+     *
+     * Called right after this entity is created.
+     * Similarly to a class constructor function, you should use this hook to initialize the entity.
+     */
+    public _init(initialState: KeyValue) {}
 
-    public tick() {}
+    /**
+     * @SharedIO Hook Function
+     *
+     * This function will be called every server tick.
+     */
+    public _tick() {}
 
-    public read() {}
+    /**
+     * @SharedIO Hook Function
+     *
+     * Called before an user reads this entity's properties.
+     */
+    public _read() {}
 
-    public update() {}
+    /**
+     * @SharedIO Hook Function
+     *
+     * Called after an user updates this entity's properties and before the changes are propagated.
+     */
+    public _update() {}
 
-    public delete(): boolean {
+    /**
+     * @SharedIO Hook Function
+     *
+     * Called before an user attempts to delete this entity.
+     * The return value (true or false) will determine whether or not the user will be able to delete this entity.
+     */
+    public _delete(): boolean {
         return true;
     }
 
-    public gone() {}
+    /**
+     * @SharedIO Hook Function
+     *
+     * Called right after this entity gets deleted.
+     * Useful for implementing cleanup code.
+     */
+    public _gone() {}
 }

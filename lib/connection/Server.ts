@@ -204,7 +204,7 @@ export class Server extends HasId {
         this._ticks++;
 
         this.entities.forEach(entity => {
-            entity.tick();
+            entity._tick();
         });
 
         this.onlineUsers.forEach(user => {
@@ -261,7 +261,7 @@ export class Server extends HasId {
     public createEntity(Type: typeof Entity, initialState: KeyValue = {}, owner: User|null = null): Entity {
         const newEntity = new Type(this, Type.name, owner);
         this._entities.push(newEntity);
-        newEntity.init(initialState);
+        newEntity._init(initialState);
 
         Object.keys(initialState).forEach(key => {
             (newEntity as any)[key] = initialState[key];
@@ -277,7 +277,7 @@ export class Server extends HasId {
         this._entities = this._entities.filter(
             (currentEntity) => !currentEntity.is(entity),
         );
-        entity.gone();
+        entity._gone();
         return entity;
     }
 }
