@@ -1,7 +1,15 @@
 import { Entity, Rules } from ".";
+import { SharedIOError } from '../types';
 
-function prepareSchemaAndGetType(entity: Entity) {
+function prepareSchemaAndGetType(entity: Entity, attributeName: string) {
     const type = entity.constructor.name;
+
+    if (Entity.isDefaultAttribute(attributeName)) {
+        throw new SharedIOError(
+            `Decorators cannot be applied to default member "${attributeName}" on entity ${type}.
+            Please remove the decorators you've added and try to run your code again.`
+        )
+    }
 
     Rules.schema[type] ??= {};
 
@@ -14,7 +22,7 @@ function prepareSchemaAndGetType(entity: Entity) {
  * All users can read this attribute
  */
  export function Public(entity: Entity, attributeName: string) {
-    const type = prepareSchemaAndGetType(entity);
+    const type = prepareSchemaAndGetType(entity, attributeName);
 
     Rules.schema[type][attributeName] = {
         ...Rules.spread(type, attributeName),
@@ -28,7 +36,7 @@ function prepareSchemaAndGetType(entity: Entity) {
  * Only the entity's owner can read this attribute
  */
 export function Private(entity: Entity, attributeName: string) {
-    const type = prepareSchemaAndGetType(entity);
+    const type = prepareSchemaAndGetType(entity, attributeName);
 
     Rules.schema[type][attributeName] = {
         ...Rules.spread(type, attributeName),
@@ -42,10 +50,11 @@ export function Private(entity: Entity, attributeName: string) {
  * No user can read this attribute, it's server-side only
  */
 export function Internal(entity: Entity, attributeName: string) {
-    const type = prepareSchemaAndGetType(entity);
+    const type = prepareSchemaAndGetType(entity, attributeName);
 
     Rules.schema[type][attributeName] = {
         ...Rules.spread(type, attributeName),
+        readonly: true,
         visibility: "internal",
     };
 }
@@ -56,7 +65,7 @@ export function Internal(entity: Entity, attributeName: string) {
  * Users are not allowed to edit this attribute
  */
 export function Readonly(entity: Entity, attributeName: string) {
-    const type = prepareSchemaAndGetType(entity);
+    const type = prepareSchemaAndGetType(entity, attributeName);
 
     Rules.schema[type][attributeName] = {
         ...Rules.spread(type, attributeName),
