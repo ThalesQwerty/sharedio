@@ -1,4 +1,11 @@
-import { Server, Entity, Public, Private, Readonly, Internal } from "../../lib";
+import {
+    Server,
+    Entity,
+    Public,
+    Private,
+    Readonly,
+    Internal,
+} from "../../lib";
 class Player extends Entity {
     @Public name = "Thales";
     @Public power = 9001;
@@ -11,6 +18,7 @@ class Player extends Entity {
 
     @Private @Readonly immutableSecret = "Hello Person!";
 
+    @Public
     shoot() {
         // pew
     }
@@ -32,11 +40,17 @@ class Player extends Entity {
 
 const server = new Server({
     port: 8080,
-    on: {
-        connection(user) {
-            const owned = server.createEntity(Player, {name: "You", power: 0}, user);
-            const notOwned = server.createEntity(Player, {name: "They", power: 0});
-        }
-    },
-    debug: true
+    debug: true,
 }).start();
+
+server.on("connection", (user) => {
+    const owned = server.createEntity(
+        Player,
+        { name: "You", power: 0 },
+        user,
+    );
+    const notOwned = server.createEntity(Player, {
+        name: "They",
+        power: 0,
+    });
+});
