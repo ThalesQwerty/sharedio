@@ -18,20 +18,27 @@ export class View {
     /**
      * Returns a JSON that represents what the user is viewing right now
      */
-    public get current() { return this._current };
+    public get current() {
+        return this._current;
+    }
     private _current: KeyValue<SerializedEntity> = {};
 
     /**
      * Returns a JSON that represents what the user will view in the next server tick
      */
-    public get next() { return this._next };
+    public get next() {
+        return this._next;
+    }
     private _next: KeyValue<SerializedEntity> = {};
 
     /**
      * Returns the difference between the current view and the next view as a JSON
      */
     public get changes() {
-        return Difference<KeyValue<SerializedEntity>>(this._current, this._next);
+        return Difference<KeyValue<SerializedEntity>>(
+            this._current,
+            this._next,
+        );
     }
 
     /**
@@ -39,7 +46,7 @@ export class View {
      *
      * If the entity is not visible for the user, this function returns null.
      */
-    public find(entity: Entity): SerializedEntity|null {
+    public find(entity: Entity): SerializedEntity | null {
         return this._current[entity.id] ?? null;
     }
 
@@ -50,11 +57,11 @@ export class View {
     /**
      * Serializes all visible entities and generates the next view
      */
-     public render() {
+    public render() {
         this._next = {};
-        this.user.server.entities.forEach(entity => {
+        this.user.server.entities.forEach((entity) => {
             this._next[entity.id] = this.serialize(entity);
-        })
+        });
 
         return this._next;
     }
@@ -68,8 +75,8 @@ export class View {
         if (difference.add || difference.remove) {
             this.user.client.send({
                 action: "view",
-                ...difference
-            })
+                ...difference,
+            });
         }
 
         this._current = _.cloneDeep(this._next);
@@ -85,9 +92,7 @@ export class View {
     /**
      * Returns a serialized version of an entity, that can be sent as a JSON to the user
      */
-    public serialize(
-        entity: Entity
-    ): SerializedEntity {
+    public serialize(entity: Entity): SerializedEntity {
         const clone = Entity.clone(entity);
 
         const serialized: SerializedEntity = {

@@ -1,14 +1,17 @@
 import { Entity, Rules } from ".";
-import { SharedIOError } from '../types';
+import { SharedIOError } from "../types";
 
-function prepareSchemaAndGetType(entity: Entity, attributeName: string) {
+function prepareSchemaAndGetType(
+    entity: Entity,
+    attributeName: string,
+) {
     const type = entity.constructor.name;
 
     if (Entity.isDefaultAttribute(attributeName)) {
         throw new SharedIOError(
             `Decorators cannot be applied to default member "${attributeName}" on entity ${type}.
-            Please remove the decorators you've added and try to run your code again.`
-        )
+            Please remove the decorators you've added and try to run your code again.`,
+        );
     }
 
     Rules.schema[type] ??= {};
@@ -21,7 +24,7 @@ function prepareSchemaAndGetType(entity: Entity, attributeName: string) {
  *
  * All users can read this attribute
  */
- export function Public(entity: Entity, attributeName: string) {
+export function Public(entity: Entity, attributeName: string) {
     const type = prepareSchemaAndGetType(entity, attributeName);
 
     Rules.schema[type][attributeName] = {
@@ -69,6 +72,6 @@ export function Readonly(entity: Entity, attributeName: string) {
 
     Rules.schema[type][attributeName] = {
         ...Rules.spread(type, attributeName),
-        readonly: true
+        readonly: true,
     };
 }

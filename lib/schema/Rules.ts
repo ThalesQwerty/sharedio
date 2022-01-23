@@ -2,8 +2,8 @@ import { Entity } from ".";
 
 export interface RuleSchema {
     [entityType: string]: {
-        [attributeName: string]: AttributeRules
-    }
+        [attributeName: string]: AttributeRules;
+    };
 }
 
 export interface AttributeRules {
@@ -14,12 +14,12 @@ export interface AttributeRules {
      * @private Only the entity's owner can read
      * @internal No one can read, it's a server-only attribute
      */
-    visibility: "public"|"private"|"internal",
+    visibility: "public" | "private" | "internal";
 
     /**
      * Determines whether or not this attribute can be altered by the entity's owner
      */
-    readonly: boolean
+    readonly: boolean;
 }
 
 /**
@@ -29,7 +29,9 @@ export class Rules {
     /**
      * Lists all the rules
      */
-    public static get schema() { return this._schema };
+    public static get schema() {
+        return this._schema;
+    }
     private static _schema: RuleSchema = {};
 
     /**
@@ -45,14 +47,14 @@ export class Rules {
     public static get default(): AttributeRules {
         return {
             visibility: "public",
-            readonly: false
+            readonly: false,
         };
     }
 
     public static spread(entityType: string, attributeName: string) {
         return {
             ...this.default,
-            ...this.schema[entityType]?.[attributeName]
+            ...this.schema[entityType]?.[attributeName],
         };
     }
 }

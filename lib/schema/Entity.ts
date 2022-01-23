@@ -36,10 +36,15 @@ export class Entity extends HasId implements EntityDefaultAttributes {
     public static isDefaultAttribute(attributeName: string): boolean {
         for (const defaultAttributeName of this.defaultAttributes) {
             if (
-                (attributeName === defaultAttributeName)
-                || (attributeName[0] === "_" && attributeName.substring(1) === defaultAttributeName)
-                || (defaultAttributeName[0] === "_" && defaultAttributeName.substring(1) === attributeName)
-            ) return true;
+                attributeName === defaultAttributeName ||
+                (attributeName[0] === "_" &&
+                    attributeName.substring(1) ===
+                        defaultAttributeName) ||
+                (defaultAttributeName[0] === "_" &&
+                    defaultAttributeName.substring(1) ===
+                        attributeName)
+            )
+                return true;
         }
         return false;
     }

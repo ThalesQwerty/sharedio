@@ -33,8 +33,10 @@ export class User extends HasId {
         return this._online;
     }
 
-    public get view() { return this._view };
-    private _view:View;
+    public get view() {
+        return this._view;
+    }
+    private _view: View;
 
     constructor(server: Server, client: Client) {
         super("User");

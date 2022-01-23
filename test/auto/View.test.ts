@@ -107,8 +107,14 @@ describe("Decorators", () => {
         };
 
         server.on("connection", (user) => {
-            const owned = server.createEntity(TestEntity, {}, user) as TestEntity;
-            const notOwned = server.createEntity(TestEntity) as TestEntity;
+            const owned = server.createEntity(
+                TestEntity,
+                {},
+                user,
+            ) as TestEntity;
+            const notOwned = server.createEntity(
+                TestEntity,
+            ) as TestEntity;
 
             server.on("nextTick", () => {
                 const { view } = user;
@@ -121,20 +127,19 @@ describe("Decorators", () => {
                     name: owned.name,
                     password: owned.password,
                     color: owned.color,
-                    secret: owned.secret
+                    secret: owned.secret,
                 });
                 expect(_owned?.actions).toStrictEqual([
-                    "shoot", "shootPrivately"
-                ])
+                    "shoot",
+                    "shootPrivately",
+                ]);
 
                 expect(_notOwned?.owned).toBe(false);
                 expect(_notOwned?.state).toStrictEqual({
                     name: notOwned.name,
-                    color: notOwned.color
+                    color: notOwned.color,
                 });
-                expect(_notOwned?.actions).toStrictEqual([
-                    "shoot"
-                ])
+                expect(_notOwned?.actions).toStrictEqual(["shoot"]);
 
                 done();
             });
