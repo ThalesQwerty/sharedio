@@ -84,12 +84,11 @@ export class Entity extends HasId implements EntityDefaultAttributes {
 
     constructor(
         server: Server,
-        type: string,
         owner: User | null = null,
     ) {
-        super(type);
+        super("Entity");
         this._server = server;
-        this._type = type;
+        this._type = this.constructor.name;
         this._owner = owner;
     }
 

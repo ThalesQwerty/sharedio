@@ -342,7 +342,7 @@ export class Server extends HasId {
         initialState: KeyValue | null | undefined = {},
         owner: User | null = null,
     ): Entity {
-        const newEntity = new Type(this, Type.name, owner);
+        const newEntity = new Type(this, owner);
         this._entities.push(newEntity);
         newEntity._init(initialState ?? {});
 
