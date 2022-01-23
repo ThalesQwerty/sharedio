@@ -19,28 +19,51 @@ export class View {
      * Returns a JSON that represents what the user is viewing right now
      */
     public get current() { return this._current };
-    private _current: KeyValue = {};
+    private _current: KeyValue<SerializedEntity> = {};
 
     /**
      * Returns a JSON that represents what the user will view in the next server tick
      */
     public get next() { return this._next };
-    private _next: KeyValue = {};
+    private _next: KeyValue<SerializedEntity> = {};
+
+    /**
+     * Returns the difference between the current view and the next view as a JSON
+     */
+    public get changes() {
+        return Difference<KeyValue<SerializedEntity>>(this._current, this._next);
+    }
+
+    /**
+     * Returns how the user is currently viewing an entity as JSON.
+     *
+     * If the entity is not visible for the user, this function returns null.
+     */
+    public find(entity: Entity): SerializedEntity|null {
+        return this._current[entity.id] ?? null;
+    }
 
     constructor(viewer: User) {
         this._user = viewer;
     }
 
     /**
-     * Serializes all visible entities and sends them as JSON to the user
+     * Serializes all visible entities and generates the next view
      */
-     public update() {
-        this.reset();
+     public render() {
+        this._next = {};
         this.user.server.entities.forEach(entity => {
             this._next[entity.id] = this.serialize(entity);
         })
 
-        const difference = Difference(this._current, this._next);
+        return this._next;
+    }
+
+    /**
+     * Sends the next view as JSON to the user, and turns it into the current view
+     */
+    public update() {
+        const difference = this.changes;
 
         if (difference.add || difference.remove) {
             this.user.client.send({
@@ -56,7 +79,7 @@ export class View {
      * Clears the current view
      */
     public reset() {
-        this._next = {};
+        this._current = {};
     }
 
     /**

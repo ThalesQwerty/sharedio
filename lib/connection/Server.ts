@@ -15,30 +15,20 @@ interface ServerConfig {
      * How many ticks will happen per second (default is 64)
      */
     tickRate?: number;
-
-    on?: {
-        /**
-         * This function will be called whenever an user connects
-         */
-        connection?: (user: User) => void;
-
-        /**
-         * This function will be called whenever an user disconnects
-         */
-        disconnection?: (user: User) => void;
-
-        /**
-         * This function will be called whenever a message is recieved from an user's websocket client
-         */
-        message?: (user: User, message: Request) => void;
-
-        /**
-         * This function will be called every server tick
-         */
-        tick?: (server: Server) => void | (() => void);
-    };
 }
 
+type ConnectionHandler = (user: User) => void;
+type DisconnectionHandler = (user: User) => void;
+type MessageHandler = (user: User, message: Request) => void;
+type TickHandler = () => void;
+
+export interface ServerListeners {
+    connection?: ConnectionHandler[];
+    disconnection?: DisconnectionHandler[];
+    message?: MessageHandler[];
+    tick?: TickHandler[];
+    nextTick?: TickHandler[];
+}
 export class Server extends HasId {
     static current: Server;
 
@@ -49,6 +39,11 @@ export class Server extends HasId {
         return this._config;
     }
     private _config: ServerConfig;
+
+    /**
+     * List of event listeners for different types of events
+     */
+    private _listeners: ServerListeners = {};
 
     public get port() {
         return this.wss?.options.port;
@@ -198,18 +193,102 @@ export class Server extends HasId {
     }
 
     /**
-     * This function is executed every server tick
+     * This function will be called whenever an user connects
+     */
+    public on(
+        event: "connection",
+        callback: ConnectionHandler,
+    ): Server;
+
+    /**
+     * This function will be called whenever an user disconnects
+     */
+    public on(
+        event: "disconnection",
+        callback: DisconnectionHandler,
+    ): Server;
+
+    /**
+     * This function will be called whenever a message is recieved from an user's websocket client
+     */
+    public on(event: "message", callback: MessageHandler): Server;
+
+    /**
+     * This function will be called every server tick
+     */
+    public on(event: "tick", callback: TickHandler): Server;
+
+    /**
+     * This function will be called in the next server tick
+     */
+    public on(event: "nextTick", callback: TickHandler): Server;
+
+    /**
+     * Adds an event listener
+     */
+    public on(
+        event: keyof ServerListeners,
+        callback: Function,
+    ): Server {
+        this._listeners[event] ??= [] as any;
+        if (typeof this._listeners[event] === "function")
+            this._listeners[event] = [this._listeners[event]] as any;
+        (this._listeners[event] as Function[]).push(callback);
+        return this;
+    }
+
+    private dispatch(event: "connection", user: User): Server;
+    private dispatch(event: "disconnection", user: User): Server;
+    private dispatch(
+        event: "message",
+        user: User,
+        message: Request,
+    ): Server;
+    private dispatch(event: "tick"): Server;
+    private dispatch(event: "nextTick"): Server;
+
+    /**
+     * Disptach an event, calling its listeners following the order by which they were added
+     */
+    private dispatch(
+        event: keyof ServerListeners,
+        ...props: unknown[]
+    ): Server {
+        for (const listener of this._listeners[event] ?? []) {
+            (listener as Function)(...props);
+        }
+        if (event === "nextTick") this.removeAllListeners("nextTick");
+        return this;
+    }
+
+    /**
+     * Removes all current event listeners
+     */
+    public removeAllListeners(event?: keyof ServerListeners) {
+        if (event) this._listeners[event] = [];
+        else
+            for (const name in this._listeners) {
+                this._listeners[name as keyof ServerListeners] = [];
+            }
+    }
+
+    /**
+     * This function dispatches the tick event
      */
     private tick() {
         this._ticks++;
 
-        this.entities.forEach(entity => {
+        this.entities.forEach((entity) => {
             entity._tick();
         });
 
-        this.onlineUsers.forEach(user => {
+        this.onlineUsers.forEach((user) => {
+            user.view.render();
             user.view.update();
-        })
+        });
+
+        this.dispatch("nextTick");
+        this.dispatch("tick");
 
         this._lastTickTimestamp = new Date().getTime();
     }
@@ -231,16 +310,16 @@ export class Server extends HasId {
 
             if (!this._users.filter((user) => user.is(newUser))[0]) {
                 this._users.push(newUser);
-                this._config.on?.connection?.(newUser);
+                this.dispatch("connection", newUser);
             }
 
             return {
                 close: () => {
-                    this._config.on?.disconnection?.(newUser);
+                    this.dispatch("disconnection", newUser);
                     newUser.view.reset();
                 },
                 message: (request) => {
-                    this._config.on?.message?.(newUser, request);
+                    this.dispatch("message", newUser, request);
                 },
             };
         });
@@ -258,14 +337,20 @@ export class Server extends HasId {
     /**
      * Creates a new entity
      */
-    public createEntity(Type: typeof Entity, initialState: KeyValue = {}, owner: User|null = null): Entity {
+    public createEntity(
+        Type: typeof Entity,
+        initialState: KeyValue | null | undefined = {},
+        owner: User | null = null,
+    ): Entity {
         const newEntity = new Type(this, Type.name, owner);
         this._entities.push(newEntity);
-        newEntity._init(initialState);
+        newEntity._init(initialState ?? {});
 
-        Object.keys(initialState).forEach(key => {
-            (newEntity as any)[key] = initialState[key];
-        });
+        if (initialState) {
+            Object.keys(initialState).forEach((key) => {
+                (newEntity as any)[key] = initialState[key];
+            });
+        }
 
         return newEntity;
     }
