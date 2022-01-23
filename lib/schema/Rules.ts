@@ -51,10 +51,12 @@ export class Rules {
         };
     }
 
-    public static spread(entityType: string, attributeName: string) {
-        return {
+    public static create(entityType: string, attributeName: string): AttributeRules {
+        this.schema[entityType] ??= {};
+
+        return (this.schema[entityType][attributeName] = {
             ...this.default,
             ...this.schema[entityType]?.[attributeName],
-        };
+        });
     }
 }
