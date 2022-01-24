@@ -28,7 +28,7 @@ class Player extends Entity {
         // pew (privately)
     }
 
-    _init() {
+    _OnCreate() {
         setInterval(() => {
             this.power = Math.floor(Math.random() * 10000);
         }, 1000);
@@ -49,6 +49,7 @@ server.on("connection", (user) => {
         { name: "You", power: 0 },
         user,
     );
+
     const notOwned = server.createEntity(Player, {
         name: "They",
         power: 0,

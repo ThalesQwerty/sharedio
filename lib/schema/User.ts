@@ -1,6 +1,6 @@
-import { HasId, View } from ".";
+import { View } from ".";
 import { Server, Client } from "../connection";
-import { RandomHex } from "../utils";
+import { RandomHex, HasId } from "../utils";
 import * as _ from "lodash";
 
 export class User extends HasId {

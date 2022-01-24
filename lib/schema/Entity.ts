@@ -1,6 +1,7 @@
-import { User, HasId } from ".";
+import { User } from ".";
 import { Server } from "../connection";
-import { KeyValue, Hooks } from "../types";
+import { KeyValue, Hooks, hookNameList } from "../types";
+import { HasId } from "../utils";
 
 import * as _ from "lodash";
 interface EntityDefaultAttributes extends Hooks {
@@ -20,17 +21,11 @@ export class Entity extends HasId implements EntityDefaultAttributes {
         "owner",
         "type",
         "server",
-        "_init",
-        "_tick",
-        "_read",
-        "_update",
-        "_create",
-        "_delete",
-        "_gone",
         "id",
         "is",
         "constructor",
         "resetId",
+        ...hookNameList
     ];
 
     public static isDefaultAttribute(attributeName: string): boolean {
@@ -92,17 +87,17 @@ export class Entity extends HasId implements EntityDefaultAttributes {
         this._owner = owner;
     }
 
-    public _create(): boolean {
+    public _BeforeCreate(): boolean {
         return true;
     }
 
-    public _delete(): boolean {
+    public _BeforeDelete(): boolean {
         return true;
     }
 
-    public _init(initialState: KeyValue) {}
-    public _tick() {}
-    public _read() {}
-    public _update() {}
-    public _gone() {}
+    public _OnCreate(initialState: KeyValue) {}
+    public _OnServerTick() {}
+    public _OnRender() {}
+    public _OnChange() {}
+    public _OnDelete() {}
 }

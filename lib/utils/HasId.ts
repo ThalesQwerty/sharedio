@@ -5,7 +5,7 @@ const ID_CHAR_LENGTH = 32;
 /**
  * Base class for all objects that have a random and unique hex ID associated with them
  */
-export class HasId {
+export abstract class HasId {
     private get prefix() {
         return this.id.indexOf("_") < 0 ? "" : this.id.split("_")[0];
     }

@@ -1,35 +1,12 @@
-import { KeyValue } from "../types";
-import { User, HasId, Entity } from "../schema";
-import { Request, AuthRequest, Client } from ".";
+import { KeyValue, ServerConfig, ServerListeners, ServerEventOverloads } from "../types";
+import { User, Entity } from "../schema";
+import { HasEvents } from "../utils";
+import { SharedIORequest, Client } from ".";
 import WS from "ws";
 
 const DEFAULT_PORT = 3000;
 const DEFAULT_TICK_RATE = 64;
-
-interface ServerConfig {
-    debug?: boolean;
-    port?: number;
-    wsOptions?: KeyValue;
-
-    /**
-     * How many ticks will happen per second (default is 64)
-     */
-    tickRate?: number;
-}
-
-type ConnectionHandler = (user: User) => void;
-type DisconnectionHandler = (user: User) => void;
-type MessageHandler = (user: User, message: Request) => void;
-type TickHandler = () => void;
-
-export interface ServerListeners {
-    connection?: ConnectionHandler[];
-    disconnection?: DisconnectionHandler[];
-    message?: MessageHandler[];
-    tick?: TickHandler[];
-    nextTick?: TickHandler[];
-}
-export class Server extends HasId {
+export class Server extends HasEvents<ServerListeners, ServerEventOverloads> {
     static current: Server;
 
     private wss?: WS.Server;
@@ -39,11 +16,6 @@ export class Server extends HasId {
         return this._config;
     }
     private _config: ServerConfig;
-
-    /**
-     * List of event listeners for different types of events
-     */
-    private _listeners: ServerListeners = {};
 
     public get port() {
         return this.wss?.options.port;
@@ -193,75 +165,6 @@ export class Server extends HasId {
     }
 
     /**
-     * This function will be called whenever an user connects
-     */
-    public on(
-        event: "connection",
-        callback: ConnectionHandler,
-    ): Server;
-
-    /**
-     * This function will be called whenever an user disconnects
-     */
-    public on(
-        event: "disconnection",
-        callback: DisconnectionHandler,
-    ): Server;
-
-    /**
-     * This function will be called whenever a message is recieved from an user's websocket client
-     */
-    public on(event: "message", callback: MessageHandler): Server;
-
-    /**
-     * This function will be called every server tick
-     */
-    public on(event: "tick", callback: TickHandler): Server;
-
-    /**
-     * This function will be called in the next server tick
-     */
-    public on(event: "nextTick", callback: TickHandler): Server;
-
-    /**
-     * Adds an event listener
-     */
-    public on(
-        event: keyof ServerListeners,
-        callback: Function,
-    ): Server {
-        this._listeners[event] ??= [] as any;
-        if (typeof this._listeners[event] === "function")
-            this._listeners[event] = [this._listeners[event]] as any;
-        (this._listeners[event] as Function[]).push(callback);
-        return this;
-    }
-
-    private dispatch(event: "connection", user: User): Server;
-    private dispatch(event: "disconnection", user: User): Server;
-    private dispatch(
-        event: "message",
-        user: User,
-        message: Request,
-    ): Server;
-    private dispatch(event: "tick"): Server;
-    private dispatch(event: "nextTick"): Server;
-
-    /**
-     * Disptach an event, calling its listeners following the order by which they were added
-     */
-    private dispatch(
-        event: keyof ServerListeners,
-        ...props: unknown[]
-    ): Server {
-        for (const listener of this._listeners[event] ?? []) {
-            (listener as Function)(...props);
-        }
-        if (event === "nextTick") this.removeAllListeners("nextTick");
-        return this;
-    }
-
-    /**
      * Removes all current event listeners
      */
     public removeAllListeners(event?: keyof ServerListeners) {
@@ -279,7 +182,7 @@ export class Server extends HasId {
         this._ticks++;
 
         this.entities.forEach((entity) => {
-            entity._tick();
+            entity._OnServerTick();
         });
 
         this.onlineUsers.forEach((user) => {
@@ -287,8 +190,8 @@ export class Server extends HasId {
             user.view.update();
         });
 
-        this.dispatch("nextTick");
-        this.dispatch("tick");
+        this.emit("nextTick");
+        this.emit("tick");
 
         this._lastTickTimestamp = new Date().getTime();
     }
@@ -310,16 +213,16 @@ export class Server extends HasId {
 
             if (!this._users.filter((user) => user.is(newUser))[0]) {
                 this._users.push(newUser);
-                this.dispatch("connection", newUser);
+                this.emit("connection", newUser);
             }
 
             return {
                 close: () => {
-                    this.dispatch("disconnection", newUser);
+                    this.emit("disconnection", newUser);
                     newUser.view.reset();
                 },
                 message: (request) => {
-                    this.dispatch("message", newUser, request);
+                    this.emit("message", newUser, request);
                 },
             };
         });
@@ -344,7 +247,7 @@ export class Server extends HasId {
     ): Entity {
         const newEntity = new Type(this, owner);
         this._entities.push(newEntity);
-        newEntity._init(initialState ?? {});
+        newEntity._OnCreate(initialState ?? {});
 
         if (initialState) {
             Object.keys(initialState).forEach((key) => {
@@ -362,7 +265,7 @@ export class Server extends HasId {
         this._entities = this._entities.filter(
             (currentEntity) => !currentEntity.is(entity),
         );
-        entity._gone();
+        entity._OnDelete();
         return entity;
     }
 }

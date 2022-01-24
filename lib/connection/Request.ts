@@ -1,13 +1,13 @@
 import { ClientListeners } from ".";
 
-export interface Request {
+export interface SharedIORequest {
     action: keyof ClientListeners;
 }
 
-export interface AuthRequest extends Request {
+export interface AuthRequest extends SharedIORequest {
     token: string | null;
 }
 
-export interface PongRequest extends Request {
+export interface PongRequest extends SharedIORequest {
     packetId: string;
 }
