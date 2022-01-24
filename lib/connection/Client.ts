@@ -1,14 +1,14 @@
 import WS from "ws";
-import { Server, Request, AuthRequest, PongRequest } from "./";
+import { Server, SharedIORequest, AuthRequest, PongRequest } from "./";
 import { RandomHex } from "../utils";
 import { KeyValue } from "../types";
-import { HasId } from "../schema/HasId";
+import { HasId } from "../utils";
 
 const PING_SAMPLE_TIME = 1;
 
 export interface ClientListeners {
     auth?: (request: AuthRequest) => ClientListeners;
-    message?: (request: Request) => void;
+    message?: (request: SharedIORequest) => void;
     pong?: (request: PongRequest) => void;
     close?: () => void;
 }
@@ -116,7 +116,7 @@ export class Client extends HasId {
     }
 
     public recieve(data: WS.RawData) {
-        const request: Request = JSON.parse(data.toString());
+        const request: SharedIORequest = JSON.parse(data.toString());
 
         switch (request.action) {
             case "auth": {
