@@ -1,6 +1,11 @@
 import { User } from ".";
 import { Server } from "../connection";
-import { KeyValue, EntityEvents, EntityListenerOverloads, EntityEmitterOverloads } from "../types";
+import {
+    KeyValue,
+    EntityEvents,
+    EntityListenerOverloads,
+    EntityEmitterOverloads,
+} from "../types";
 import { HasEvents } from "../utils";
 
 import * as _ from "lodash";
@@ -18,9 +23,16 @@ export type EntityDefaultAttributeName =
     | "emit"
     | "constructor"
     | "removeAllListeners"
-    | "_Config"
+    | "_Config";
 
-export class Entity extends HasEvents<EntityEvents, EntityListenerOverloads, EntityEmitterOverloads> implements EntityDefaultAttributes {
+export class Entity
+    extends HasEvents<
+        EntityEvents,
+        EntityListenerOverloads,
+        EntityEmitterOverloads
+    >
+    implements EntityDefaultAttributes
+{
     public static defaultAttributes: EntityDefaultAttributeName[] = [
         "owner",
         "type",
@@ -33,7 +45,7 @@ export class Entity extends HasEvents<EntityEvents, EntityListenerOverloads, Ent
         "on",
         "_listeners",
         "removeAllListeners",
-        "_Config"
+        "_Config",
     ];
 
     public static isDefaultAttribute(attributeName: string): boolean {
@@ -85,10 +97,7 @@ export class Entity extends HasEvents<EntityEvents, EntityListenerOverloads, Ent
     }
     private _server: Server;
 
-    constructor(
-        server: Server,
-        owner: User | null = null,
-    ) {
+    constructor(server: Server, owner: User | null = null) {
         super("Entity");
         this._server = server;
         this._type = this.constructor.name;
@@ -100,6 +109,10 @@ export class Entity extends HasEvents<EntityEvents, EntityListenerOverloads, Ent
             if (!shouldCreate) {
                 this.removeAllListeners();
                 this.server.deleteEntity(this);
+            } else {
+                this.on("delete", () => {
+                    setTimeout(() => this.removeAllListeners(), 0);
+                });
             }
         }, 0);
     }

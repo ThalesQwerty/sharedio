@@ -29,15 +29,19 @@ class Player extends Entity {
     }
 
     _Config() {
-        setInterval(() => {
-            this.power = Math.floor(Math.random() * 10000);
-        }, 1000);
+        // setInterval(() => {
+        //     this.power = Math.floor(Math.random() * 10000);
+        // }, 1000);
         setTimeout(() => {
             this.server.deleteEntity(this);
-        }, 3000);
+        }, 1000);
 
         this.on("delete", () => {
             console.log("Aaaaaand it's gone! It's gone.");
+        })
+
+        this.on("tick", () => {
+            console.log(this.server.ticks);
         })
 
         return true;
