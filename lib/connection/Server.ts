@@ -1,4 +1,4 @@
-import { KeyValue, ServerConfig, ServerListeners, ServerEventOverloads } from "../types";
+import { KeyValue, ServerConfig, ServerEvents, ServerEmitterOverloads, ServerListenerOverloads } from "../types";
 import { User, Entity } from "../schema";
 import { HasEvents } from "../utils";
 import { SharedIORequest, Client } from ".";
@@ -6,7 +6,7 @@ import WS from "ws";
 
 const DEFAULT_PORT = 3000;
 const DEFAULT_TICK_RATE = 64;
-export class Server extends HasEvents<ServerListeners, ServerEventOverloads> {
+export class Server extends HasEvents<ServerEvents, ServerListenerOverloads, ServerEmitterOverloads> {
     static current: Server;
 
     private wss?: WS.Server;
@@ -165,17 +165,6 @@ export class Server extends HasEvents<ServerListeners, ServerEventOverloads> {
     }
 
     /**
-     * Removes all current event listeners
-     */
-    public removeAllListeners(event?: keyof ServerListeners) {
-        if (event) this._listeners[event] = [];
-        else
-            for (const name in this._listeners) {
-                this._listeners[name as keyof ServerListeners] = [];
-            }
-    }
-
-    /**
      * This function dispatches the tick event
      */
     private tick() {
@@ -200,7 +189,9 @@ export class Server extends HasEvents<ServerListeners, ServerEventOverloads> {
      * This function is executed whenever a new client connects to the server
      */
     private handleNewConnection(ws: WS.WebSocket) {
-        const newClient = new Client(ws, this, ({ token }) => {
+        const newClient = new Client(ws, this);
+        newClient.on("auth", ({ request }) => {
+            const { token } = request;
             const newUser =
                 User.auth(newClient, this, token) ||
                 new User(this, newClient);
@@ -216,15 +207,14 @@ export class Server extends HasEvents<ServerListeners, ServerEventOverloads> {
                 this.emit("connection", newUser);
             }
 
-            return {
-                close: () => {
-                    this.emit("disconnection", newUser);
-                    newUser.view.reset();
-                },
-                message: (request) => {
-                    this.emit("message", newUser, request);
-                },
-            };
+            newClient.on("close", () => {
+                this.emit("disconnection", newUser);
+                newUser.view.reset();
+            })
+
+            newClient.on("message", ({ request }) => {
+                this.emit("message", request);
+            })
         });
     }
 

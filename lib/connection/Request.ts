@@ -1,7 +1,7 @@
-import { ClientListeners } from ".";
+import { ClientEvents } from "../types";
 
 export interface SharedIORequest {
-    action: keyof ClientListeners;
+    action: keyof ClientEvents;
 }
 
 export interface AuthRequest extends SharedIORequest {

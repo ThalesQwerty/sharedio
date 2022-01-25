@@ -1,18 +1,11 @@
 import WS from "ws";
 import { Server, SharedIORequest, AuthRequest, PongRequest } from "./";
 import { RandomHex } from "../utils";
-import { KeyValue } from "../types";
-import { HasId } from "../utils";
+import { KeyValue, ClientEvents, ClientListenerOverloads, ClientEmitterOverloads} from "../types";
+import { HasEvents } from "../utils";
 
 const PING_SAMPLE_TIME = 1;
-
-export interface ClientListeners {
-    auth?: (request: AuthRequest) => ClientListeners;
-    message?: (request: SharedIORequest) => void;
-    pong?: (request: PongRequest) => void;
-    close?: () => void;
-}
-export class Client extends HasId {
+export class Client extends HasEvents<ClientEvents, ClientListenerOverloads, ClientEmitterOverloads> {
     public get ws() {
         return this._ws;
     }
@@ -30,11 +23,6 @@ export class Client extends HasId {
         return this._online;
     }
     private _online: boolean;
-
-    /**
-     * List of event listeners for different types of messages received
-     */
-    private _listeners: ClientListeners = {};
 
     /**
      * Calculates the connection latency (in microseconds)
@@ -71,10 +59,8 @@ export class Client extends HasId {
     constructor(
         ws: WS.WebSocket,
         server: Server,
-        auth: (request: AuthRequest) => ClientListeners,
     ) {
         super("Client");
-        this._listeners.auth = auth;
         this._server = server;
         this._online = false;
         this._ws = ws;
@@ -100,7 +86,7 @@ export class Client extends HasId {
 
         ws.on("close", () => {
             this._online = false;
-            this._listeners.close?.();
+            this.emit("close");
             if (this._packetTimeout)
                 clearTimeout(this._packetTimeout);
             ws.removeAllListeners();
@@ -120,13 +106,9 @@ export class Client extends HasId {
 
         switch (request.action) {
             case "auth": {
-                const newListeners = this._listeners.auth?.(
-                    request as AuthRequest,
-                );
-                this._listeners = {
-                    ...this._listeners,
-                    ...newListeners,
-                };
+                this.emit("auth", {
+                    request: request as AuthRequest,
+                });
                 this.sendPing();
                 break;
             }
@@ -134,7 +116,7 @@ export class Client extends HasId {
                 this.sendPing(request as PongRequest);
             }
             default: {
-                this._listeners.message?.(request);
+                this.emit("message", {request});
                 break;
             }
         }

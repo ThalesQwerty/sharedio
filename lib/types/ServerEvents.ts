@@ -1,13 +1,28 @@
 import { User } from "../schema";
-import { EventOverloads } from "../utils";
-import { SharedIORequest } from '../connection';
+import { ListenerOverloads, EmitterOverloads } from "../utils";
+import { SharedIORequest } from "../connection";
 
-type ConnectionHandler = (user: User) => void;
-type DisconnectionHandler = (user: User) => void;
-type MessageHandler = (user: User, message: SharedIORequest) => void;
+interface ServerConnectionEvent {
+    user: User;
+}
+
+interface ServerDisconnectionEvent {
+    user: User;
+}
+
+interface ServerMessageEvent {
+    user: User;
+    message: SharedIORequest;
+}
+
+export interface ServerTickEvent {}
+
+type ConnectionHandler = (event: ServerConnectionEvent) => void;
+type DisconnectionHandler = (event: ServerDisconnectionEvent) => void;
+type MessageHandler = (event: ServerMessageEvent) => void;
 type TickHandler = () => void;
 
-export interface ServerListeners {
+export interface ServerEvents {
     connection?: ConnectionHandler[];
     disconnection?: DisconnectionHandler[];
     message?: MessageHandler[];
@@ -15,8 +30,8 @@ export interface ServerListeners {
     nextTick?: TickHandler[];
 }
 
-export interface ServerEventOverloads
-    extends EventOverloads<ServerListeners> {
+export interface ServerListenerOverloads
+    extends ListenerOverloads<ServerEvents> {
     /**
      * This function will be called whenever an user connects
      */
@@ -41,9 +56,13 @@ export interface ServerEventOverloads
      * This function will be called in the next server tick
      */
     (event: "nextTick", callback: TickHandler): void;
+}
 
-    /**
-     * Adds an event listener
-     */
-    (event: keyof ServerListeners, callback: Function): void;
+export interface ServerEmitterOverloads
+    extends EmitterOverloads<ServerEvents> {
+    (event: "connection", props: ServerConnectionEvent): void;
+    (event: "disconnection", props: ServerDisconnectionEvent): void;
+    (event: "message", props: ServerMessageEvent): void;
+    (event: "tick"): void;
+    (event: "nextTick"): void;
 }
