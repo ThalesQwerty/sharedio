@@ -61,7 +61,7 @@ export abstract class HasEvents<
     /**
      * Emits an event, calling its listeners following the order by which they were added
      */
-    protected emit:
+    public emit:
         | Emitters
         | ((event: keyof Events, props?: KeyValue) => void) = (
         event: keyof Events,

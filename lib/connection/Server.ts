@@ -171,7 +171,7 @@ export class Server extends HasEvents<ServerEvents, ServerListenerOverloads, Ser
         this._ticks++;
 
         this.entities.forEach((entity) => {
-            entity._OnServerTick();
+            entity.emit("tick");
         });
 
         this.onlineUsers.forEach((user) => {
@@ -204,11 +204,15 @@ export class Server extends HasEvents<ServerEvents, ServerListenerOverloads, Ser
 
             if (!this._users.filter((user) => user.is(newUser))[0]) {
                 this._users.push(newUser);
-                this.emit("connection", newUser);
+                this.emit("connection", {
+                    user: newUser
+                });
             }
 
             newClient.on("close", () => {
-                this.emit("disconnection", newUser);
+                this.emit("disconnection", {
+                    user: newUser
+                });
                 newUser.view.reset();
             })
 
@@ -237,7 +241,6 @@ export class Server extends HasEvents<ServerEvents, ServerListenerOverloads, Ser
     ): Entity {
         const newEntity = new Type(this, owner);
         this._entities.push(newEntity);
-        newEntity._OnCreate(initialState ?? {});
 
         if (initialState) {
             Object.keys(initialState).forEach((key) => {
@@ -255,7 +258,7 @@ export class Server extends HasEvents<ServerEvents, ServerListenerOverloads, Ser
         this._entities = this._entities.filter(
             (currentEntity) => !currentEntity.is(entity),
         );
-        entity._OnDelete();
+        entity.emit("delete");
         return entity;
     }
 }

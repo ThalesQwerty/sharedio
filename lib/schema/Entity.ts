@@ -1,10 +1,10 @@
 import { User } from ".";
 import { Server } from "../connection";
-import { KeyValue, Hooks, hookNameList } from "../types";
-import { HasId } from "../utils";
+import { KeyValue, EntityEvents, EntityListenerOverloads, EntityEmitterOverloads } from "../types";
+import { HasEvents } from "../utils";
 
 import * as _ from "lodash";
-interface EntityDefaultAttributes extends Hooks {
+interface EntityDefaultAttributes {
     type: string;
     owner: User | null;
     server: Server | null;
@@ -12,11 +12,15 @@ interface EntityDefaultAttributes extends Hooks {
 }
 
 export type EntityDefaultAttributeName =
-    | keyof EntityDefaultAttributes
-    | keyof HasId
-    | "resetId";
+    | keyof Entity
+    | "resetId"
+    | "_listeners"
+    | "emit"
+    | "constructor"
+    | "removeAllListeners"
+    | "_Config"
 
-export class Entity extends HasId implements EntityDefaultAttributes {
+export class Entity extends HasEvents<EntityEvents, EntityListenerOverloads, EntityEmitterOverloads> implements EntityDefaultAttributes {
     public static defaultAttributes: EntityDefaultAttributeName[] = [
         "owner",
         "type",
@@ -25,7 +29,11 @@ export class Entity extends HasId implements EntityDefaultAttributes {
         "is",
         "constructor",
         "resetId",
-        ...hookNameList
+        "emit",
+        "on",
+        "_listeners",
+        "removeAllListeners",
+        "_Config"
     ];
 
     public static isDefaultAttribute(attributeName: string): boolean {
@@ -85,19 +93,34 @@ export class Entity extends HasId implements EntityDefaultAttributes {
         this._server = server;
         this._type = this.constructor.name;
         this._owner = owner;
+
+        setTimeout(() => {
+            const shouldCreate = this._Config();
+
+            if (!shouldCreate) {
+                this.removeAllListeners();
+                this.server.deleteEntity(this);
+            }
+        }, 0);
     }
 
-    public _BeforeCreate(): boolean {
+    /**
+     * @SharedIO
+     * Config Function
+     *
+     * This is a special function that will be called automatically whenever a new instance of this entity is created.
+     *
+     * This function can be used for:
+     * - Initializing values
+     * - Setting up event listeners (use the "on" method)
+     * - Generating side effects on the server
+     * - Verifying whether or not the entity can be created by an user
+     *
+     * Return **false** to deny the creation of the entity, and **true** to allow it.
+     *
+     * Decorators such as "@Public" and "@Private" cannot be added to this method.
+     */
+    protected _Config(): boolean {
         return true;
     }
-
-    public _BeforeDelete(): boolean {
-        return true;
-    }
-
-    public _OnCreate(initialState: KeyValue) {}
-    public _OnServerTick() {}
-    public _OnRender() {}
-    public _OnChange() {}
-    public _OnDelete() {}
 }

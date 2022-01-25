@@ -106,7 +106,7 @@ describe("Decorators", () => {
             );
         };
 
-        server.on("connection", (user) => {
+        server.on("connection", ({user}) => {
             const owned = server.createEntity(
                 TestEntity,
                 {},

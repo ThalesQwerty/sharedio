@@ -28,13 +28,19 @@ class Player extends Entity {
         // pew (privately)
     }
 
-    _OnCreate() {
+    _Config() {
         setInterval(() => {
             this.power = Math.floor(Math.random() * 10000);
         }, 1000);
         setTimeout(() => {
             this.server.deleteEntity(this);
-        }, 30000);
+        }, 3000);
+
+        this.on("delete", () => {
+            console.log("Aaaaaand it's gone! It's gone.");
+        })
+
+        return true;
     }
 }
 
@@ -43,7 +49,12 @@ const server = new Server({
     debug: true,
 }).start();
 
-server.on("connection", (user) => {
+server.createEntity(Player, {
+    name: "Entity event test",
+    power: 0,
+});
+
+server.on("connection", ({user}) => {
     const owned = server.createEntity(
         Player,
         { name: "You", power: 0 },
