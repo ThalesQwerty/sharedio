@@ -171,7 +171,7 @@ export class Server extends HasEvents<ServerEvents, ServerListenerOverloads, Ser
         this._ticks++;
 
         this.entities.forEach((entity) => {
-            entity.emit("tick");
+            Entity.emit(entity)("tick");
         });
 
         this.onlineUsers.forEach((user) => {
@@ -258,7 +258,7 @@ export class Server extends HasEvents<ServerEvents, ServerListenerOverloads, Ser
         this._entities = this._entities.filter(
             (currentEntity) => !currentEntity.is(entity),
         );
-        entity.emit("delete");
+        Entity.emit(entity)("delete");
         return entity;
     }
 }

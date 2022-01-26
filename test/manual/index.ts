@@ -28,7 +28,7 @@ class Player extends Entity {
         // pew (privately)
     }
 
-    _Config() {
+    _Constructor() {
         // setInterval(() => {
         //     this.power = Math.floor(Math.random() * 10000);
         // }, 1000);

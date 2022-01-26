@@ -61,22 +61,24 @@ export abstract class HasEvents<
     /**
      * Emits an event, calling its listeners following the order by which they were added
      */
-    public emit:
+    protected emit:
         | Emitters
         | ((event: keyof Events, props?: KeyValue) => void) = (
         event: keyof Events,
         props?: KeyValue,
-    ): void => {
+    ): unknown => {
         props ??= {};
+        let returnedValue: unknown;
         for (const listener of this._listeners[event] ?? []) {
-            (listener as Function)(props);
+            returnedValue = (listener as Function)(props, returnedValue);
         }
+        return returnedValue;
     };
 
     /**
      * Removes all current event listeners
      */
-    public removeAllListeners(event?: keyof Events) {
+    protected removeAllListeners(event?: keyof Events) {
         if (event) this._listeners[event] = [] as any;
         else
             for (const name in this._listeners) {

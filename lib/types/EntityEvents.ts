@@ -1,7 +1,10 @@
 import { ListenerOverloads, EmitterOverloads } from "../utils";
 import { ServerTickEvent } from './ServerEvents';
+import { Entity } from '../schema';
 
-interface EntityCreateEvent {}
+interface EntityCreateEvent<Type extends Entity> {
+    entity: Type
+}
 
 interface EntityDeleteEvent {}
 
@@ -11,7 +14,7 @@ interface EntityUpdateEvent {}
 
 interface EntityBeforeDeleteEvent {}
 
-type CreateHandler = (event: EntityCreateEvent) => void;
+type CreateHandler<Type extends Entity> = (event: EntityCreateEvent<Type>) => void;
 type BeforeDeleteHandler = (
     event: EntityBeforeDeleteEvent,
 ) => boolean;
@@ -20,15 +23,16 @@ type RenderHandler = (event: EntityRenderEvent) => void;
 type UpdateHandler = (event: EntityUpdateEvent) => void;
 type TickHandler = (event: ServerTickEvent) => void;
 
-export interface EntityEvents {
+export interface EntityEvents<Type extends Entity = Entity> {
     beforeDelete?: BeforeDeleteHandler[];
     delete?: DeleteHandler[];
     render?: RenderHandler[];
     update?: UpdateHandler[];
     tick?: TickHandler[];
+    create?: CreateHandler<Type>[];
 }
 
-export interface EntityListenerOverloads
+export interface EntityListenerOverloads<Type extends Entity = Entity>
     extends ListenerOverloads<EntityEvents> {
 
     /**
@@ -57,12 +61,20 @@ export interface EntityListenerOverloads
      * Called before an user reads this entity's properties.
      */
     (event: "update", callback: UpdateHandler): void;
+
+    /**
+     * Called after the entity is successfully created.
+     *
+     * Note: this function will not be called if the entity _Constructor() method returns false, since this implies the entity won't be created.
+     */
+     (event: "create", callback: CreateHandler<Type>): void;
 }
 
-export interface EntityEmitterOverloads
+export interface EntityEmitterOverloads<Type extends Entity = Entity>
     extends EmitterOverloads<EntityEvents> {
     (event: "beforeDelete", props: EntityBeforeDeleteEvent): void;
     (event: "delete", props: EntityDeleteEvent): void;
     (event: "render", props: EntityRenderEvent): void;
     (event: "update", props: EntityUpdateEvent): void;
+    (event: "create", props: EntityCreateEvent<Type>): void;
 }

@@ -9,6 +9,7 @@ import {
 import { HasEvents } from "../utils";
 
 import * as _ from "lodash";
+import { EmitterOverloads } from '../utils/HasEvents';
 interface EntityDefaultAttributes {
     type: string;
     owner: User | null;
@@ -104,7 +105,7 @@ export class Entity
         this._owner = owner;
 
         setTimeout(() => {
-            const shouldCreate = this._Config();
+            const shouldCreate = this._Constructor();
 
             if (!shouldCreate) {
                 this.removeAllListeners();
@@ -119,7 +120,7 @@ export class Entity
 
     /**
      * @SharedIO
-     * Config Function
+     * Constructor
      *
      * This is a special function that will be called automatically whenever a new instance of this entity is created.
      *
@@ -133,7 +134,11 @@ export class Entity
      *
      * Decorators such as "@Public" and "@Private" cannot be added to this method.
      */
-    protected _Config(): boolean {
+    protected _Constructor(): boolean {
         return true;
+    }
+
+    public static emit(entity: Entity): EntityEmitterOverloads {
+        return entity.emit;
     }
 }
