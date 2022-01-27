@@ -23,7 +23,7 @@ export interface EmitterOverloads<
     /**
      * Emits an event
      */
-    (event: keyof EventNames, props?: KeyValue): void;
+    (event: keyof EventNames, props?: KeyValue): unknown;
 }
 
 /**
@@ -37,7 +37,7 @@ export abstract class HasEvents<
     /**
      * List of event listeners for different types of events
      */
-    protected _listeners: KeyValue<Function[], keyof Events> = {};
+    private _listeners: KeyValue<Function[], keyof Events> = {};
 
     /**
      * Adds an event listener

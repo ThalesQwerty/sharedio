@@ -25,7 +25,7 @@ export interface AttributeRules {
 /**
  * You know the rules, and so do I
  */
-export class Rules {
+export abstract class Rules {
     /**
      * Lists all the rules
      */

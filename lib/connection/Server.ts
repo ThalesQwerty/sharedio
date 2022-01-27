@@ -254,11 +254,16 @@ export class Server extends HasEvents<ServerEvents, ServerListenerOverloads, Ser
     /**
      * Deletes an entity
      */
-    public deleteEntity(entity: Entity): Entity {
-        this._entities = this._entities.filter(
-            (currentEntity) => !currentEntity.is(entity),
-        );
-        Entity.emit(entity)("delete");
+    public deleteEntity(entity: Entity, user: User|null = null): Entity {
+        if (entity.exists) {
+            this._entities = this._entities.filter(
+                (currentEntity) => !currentEntity.is(entity),
+            );
+            if (Entity.emit(entity)("beforeDelete")) {
+                Entity.emit(entity)("delete");
+            }
+            Entity.emit(entity)("delete");
+        }
         return entity;
     }
 }

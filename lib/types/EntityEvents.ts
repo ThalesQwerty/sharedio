@@ -1,20 +1,27 @@
 import { ListenerOverloads, EmitterOverloads } from "../utils";
 import { ServerTickEvent } from './ServerEvents';
-import { Entity } from '../schema';
+import { Entity, User } from '../schema';
 
-interface EntityCreateEvent<Type extends Entity> {
-    entity: Type
+interface EntityCreateEvent {
+    user: User,
+    entity: Entity
 }
 
-interface EntityDeleteEvent {}
+interface EntityDeleteEvent {
+    user: User,
+    entity: Entity
+}
 
 interface EntityRenderEvent {}
 
 interface EntityUpdateEvent {}
 
-interface EntityBeforeDeleteEvent {}
+interface EntityBeforeDeleteEvent {
+    user: User,
+    entity: Entity
+}
 
-type CreateHandler<Type extends Entity> = (event: EntityCreateEvent<Type>) => void;
+type CreateHandler = (event: EntityCreateEvent) => void;
 type BeforeDeleteHandler = (
     event: EntityBeforeDeleteEvent,
 ) => boolean;
@@ -23,16 +30,16 @@ type RenderHandler = (event: EntityRenderEvent) => void;
 type UpdateHandler = (event: EntityUpdateEvent) => void;
 type TickHandler = (event: ServerTickEvent) => void;
 
-export interface EntityEvents<Type extends Entity = Entity> {
+export interface EntityEvents {
     beforeDelete?: BeforeDeleteHandler[];
     delete?: DeleteHandler[];
     render?: RenderHandler[];
     update?: UpdateHandler[];
     tick?: TickHandler[];
-    create?: CreateHandler<Type>[];
+    create?: CreateHandler[];
 }
 
-export interface EntityListenerOverloads<Type extends Entity = Entity>
+export interface EntityListenerOverloads
     extends ListenerOverloads<EntityEvents> {
 
     /**
@@ -67,14 +74,14 @@ export interface EntityListenerOverloads<Type extends Entity = Entity>
      *
      * Note: this function will not be called if the entity _Constructor() method returns false, since this implies the entity won't be created.
      */
-     (event: "create", callback: CreateHandler<Type>): void;
+     (event: "create", callback: CreateHandler): void;
 }
 
-export interface EntityEmitterOverloads<Type extends Entity = Entity>
+export interface EntityEmitterOverloads
     extends EmitterOverloads<EntityEvents> {
-    (event: "beforeDelete", props: EntityBeforeDeleteEvent): void;
+    (event: "beforeDelete", props: EntityBeforeDeleteEvent): boolean;
     (event: "delete", props: EntityDeleteEvent): void;
     (event: "render", props: EntityRenderEvent): void;
     (event: "update", props: EntityUpdateEvent): void;
-    (event: "create", props: EntityCreateEvent<Type>): void;
+    (event: "create", props: EntityCreateEvent): void;
 }

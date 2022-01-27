@@ -1,15 +1,14 @@
 import { User } from ".";
 import { Server } from "../connection";
 import {
-    KeyValue,
     EntityEvents,
     EntityListenerOverloads,
     EntityEmitterOverloads,
+    KeyValue,
 } from "../types";
 import { HasEvents } from "../utils";
 
 import * as _ from "lodash";
-import { EmitterOverloads } from '../utils/HasEvents';
 interface EntityDefaultAttributes {
     type: string;
     owner: User | null;
@@ -24,7 +23,7 @@ export type EntityDefaultAttributeName =
     | "emit"
     | "constructor"
     | "removeAllListeners"
-    | "_Config";
+    | "_Constructor";
 
 export class Entity
     extends HasEvents<
@@ -44,9 +43,11 @@ export class Entity
         "resetId",
         "emit",
         "on",
+        "delete",
+        "exists",
         "_listeners",
         "removeAllListeners",
-        "_Config",
+        "_Constructor",
     ];
 
     public static isDefaultAttribute(attributeName: string): boolean {
@@ -70,6 +71,17 @@ export class Entity
      */
     public static clone(entity: Entity): Entity {
         return _.cloneDeep(entity);
+    }
+
+    public static emit(
+        entity: Entity,
+    ):
+        | EntityEmitterOverloads
+        | ((
+              event: keyof EntityEvents,
+              props?: KeyValue<any, string | number | symbol>,
+          ) => void) {
+        return entity.emit;
     }
 
     /**
@@ -98,24 +110,40 @@ export class Entity
     }
     private _server: Server;
 
+    /**
+     * Does this entity exist or has it been deleted?
+     */
+    public get exists(): boolean {
+        return this.server.entities.find((currentEntity) =>
+            currentEntity.is(this),
+        )
+            ? true
+            : false;
+    }
+
     constructor(server: Server, owner: User | null = null) {
         super("Entity");
         this._server = server;
         this._type = this.constructor.name;
         this._owner = owner;
 
-        setTimeout(() => {
-            const shouldCreate = this._Constructor();
+        if (!this.exists) this.server.entities.push(this);
 
-            if (!shouldCreate) {
-                this.removeAllListeners();
-                this.server.deleteEntity(this);
-            } else {
-                this.on("delete", () => {
-                    setTimeout(() => this.removeAllListeners(), 0);
-                });
-            }
-        }, 0);
+        this.on("delete", () => {
+            setTimeout(() => this.removeAllListeners(), 0);
+        });
+
+        const shouldCreate = this._Constructor();
+
+        if (shouldCreate) {
+            setTimeout(() => this.emit("create", {
+                entity: this,
+                user: owner,
+            }));
+        } else {
+            this.removeAllListeners();
+            this.delete();
+        }
     }
 
     /**
@@ -138,7 +166,12 @@ export class Entity
         return true;
     }
 
-    public static emit(entity: Entity): EntityEmitterOverloads {
-        return entity.emit;
+    /**
+     * Deletes this entity
+     *
+     * @param user Who is trying to delete? (it's **null** if entity is being deleted by the server)
+     */
+    public delete(user: User | null = null) {
+        this.server.deleteEntity(this, user);
     }
 }
