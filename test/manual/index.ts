@@ -5,7 +5,11 @@ import {
     Private,
     Readonly,
     Internal,
+    Get,
+    Cached,
+    User,
 } from "../../lib";
+
 class Player extends Entity {
     @Public name = "Thales";
     @Public power = 9001;
@@ -18,6 +22,9 @@ class Player extends Entity {
 
     @Private @Readonly immutableSecret = "Hello Person!";
 
+    @Public null = null;
+    @Public undefined = undefined;
+
     @Public
     shoot() {
         // pew
@@ -28,21 +35,30 @@ class Player extends Entity {
         // pew (privately)
     }
 
+    @Get myUserId(user?: User) {
+        return user?.id;
+    }
+
+    @Cached(2000)
+    @Get randomNumber() {
+        return Math.random();
+    }
+
     _Constructor() {
         // setInterval(() => {
         //     this.power = Math.floor(Math.random() * 10000);
         // }, 1000);
-        setTimeout(() => {
-            this.server.deleteEntity(this);
-        }, 1000);
+        // setTimeout(() => {
+        //     this.server.deleteEntity(this);
+        // }, 1000);
 
-        this.on("delete", () => {
-            console.log("Aaaaaand it's gone! It's gone.");
-        })
+        // this.on("delete", () => {
+        //     console.log("Aaaaaand it's gone! It's gone.");
+        // })
 
-        this.on("tick", () => {
-            console.log(this.server.ticks);
-        })
+        // this.on("tick", () => {
+        //     console.log(this.server.ticks);
+        // })
 
         return true;
     }
@@ -51,12 +67,8 @@ class Player extends Entity {
 const server = new Server({
     port: 8080,
     debug: true,
+    tickRate: 1
 }).start();
-
-server.createEntity(Player, {
-    name: "Entity event test",
-    power: 0,
-});
 
 server.on("connection", ({user}) => {
     const owned = server.createEntity(
@@ -64,9 +76,4 @@ server.on("connection", ({user}) => {
         { name: "You", power: 0 },
         user,
     );
-
-    const notOwned = server.createEntity(Player, {
-        name: "They",
-        power: 0,
-    });
 });

@@ -1,4 +1,4 @@
-import { View } from ".";
+import { Entity, View } from ".";
 import { Server, Client } from "../connection";
 import { RandomHex, HasId } from "../utils";
 import * as _ from "lodash";
@@ -62,5 +62,12 @@ export class User extends HasId {
 
         user._client = client;
         return user;
+    }
+
+    /**
+     * Verifies if this user owns an entity
+     */
+    public owns(entity: Entity) {
+        return entity.owner && this.is(entity.owner) ? true : false;
     }
 }

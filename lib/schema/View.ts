@@ -2,6 +2,7 @@ import { User, Entity, Rules, EntityDefaultAttributeName } from ".";
 import { KeyValue, SerializedEntity } from "../types";
 import { Difference } from "../utils";
 import * as _ from "lodash";
+import { Cache } from "./Cache";
 
 /**
  * Class specialized in serializing entities as JSON and sending them to users
@@ -122,25 +123,52 @@ export class View {
             removeAttribute(defaultAttribute);
         }
 
+        const currentEntityCache = Cache.get(entity);
+
         for (const attributeName in clone) {
             if (
                 Entity.defaultAttributes.indexOf(
                     attributeName as EntityDefaultAttributeName,
                 ) < 0
             ) {
-                const value = (clone as any)[attributeName];
+                const rawValue = (clone as any)[attributeName];
                 const rules =
                     Rules.from(entity)[attributeName] ??
                     Rules.default;
+
+                const cached = currentEntityCache[attributeName];
+                const isCached = Object.keys(currentEntityCache).indexOf(attributeName) >= 0;
+
+                let type:"attribute"|"method"|undefined = undefined;
+                let serializedValue = undefined;
 
                 if (
                     rules.visibility === "public" ||
                     (rules.visibility === "private" &&
                         serialized.owned)
                 ) {
-                    if (typeof value === "function")
+                    if (typeof rawValue === "function") {
+                        if (rules.isGetAcessor) {
+                            type = "attribute";
+                            serializedValue = isCached ? cached : (rawValue as Function).call(entity, this.user);
+                        } else {
+                            type = "method";
+                        }
+                    }
+                    else {
+                        type = "attribute";
+                        serializedValue = serialized.state[attributeName] = isCached ? cached : rawValue;
+                    }
+                }
+
+                switch (type) {
+                    case "attribute":
+                        if (rules.cacheDuration > 0 && !isCached) Cache.add(entity, attributeName, serializedValue, rules.cacheDuration);
+                        serialized.state[attributeName] = serializedValue;
+                        break;
+                    case "method":
                         serialized.actions.push(attributeName);
-                    else serialized.state[attributeName] = value;
+                        break;
                 }
             }
         }

@@ -1,10 +1,19 @@
-import { Entity } from ".";
+import { Entity, User } from ".";
 
 export interface RuleSchema {
     [entityType: string]: {
         [attributeName: string]: AttributeRules;
     };
 }
+
+export type GetAcessor = (
+    /**
+     * Who is trying to read this property?
+     *
+     * Value will be undefined if property is being read by the server
+     */
+    user?: User
+) => any;
 
 export interface AttributeRules {
     /**
@@ -20,6 +29,16 @@ export interface AttributeRules {
      * Determines whether or not this attribute can be altered by the entity's owner
      */
     readonly: boolean;
+
+    /**
+     * Determines whether or not this method will be treated as a computed property
+     */
+    isGetAcessor: boolean;
+
+    /**
+     * Determines for how long this property will be cached before being updated again for users
+     */
+    cacheDuration: number;
 }
 
 /**
@@ -44,12 +63,12 @@ export abstract class Rules {
     /**
      * Default ruleset for entities
      */
-    public static get default(): AttributeRules {
-        return {
-            visibility: "public",
-            readonly: false,
-        };
-    }
+    public static readonly default: AttributeRules = {
+        visibility: "public",
+        readonly: false,
+        isGetAcessor: false,
+        cacheDuration: 0
+    };
 
     public static create(entityType: string, attributeName: string): AttributeRules {
         this.schema[entityType] ??= {};
