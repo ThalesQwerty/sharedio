@@ -69,35 +69,35 @@ describe("Decorators", () => {
         checkRules("name", {
             readonly: false,
             visibility: "public",
-            isGetAcessor: false,
+            isGetAccessor: false,
             cacheDuration: 0
         });
 
         checkRules("password", {
             readonly: false,
             visibility: "private",
-            isGetAcessor: false,
+            isGetAccessor: false,
             cacheDuration: 0
         });
 
         checkRules("power", {
             readonly: true,
             visibility: "internal",
-            isGetAcessor: false,
+            isGetAccessor: false,
             cacheDuration: 0
         });
 
         checkRules("color", {
             readonly: true,
             visibility: "public",
-            isGetAcessor: false,
+            isGetAccessor: false,
             cacheDuration: 0
         });
 
         checkRules("secret", {
             readonly: true,
             visibility: "private",
-            isGetAcessor: false,
+            isGetAccessor: false,
             cacheDuration: 0
         });
 

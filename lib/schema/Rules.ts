@@ -6,7 +6,7 @@ export interface RuleSchema {
     };
 }
 
-export type GetAcessor = (
+export type GetAccessor = (
     /**
      * Who is trying to read this property?
      *
@@ -33,7 +33,7 @@ export interface AttributeRules {
     /**
      * Determines whether or not this method will be treated as a computed property
      */
-    isGetAcessor: boolean;
+    isGetAccessor: boolean;
 
     /**
      * Determines for how long this property will be cached before being updated again for users
@@ -66,7 +66,7 @@ export abstract class Rules {
     public static readonly default: AttributeRules = {
         visibility: "public",
         readonly: false,
-        isGetAcessor: false,
+        isGetAccessor: false,
         cacheDuration: 0
     };
 

@@ -1,4 +1,4 @@
-import { Entity, Rules, User, GetAcessor } from ".";
+import { Entity, Rules, User, GetAccessor } from ".";
 import { SharedIOError } from "../types";
 
 function prepareSchema(entity: Entity, attributeName: string) {
@@ -66,10 +66,10 @@ export function Readonly(entity: Entity, attributeName: string) {
  *
  * You can pass an optional parameter of type User, that will be the user who's attempting to read this property (undefined if it's being read by the server)
  */
-export function Get(entity: Entity, attributeName: string, descriptor: TypedPropertyDescriptor<GetAcessor>) {
+export function Get(entity: Entity, attributeName: string, descriptor: TypedPropertyDescriptor<GetAccessor>) {
     const rules = prepareSchema(entity, attributeName);
 
-    rules.isGetAcessor = true;
+    rules.isGetAccessor = true;
     rules.readonly = true;
 }
 
@@ -83,7 +83,7 @@ export function Get(entity: Entity, attributeName: string, descriptor: TypedProp
  * @param duration The duration of the cache, in milliseconds (default is 1000)
  */
  export function Cached(duration: number = 1000) {
-    return function Get(entity: Entity, attributeName: string, descriptor: TypedPropertyDescriptor<GetAcessor>) {
+    return function Get(entity: Entity, attributeName: string, descriptor: TypedPropertyDescriptor<GetAccessor>) {
         const rules = prepareSchema(entity, attributeName);
 
         rules.cacheDuration = duration;

@@ -148,7 +148,7 @@ export class View {
                         serialized.owned)
                 ) {
                     if (typeof rawValue === "function") {
-                        if (rules.isGetAcessor) {
+                        if (rules.isGetAccessor) {
                             type = "attribute";
                             serializedValue = isCached ? cached : (rawValue as Function).call(entity, this.user);
                         } else {
