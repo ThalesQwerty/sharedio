@@ -1,7 +1,7 @@
 import { JsonDiffer } from "json-difference";
 import { KeyValue } from "../types";
 
-export interface KeyValueDiff<Type extends KeyValue = KeyValue> {
+export interface KeyValueDifference<Type extends KeyValue = KeyValue> {
     add?: Type;
     remove?: string[];
 }
@@ -9,7 +9,7 @@ export interface KeyValueDiff<Type extends KeyValue = KeyValue> {
 export function Difference<Type extends KeyValue = KeyValue>(
     previous: KeyValue,
     current: KeyValue,
-): KeyValueDiff<Type> {
+): KeyValueDifference<Type> {
     const diff = new JsonDiffer().getDiff(previous, current);
     const _diff: KeyValue = { add: diff.new, remove: diff.removed };
 
@@ -54,5 +54,5 @@ export function Difference<Type extends KeyValue = KeyValue>(
             final.remove.push(key.replace(/\//gm, "."));
         }
 
-    return final as KeyValueDiff<Type>;
+    return final as KeyValueDifference<Type>;
 }

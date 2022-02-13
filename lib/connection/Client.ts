@@ -1,5 +1,5 @@
 import WS from "ws";
-import { Server, SharedIORequest, AuthRequest, PongRequest } from "./";
+import { Server, SharedIORequest, SharedIOResponse, PongRequest } from "./";
 import { RandomHex } from "../utils";
 import { KeyValue, ClientEvents, ClientListenerOverloads, ClientEmitterOverloads} from "../types";
 import { HasEvents } from "../utils";
@@ -107,13 +107,17 @@ export class Client extends HasEvents<ClientEvents, ClientListenerOverloads, Cli
         switch (request.action) {
             case "auth": {
                 this.emit("auth", {
-                    request: request as AuthRequest,
+                    request: request,
                 });
                 this.sendPing();
                 break;
             }
             case "pong": {
-                this.sendPing(request as PongRequest);
+                this.sendPing(request);
+                break;
+            }
+            case "write": {
+                console.log("write", request);
             }
             default: {
                 this.emit("message", {request});
@@ -122,7 +126,11 @@ export class Client extends HasEvents<ClientEvents, ClientListenerOverloads, Cli
         }
     }
 
-    public send(message: KeyValue | string) {
+    /**
+     * Sends a raw message to the client
+     * @param message Message to be sent. It can be a string or a key-value object, which will be sent as JSON.
+     */
+    public sendRaw(message: KeyValue | string) {
         this.ws?.send(
             typeof message === "string"
                 ? message
@@ -130,9 +138,21 @@ export class Client extends HasEvents<ClientEvents, ClientListenerOverloads, Cli
         );
     }
 
-    private sendPing(pong?: PongRequest, reset = false) {
-        const match = pong?.packetId === this._currentPacketId;
-        if (reset || match) {
+    /**
+     * Sends a message to the client
+     * @param message Message to be sent. It has to be one of the possible SharedIO response types
+     */
+    public send(message: SharedIOResponse) {
+        this.sendRaw(message);
+    }
+
+    /**
+     * Sends a new "ping" message to the client and calculates the connection round trip time
+     * @param pongRequest The pong sent by the client in response to the last packet
+     */
+    private sendPing(pongRequest?: PongRequest) {
+        const match = pongRequest?.packetId === this._currentPacketId;
+        if (!pongRequest || match) {
             this._currentPacketId = RandomHex(8);
             if (match) {
                 this._lastPings.push(this.server.time);
@@ -142,17 +162,17 @@ export class Client extends HasEvents<ClientEvents, ClientListenerOverloads, Cli
 
         this.log(`Sending ping: ${this._currentPacketId}`);
 
-        // this.send({
-        //     action: "ping",
-        //     packetId: this._currentPacketId,
-        //     roundTripTime: this.ping,
-        //     packetLossRatio: this.packetLoss,
-        // });
+        this.send({
+            action: "ping",
+            packetId: this._currentPacketId,
+            roundTripTime: this.ping,
+            packetLossRatio: this.packetLoss,
+        });
         this._packetsSent++;
 
         if (this._packetTimeout) clearTimeout(this._packetTimeout);
         this._packetTimeout = setTimeout(() => {
-            this.sendPing(undefined, true);
+            this.sendPing();
         }, PING_SAMPLE_TIME * 1000);
     }
 }

@@ -1,5 +1,6 @@
 import { SharedIORequest, AuthRequest, PongRequest } from "..";
 import { ListenerOverloads, EmitterOverloads } from "../utils";
+import { WriteRequest } from '../connection/Request';
 
 interface ClientAuthEvent {
     request: AuthRequest;
@@ -13,17 +14,23 @@ interface ClientPongEvent {
     request: PongRequest;
 }
 
+interface ClientWriteEvent {
+    request: WriteRequest;
+}
+
 interface ClientCloseEvent {}
 
 type AuthHandler = (event: ClientAuthEvent) => void;
 type MessageHandler = (event: ClientMessageEvent) => void;
 type PongHandler = (event: ClientPongEvent) => void;
+type WriteHandler = (event: ClientWriteEvent) => void;
 type CloseHandler = () => void;
 
 export interface ClientEvents {
     auth?: AuthHandler[];
     message?: MessageHandler[];
     pong?: PongHandler[];
+    write?: WriteHandler[];
     close?: CloseHandler[];
 }
 
@@ -45,6 +52,11 @@ export interface ClientListenerOverloads
     (event: "pong", callback: PongHandler): void;
 
     /**
+     * This function will be called when a user attempts to edit a entity's attributes
+     */
+     (event: "write", callback: WriteHandler): void;
+
+    /**
      * This function will be called when an user disconnects
      */
     (event: "close", callback: CloseHandler): void;
@@ -55,5 +67,6 @@ export interface ClientEmitterOverloads
     (event: "auth", props: ClientAuthEvent): void;
     (event: "message", props: ClientMessageEvent): void;
     (event: "pong", props: ClientPongEvent): void;
+    (event: "write", props: ClientWriteEvent): void;
     (event: "close"): void;
 }
