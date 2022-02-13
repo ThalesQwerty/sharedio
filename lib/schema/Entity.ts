@@ -174,10 +174,4 @@ export class Entity
     public delete(user: User | null = null) {
         this.server.deleteEntity(this, user);
     }
-
-    protected get(property: keyof this) {
-
-    }
-
-    protected watch:{[property in keyof this]?: (value: unknown) => unknown} = {};
 }
