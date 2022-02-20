@@ -5,8 +5,13 @@ import {
     EntityListenerOverloads,
     EntityEmitterOverloads,
     KeyValue,
+    EntityDefaultAttributeName,
+    EntityAttributeName,
+    EntityAttribute,
+    SerializedEntity,
+    PrintableEntity,
 } from "../types";
-import { HasEvents } from "../utils";
+import { HasEvents, HasId } from "../utils";
 
 import * as _ from "lodash";
 interface EntityDefaultAttributes {
@@ -15,16 +20,6 @@ interface EntityDefaultAttributes {
     server: Server | null;
     constructor?: Function;
 }
-
-export type EntityDefaultAttributeName =
-    | keyof Entity
-    | "resetId"
-    | "_listeners"
-    | "emit"
-    | "constructor"
-    | "removeAllListeners"
-    | "_Constructor";
-
 export class Entity
     extends HasEvents<
         EntityEvents,
@@ -64,6 +59,15 @@ export class Entity
                 return true;
         }
         return false;
+    }
+
+    /**
+     * Finds an entity by its ID.
+     *
+     * Returns null if it fails to find an entity.
+     */
+    public static find(entityId: string): Entity | null {
+        return HasId.find(entityId) as Entity;
     }
 
     /**
@@ -121,11 +125,55 @@ export class Entity
             : false;
     }
 
-    constructor(server: Server, owner: User | null = null) {
+    /**
+     * Generates a simplified key-value pair that represents the entity. Useful for printing things on the console.
+     */
+    public static printable<Type extends Entity>(entity: Type): PrintableEntity<Type> {
+        const clone = Entity.clone(entity);
+        const simplified: KeyValue = { ...clone };
+
+        for (const defaultAttribute of Entity.defaultAttributes) {
+            const value = entity[defaultAttribute];
+
+            if (value instanceof HasId) {
+                simplified[defaultAttribute] = value.id;
+            } else {
+                simplified[defaultAttribute] = value;
+            }
+        }
+
+        for (const defaultAttribute of Entity.defaultAttributes) {
+            const value = entity[defaultAttribute];
+
+            switch (defaultAttribute) {
+                case "id":
+                case "type":
+                    simplified[defaultAttribute] = value;
+                    break;
+                default:
+                    if (value instanceof HasId) {
+                        simplified[defaultAttribute] = value.id;
+                    } else {
+                        delete simplified[defaultAttribute];
+                    }
+                    break;
+            }
+
+            delete simplified["_" + defaultAttribute];
+        }
+
+        return simplified as PrintableEntity<Type>;
+    }
+
+    constructor(
+        server: Server,
+        initialState?: KeyValue<EntityAttribute, EntityAttributeName>,
+        owner?: User | null,
+    ) {
         super("Entity");
         this._server = server;
         this._type = this.constructor.name;
-        this._owner = owner;
+        this._owner = owner ?? null;
 
         if (!this.exists) this.server.entities.push(this);
 
@@ -136,10 +184,19 @@ export class Entity
         const shouldCreate = this._Constructor();
 
         if (shouldCreate) {
-            setTimeout(() => this.emit("create", {
-                entity: this,
-                user: owner,
-            }));
+            this._server.entities.push(this);
+            if (initialState) {
+                Object.keys(initialState).forEach((key) => {
+                    if (key in this)
+                        (this as any)[key] = initialState[key];
+                });
+            }
+            setTimeout(() =>
+                this.emit("create", {
+                    entity: this,
+                    user: owner,
+                }),
+            );
         } else {
             this.removeAllListeners();
             this.delete();

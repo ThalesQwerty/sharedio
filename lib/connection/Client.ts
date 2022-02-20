@@ -3,9 +3,26 @@ import { Server, SharedIORequest, SharedIOResponse, PongRequest } from "./";
 import { RandomHex } from "../utils";
 import { KeyValue, ClientEvents, ClientListenerOverloads, ClientEmitterOverloads} from "../types";
 import { HasEvents } from "../utils";
+import { Entity, User } from "../schema";
 
 const PING_SAMPLE_TIME = 1;
 export class Client extends HasEvents<ClientEvents, ClientListenerOverloads, ClientEmitterOverloads> {
+
+    public get user() {
+        return this._user;
+    }
+    public set user(newUser) {
+        if (newUser) {
+            this.send({
+                action: "auth",
+                userId: newUser.id,
+                token: newUser.token,
+            });
+            this._user = newUser;
+        }
+    }
+    private _user?: User;
+
     public get ws() {
         return this._ws;
     }
@@ -117,7 +134,13 @@ export class Client extends HasEvents<ClientEvents, ClientListenerOverloads, Cli
                 break;
             }
             case "write": {
-                console.log("write", request);
+                if (this.user) {
+                    const entity = Entity.find(request.entityId);
+
+                    if (entity) {
+                        this.user.action.write(entity, request.props);
+                    }
+                }
             }
             default: {
                 this.emit("message", {request});

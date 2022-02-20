@@ -2,11 +2,13 @@ import { RandomHex } from "../utils/RandomHex";
 
 const ID_CHAR_LENGTH = 32;
 
+export type id<preffix extends string> = `${preffix}_${string}`;
+
 /**
  * Base class for all objects that have a random and unique hex ID associated with them
  */
 export abstract class HasId {
-    private get prefix() {
+    private get preffix() {
         return this.id.indexOf("_") < 0 ? "" : this.id.split("_")[0];
     }
 
@@ -45,32 +47,32 @@ export abstract class HasId {
     /**
      * Finds a SharedIO object by its ID
      */
-    public static find<T extends HasId = HasId>(
+    public static find(
         id: string,
-    ): T | null {
+    ): HasId | null {
         if (!id) return null;
 
         const found = this.list.filter((object) => object.id === id);
-        return found ? (found[0] as T) : null;
+        return found ? (found[0] as HasId) : null;
     }
 
     /**
      * Generates a new ID for this object
      */
-    protected resetId(prefix?: string) {
+    protected resetId(preffix?: string) {
         let id = "";
-        prefix = prefix != undefined ? prefix + "_" : this.prefix;
+        preffix = preffix != undefined ? preffix + "_" : this.preffix;
 
         do {
             id = RandomHex(ID_CHAR_LENGTH);
-            this._id = prefix + id;
+            this._id = preffix + id;
         } while (id in HasId.list);
 
         HasId.list.push(this);
     }
 
-    public constructor(prefix: string = "") {
+    public constructor(preffix: string = "") {
         this._id = "placeholder";
-        this.resetId(prefix);
+        this.resetId(preffix);
     }
 }

@@ -6,6 +6,7 @@ import {
     Readonly,
     Internal,
     Get,
+    Set,
     Cached,
     User,
 } from "../../lib";
@@ -71,9 +72,11 @@ const server = new Server({
 }).start();
 
 server.on("connection", ({user}) => {
-    const owned = server.createEntity(
-        Player,
+    const owned = new Player(
+        server,
         { name: "You", power: 0 },
         user,
-    );
+    ).on("create", () => {
+        console.log("new player", Entity.printable(owned));
+    });
 });

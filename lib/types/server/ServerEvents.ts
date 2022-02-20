@@ -1,6 +1,6 @@
-import { User } from "../schema";
-import { ListenerOverloads, EmitterOverloads } from "../utils";
-import { SharedIORequest } from "../connection";
+import { User } from "../../schema";
+import { ListenerOverloads, EmitterOverloads } from "../../utils";
+import { SharedIORequest } from "../../connection";
 
 interface ServerConnectionEvent {
     user: User;

@@ -1,3 +1,4 @@
+export * from "./Action";
 export * from "./Cache";
 export * from "./Decorators";
 export * from "./Entity";

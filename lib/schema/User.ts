@@ -1,4 +1,4 @@
-import { Entity, View } from ".";
+import { Entity, View, Action } from ".";
 import { Server, Client } from "../connection";
 import { RandomHex, HasId } from "../utils";
 import * as _ from "lodash";
@@ -38,6 +38,14 @@ export class User extends HasId {
     }
     private _view: View;
 
+    /**
+     * Attemtps to execute an action as this user
+     */
+    public get action() {
+        return this._action;
+    }
+    private _action: Action;
+
     constructor(server: Server, client: Client) {
         super("User");
 
@@ -45,6 +53,7 @@ export class User extends HasId {
         this._server = server;
         this._token = RandomHex();
         this._view = new View(this);
+        this._action = new Action(this);
     }
 
     /**

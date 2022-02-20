@@ -1,5 +1,5 @@
-import { User, Entity, Rules, EntityDefaultAttributeName } from ".";
-import { KeyValue, SerializedEntity } from "../types";
+import { User, Entity, Rules } from ".";
+import { KeyValue, SerializedEntity, EntityDefaultAttributeName } from "../types";
 import { Difference } from "../utils";
 import * as _ from "lodash";
 import { Cache } from "./Cache";
@@ -98,6 +98,7 @@ export class View {
 
         const serialized: SerializedEntity = {
             owned: false,
+            type: "Entity",
             id: "",
             state: {},
             actions: [],
@@ -112,6 +113,9 @@ export class View {
             switch (defaultAttribute) {
                 case "id":
                     serialized.id = clone.id;
+                    break;
+                case "type":
+                    serialized.type = clone.type;
                     break;
                 case "owner":
                     serialized.owned =

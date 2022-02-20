@@ -1,4 +1,4 @@
-import { KeyValue } from ".";
+import { KeyValue } from "..";
 
 export interface ServerConfig {
     debug?: boolean;

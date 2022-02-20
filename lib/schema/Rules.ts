@@ -6,15 +6,6 @@ export interface RuleSchema {
     };
 }
 
-export type GetAccessor = (
-    /**
-     * Who is trying to read this property?
-     *
-     * Value will be undefined if property is being read by the server
-     */
-    user?: User
-) => any;
-
 export interface AttributeRules {
     /**
      * Determines who can read this attribute

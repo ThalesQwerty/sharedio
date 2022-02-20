@@ -1,5 +1,11 @@
-import { Entity, Rules, User, GetAccessor } from ".";
-import { SharedIOError } from "../types";
+import { Entity, Rules, User } from ".";
+import {
+    SharedIOError,
+    EntityWithAttribute,
+    EntityAttributeName,
+    GetAccessor,
+    SetAccessor,
+} from "../types";
 
 function prepareSchema(entity: Entity, attributeName: string) {
     const type = entity.constructor.name;
@@ -19,7 +25,10 @@ function prepareSchema(entity: Entity, attributeName: string) {
  *
  * All users can read this attribute
  */
-export function Public(entity: Entity, attributeName: string) {
+export function Public<name extends string>(
+    entity: EntityWithAttribute<name>,
+    attributeName: EntityAttributeName<name>,
+) {
     const rules = prepareSchema(entity, attributeName);
 
     rules.visibility = "public";
@@ -30,7 +39,10 @@ export function Public(entity: Entity, attributeName: string) {
  *
  * Only the entity's owner can read this attribute
  */
-export function Private(entity: Entity, attributeName: string) {
+export function Private<name extends string>(
+    entity: EntityWithAttribute<name>,
+    attributeName: EntityAttributeName<name>,
+) {
     const rules = prepareSchema(entity, attributeName);
 
     rules.visibility = "private";
@@ -41,7 +53,10 @@ export function Private(entity: Entity, attributeName: string) {
  *
  * No user can read this attribute, it's server-side only
  */
-export function Internal(entity: Entity, attributeName: string) {
+export function Internal<name extends string>(
+    entity: EntityWithAttribute<name>,
+    attributeName: EntityAttributeName<name>,
+) {
     const rules = prepareSchema(entity, attributeName);
 
     rules.visibility = "internal";
@@ -53,7 +68,10 @@ export function Internal(entity: Entity, attributeName: string) {
  *
  * Users are not allowed to edit this attribute
  */
-export function Readonly(entity: Entity, attributeName: string) {
+export function Readonly<name extends string>(
+    entity: EntityWithAttribute<name>,
+    attributeName: EntityAttributeName<name>,
+) {
     const rules = prepareSchema(entity, attributeName);
 
     rules.readonly = true;
@@ -66,11 +84,34 @@ export function Readonly(entity: Entity, attributeName: string) {
  *
  * You can pass an optional parameter of type User, that will be the user who's attempting to read this property (undefined if it's being read by the server)
  */
-export function Get(entity: Entity, attributeName: string, descriptor: TypedPropertyDescriptor<GetAccessor>) {
+export function Get<name extends string>(
+    entity: EntityWithAttribute<name>,
+    attributeName: EntityAttributeName<name>,
+    descriptor: TypedPropertyDescriptor<GetAccessor>,
+) {
     const rules = prepareSchema(entity, attributeName);
 
     rules.isGetAccessor = true;
     rules.readonly = true;
+}
+
+/**
+ * @SharedIO Rule Decorator
+ *
+ * Turns this into a watched attribute, which means a function will be called every time someone attempts to change it.
+ *
+ * The first parameter of the function is the new value attempting to be written.
+ *
+ * You can also pass an optional second parameter of type User, that will be the user who's attempting to read this property (undefined if it's being read by the server)
+ *
+ * All "set" accessors' names have to start with a underscore (_)
+ */
+export function Set<name extends string>(
+    entity: EntityWithAttribute<name>,
+    attributeName: EntityAttributeName<`_${name}`>,
+    descriptor: TypedPropertyDescriptor<SetAccessor>,
+) {
+    // to-do
 }
 
 /**
@@ -82,10 +123,13 @@ export function Get(entity: Entity, attributeName: string, descriptor: TypedProp
  *
  * @param duration The duration of the cache, in milliseconds (default is 1000)
  */
- export function Cached(duration: number = 1000) {
-    return function Get(entity: Entity, attributeName: string, descriptor: TypedPropertyDescriptor<GetAccessor>) {
+export function Cached(duration: number = 1000) {
+    return function (
+        entity: Entity,
+        attributeName: EntityAttributeName,
+    ) {
         const rules = prepareSchema(entity, attributeName);
 
         rules.cacheDuration = duration;
-    }
+    };
 }

@@ -1,6 +1,6 @@
-import { SharedIORequest, AuthRequest, PongRequest } from "..";
-import { ListenerOverloads, EmitterOverloads } from "../utils";
-import { WriteRequest } from '../connection/Request';
+import { SharedIORequest, AuthRequest, PongRequest } from "../..";
+import { ListenerOverloads, EmitterOverloads } from "../../utils";
+import { WriteRequest } from '../../connection/Request';
 
 interface ClientAuthEvent {
     request: AuthRequest;

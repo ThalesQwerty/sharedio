@@ -10,7 +10,7 @@ export interface ListenerOverloads<
     /**
      * Adds an event listener
      */
-    (event: keyof EventNames, callback: Function): void;
+    (event: keyof EventNames, callback: Function): this;
 }
 
 /**
@@ -44,10 +44,10 @@ export abstract class HasEvents<
      */
     public on:
         | Listeners
-        | ((event: keyof Events, callback: Function) => void) = (
+        | ((event: keyof Events, callback: Function) => this) = (
         event: keyof Events,
         callback: Function,
-    ): void => {
+    ): this => {
         this._listeners[event] ??= [] as any;
 
         if (typeof this._listeners[event] === "function")
@@ -56,6 +56,8 @@ export abstract class HasEvents<
             ] as any[];
 
         this._listeners[event]?.push(callback);
+
+        return this;
     };
 
     /**

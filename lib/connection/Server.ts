@@ -196,11 +196,7 @@ export class Server extends HasEvents<ServerEvents, ServerListenerOverloads, Ser
                 User.auth(newClient, this, token) ||
                 new User(this, newClient);
 
-            newUser.client.send({
-                action: "auth",
-                userId: newUser.id,
-                token: newUser.token,
-            });
+            newClient.user = newUser;
 
             if (!this._users.filter((user) => user.is(newUser))[0]) {
                 this._users.push(newUser);
@@ -234,19 +230,13 @@ export class Server extends HasEvents<ServerEvents, ServerListenerOverloads, Ser
     /**
      * Creates a new entity
      */
-    public createEntity(
+    public createEntity<T extends Entity>(
         Type: typeof Entity,
-        initialState: KeyValue | null | undefined = {},
+        initialState?: KeyValue,
         owner: User | null = null,
-    ): Entity {
-        const newEntity = new Type(this, owner);
+    ): T {
+        const newEntity = new Type(this, initialState, owner) as T;
         this._entities.push(newEntity);
-
-        if (initialState) {
-            Object.keys(initialState).forEach((key) => {
-                (newEntity as any)[key] = initialState[key];
-            });
-        }
 
         return newEntity;
     }

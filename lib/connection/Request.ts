@@ -6,7 +6,7 @@ export interface SharedIOBaseRequest {
 }
 
 export interface SharedIOBaseAction extends SharedIOBaseRequest {
-    entity: string;
+    entityId: string;
 }
 
 export interface AuthRequest extends SharedIOBaseRequest {
