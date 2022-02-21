@@ -11,7 +11,7 @@ export type EntityDefaultAttributeName =
     | "removeAllListeners"
     | "_Constructor";
 
-export type EntityAttributeName<T extends string = string> = T & (T extends EntityDefaultAttributeName ? never : {});
+export type EntityAttributeName<EntityType extends Entity> = Exclude<keyof EntityType, EntityDefaultAttributeName|number|symbol>
 
 type AttributePrimitives = string | number | boolean | null | undefined | HasId;
 export type EntityAttribute = AttributePrimitives | AttributePrimitives[] | KeyValue<AttributePrimitives|AttributePrimitives[]>;

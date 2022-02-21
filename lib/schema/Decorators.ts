@@ -1,3 +1,4 @@
+import _ from "lodash";
 import { Entity, Rules, User } from ".";
 import {
     SharedIOError,
@@ -5,9 +6,49 @@ import {
     EntityAttributeName,
     GetAccessor,
     SetAccessor,
+    KeyValue,
+    EntityUserAccessPolicy,
+    EntityAttributeRules
 } from "../types";
 
-function prepareSchema(entity: Entity, attributeName: string) {
+const userAccessPolicyPresets: KeyValue<EntityUserAccessPolicy, "default"|"public"|"protected"|"private"|"internal"|"readonly"|"writable"|"controlled"> = {
+    default: {
+        read: ["+all"],
+        write: ["+owner"]
+    },
+    public: {
+        read: ["+all"],
+        write: []
+    },
+    protected: {
+        read: ["+insider", "+owner"],
+        write: []
+    },
+    private: {
+        read: ["+owner"],
+        write: []
+    },
+    internal: {
+        read: ["-all"],
+        write: []
+    },
+    readonly: {
+        read: [],
+        write: ["-all"]
+    },
+    writable: {
+        read: [],
+        write: ["+all"]
+    },
+    controlled: {
+        read: ["+host"],
+        write: ["+host"]
+    }
+};
+
+export { userAccessPolicyPresets };
+
+function prepareRuleSchema<EntityType extends Entity>(entity: EntityType, attributeName: EntityAttributeName<EntityType>): EntityAttributeRules {
     const type = entity.constructor.name;
 
     if (Entity.isDefaultAttribute(attributeName)) {
@@ -17,7 +58,35 @@ function prepareSchema(entity: Entity, attributeName: string) {
         );
     }
 
+    console.log(type, attributeName);
+
     return Rules.create(type, attributeName);
+}
+
+function applyUserAccessPolicy(ruleSchema: EntityAttributeRules, accessPolicy: EntityUserAccessPolicy) {
+    const { read, write } = _.cloneDeep(accessPolicy);
+
+    ruleSchema.accessPolicy ??= {read: [], write: []};
+
+    if (read) ruleSchema.accessPolicy.read?.push(...read);
+    if (write) ruleSchema.accessPolicy.write?.push(...write);
+
+    console.log(ruleSchema.accessPolicy);
+}
+
+/**
+ * @SharedIO Rule Decorator
+ *
+ * Creates a custom user access policy
+ */
+export function UsePolicy(accessPolicy: EntityUserAccessPolicy) {
+    return function<EntityType extends Entity>(
+        entity: EntityType,
+        attributeName: EntityAttributeName<EntityType>,
+    ) {
+        const rules = prepareRuleSchema(entity, attributeName);
+        applyUserAccessPolicy(rules, accessPolicy);
+    }
 }
 
 /**
@@ -25,56 +94,108 @@ function prepareSchema(entity: Entity, attributeName: string) {
  *
  * All users can read this attribute
  */
-export function Public<name extends string>(
-    entity: EntityWithAttribute<name>,
-    attributeName: EntityAttributeName<name>,
+export function Public<EntityType extends Entity>(
+    entity: EntityType,
+    attributeName: EntityAttributeName<EntityType>,
 ) {
-    const rules = prepareSchema(entity, attributeName);
+    const rules = prepareRuleSchema(entity, attributeName);
 
     rules.visibility = "public";
+    applyUserAccessPolicy(rules, userAccessPolicyPresets.public);
 }
+
+/**
+ * @SharedIO Rule Decorator
+ *
+ * Only users inside this channel can read this attribute
+ */
+ export function Protected<EntityType extends Entity>(
+    entity: EntityType,
+    attributeName: EntityAttributeName<EntityType>,
+) {
+    const rules = prepareRuleSchema(entity, attributeName);
+
+    applyUserAccessPolicy(rules, userAccessPolicyPresets.protected);
+}
+
 
 /**
  * @SharedIO Rule Decorator
  *
  * Only the entity's owner can read this attribute
  */
-export function Private<name extends string>(
-    entity: EntityWithAttribute<name>,
-    attributeName: EntityAttributeName<name>,
+export function Private<EntityType extends Entity>(
+    entity: EntityType,
+    attributeName: EntityAttributeName<EntityType>,
 ) {
-    const rules = prepareSchema(entity, attributeName);
+    const rules = prepareRuleSchema(entity, attributeName);
 
     rules.visibility = "private";
+    applyUserAccessPolicy(rules, userAccessPolicyPresets.private);
 }
 
 /**
  * @SharedIO Rule Decorator
  *
- * No user can read this attribute, it's server-side only
+ * No user can read this attribute, it's server-side only.
+ *
+ * This decorator is optional, since it's equivalent for using no decorator at all.
  */
-export function Internal<name extends string>(
-    entity: EntityWithAttribute<name>,
-    attributeName: EntityAttributeName<name>,
+export function Internal<EntityType extends Entity>(
+    entity: EntityType,
+    attributeName: EntityAttributeName<EntityType>,
 ) {
-    const rules = prepareSchema(entity, attributeName);
+    const rules = prepareRuleSchema(entity, attributeName);
 
     rules.visibility = "internal";
     rules.readonly = true;
+    applyUserAccessPolicy(rules, userAccessPolicyPresets.internal);
 }
 
 /**
  * @SharedIO Rule Decorator
  *
- * Users are not allowed to edit this attribute
+ * Only the owner of the channel where this entity is in can read or write this attribute.
  */
-export function Readonly<name extends string>(
-    entity: EntityWithAttribute<name>,
-    attributeName: EntityAttributeName<name>,
+ export function Controlled<EntityType extends Entity>(
+    entity: EntityType,
+    attributeName: EntityAttributeName<EntityType>,
 ) {
-    const rules = prepareSchema(entity, attributeName);
+    const rules = prepareRuleSchema(entity, attributeName);
+
+    applyUserAccessPolicy(rules, userAccessPolicyPresets.controlled);
+}
+
+/**
+ * @SharedIO Rule Decorator
+ *
+ * Denies write access to all users (the attribute value can still be altered by the server, though)
+ */
+export function Readonly<EntityType extends Entity>(
+    entity: EntityType,
+    attributeName: EntityAttributeName<EntityType>,
+) {
+    const rules = prepareRuleSchema(entity, attributeName);
 
     rules.readonly = true;
+    applyUserAccessPolicy(rules, userAccessPolicyPresets.readonly);
+}
+
+/**
+ * @SharedIO Rule Decorator
+ *
+ * Grants write access to all users who can view this attribute
+ *
+ * NOTE: This is a dangerous policy, because it's the only one that can allow multiple users to edit simultaneously the same attribute, which can lead to latency issues. Don't use this decorator unless you're 100% sure about what you're doing.
+ */
+ export function Writable<EntityType extends Entity>(
+    entity: EntityType,
+    attributeName: EntityAttributeName<EntityType>,
+) {
+    const rules = prepareRuleSchema(entity, attributeName);
+
+    rules.readonly = true;
+    applyUserAccessPolicy(rules, userAccessPolicyPresets.writable);
 }
 
 /**
@@ -84,12 +205,12 @@ export function Readonly<name extends string>(
  *
  * You can pass an optional parameter of type User, that will be the user who's attempting to read this property (undefined if it's being read by the server)
  */
-export function Get<name extends string>(
-    entity: EntityWithAttribute<name>,
-    attributeName: EntityAttributeName<name>,
+export function Get<EntityType extends Entity>(
+    entity: EntityType,
+    attributeName: EntityAttributeName<EntityType>,
     descriptor: TypedPropertyDescriptor<GetAccessor>,
 ) {
-    const rules = prepareSchema(entity, attributeName);
+    const rules = prepareRuleSchema(entity, attributeName);
 
     rules.isGetAccessor = true;
     rules.readonly = true;
@@ -106,9 +227,9 @@ export function Get<name extends string>(
  *
  * All "set" accessors' names have to start with a underscore (_)
  */
-export function Set<name extends string>(
-    entity: EntityWithAttribute<name>,
-    attributeName: EntityAttributeName<`_${name}`>,
+export function Set<EntityType extends Entity>(
+    entity: EntityType,
+    attributeName: `_${EntityAttributeName<EntityType>}`,
     descriptor: TypedPropertyDescriptor<SetAccessor>,
 ) {
     // to-do
@@ -124,11 +245,11 @@ export function Set<name extends string>(
  * @param duration The duration of the cache, in milliseconds (default is 1000)
  */
 export function Cached(duration: number = 1000) {
-    return function (
-        entity: Entity,
-        attributeName: EntityAttributeName,
+    return function <EntityType extends Entity>(
+        entity: EntityType,
+        attributeName: EntityAttributeName<EntityType>,
     ) {
-        const rules = prepareSchema(entity, attributeName);
+        const rules = prepareRuleSchema(entity, attributeName);
 
         rules.cacheDuration = duration;
     };

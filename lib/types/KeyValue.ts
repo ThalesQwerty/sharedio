@@ -5,5 +5,5 @@ export type KeyValue<
         | number
         | symbol,
 > = {
-    [property in KeyType]?: ValueType;
+    [property in KeyType]: ValueType;
 };

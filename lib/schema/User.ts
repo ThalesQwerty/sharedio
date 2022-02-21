@@ -2,6 +2,7 @@ import { Entity, View, Action } from ".";
 import { Server, Client } from "../connection";
 import { RandomHex, HasId } from "../utils";
 import * as _ from "lodash";
+import { EntityUserRelation } from '../types';
 
 export class User extends HasId {
     /**
@@ -78,5 +79,17 @@ export class User extends HasId {
      */
     public owns(entity: Entity) {
         return entity.owner && this.is(entity.owner) ? true : false;
+    }
+
+    /**
+     * In which categories does this user fall in relation to an entity?
+     */
+    public relations(entity: Entity): EntityUserRelation[] {
+        const relations:EntityUserRelation[] = [];
+
+        if (this.owns(entity)) relations.push("owner");
+        // to-do: host and insider
+
+        return relations;
     }
 }

@@ -167,7 +167,7 @@ export class Entity
 
     constructor(
         server: Server,
-        initialState?: KeyValue<EntityAttribute, EntityAttributeName>,
+        initialState?: KeyValue<EntityAttribute, string>,
         owner?: User | null,
     ) {
         super("Entity");

@@ -9,7 +9,9 @@ import {
     Set,
     Cached,
     User,
+    Rules,
 } from "../../lib";
+import { EntityAttributeName, KeyValue } from "../../lib/types";
 
 class Player extends Entity {
     @Public name = "Thales";
@@ -71,12 +73,21 @@ const server = new Server({
     tickRate: 1
 }).start();
 
+setTimeout(() => console.dir(Rules.schema, { depth: null }), 0);
+
 server.on("connection", ({user}) => {
     const owned = new Player(
         server,
         { name: "You", power: 0 },
         user,
     ).on("create", () => {
-        console.log("new player", Entity.printable(owned));
+        console.log("owned player", Entity.printable(owned));
+    });
+
+    const notOwned = new Player(
+        server,
+        { name: "You", power: 0 }
+    ).on("create", () => {
+        console.log("free player", Entity.printable(notOwned));
     });
 });

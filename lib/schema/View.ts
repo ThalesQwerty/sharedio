@@ -118,10 +118,7 @@ export class View {
                     serialized.type = clone.type;
                     break;
                 case "owner":
-                    serialized.owned =
-                        clone.owner?.id && clone.owner.is(this.user)
-                            ? true
-                            : false;
+                    serialized.owned = !!(clone.owner?.id && clone.owner.is(this.user));
                     break;
             }
             removeAttribute(defaultAttribute);
@@ -146,11 +143,7 @@ export class View {
                 let type:"attribute"|"method"|undefined = undefined;
                 let serializedValue = undefined;
 
-                if (
-                    rules.visibility === "public" ||
-                    (rules.visibility === "private" &&
-                        serialized.owned)
-                ) {
+                if (Rules.verify(this.user, "read", entity as any, attributeName)) {
                     if (typeof rawValue === "function") {
                         if (rules.isGetAccessor) {
                             type = "attribute";
