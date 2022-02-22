@@ -21,22 +21,22 @@ interface EntityBeforeDeleteEvent<EntityType extends Entity = Entity> {
     entity: EntityType
 }
 
-type CreateHandler<EntityType extends Entity = Entity> = (event: EntityCreateEvent<EntityType>) => void;
-type BeforeDeleteHandler<EntityType extends Entity = Entity> = (
+type EntityCreateListener<EntityType extends Entity = Entity> = (event: EntityCreateEvent<EntityType>) => void;
+type EntityBeforeDeleteListener<EntityType extends Entity = Entity> = (
     event: EntityBeforeDeleteEvent<EntityType>,
 ) => boolean;
-type DeleteHandler<EntityType extends Entity = Entity> = (event: EntityDeleteEvent<EntityType>) => void;
-type RenderHandler<EntityType extends Entity = Entity> = (event: EntityRenderEvent<EntityType>) => void;
-type UpdateHandler<EntityType extends Entity = Entity> = (event: EntityUpdateEvent<EntityType>) => void;
-type TickHandler = (event: ServerTickEvent) => void;
+type EntityDeleteListener<EntityType extends Entity = Entity> = (event: EntityDeleteEvent<EntityType>) => void;
+type EntityRenderListener<EntityType extends Entity = Entity> = (event: EntityRenderEvent<EntityType>) => void;
+type EntityUpdateListener<EntityType extends Entity = Entity> = (event: EntityUpdateEvent<EntityType>) => void;
+type EntityTickListener = () => void;
 
 export interface EntityEvents {
-    beforeDelete?: BeforeDeleteHandler[];
-    delete?: DeleteHandler[];
-    render?: RenderHandler[];
-    update?: UpdateHandler[];
-    tick?: TickHandler[];
-    create?: CreateHandler[];
+    beforeDelete?: EntityBeforeDeleteListener[];
+    delete?: EntityDeleteListener[];
+    render?: EntityRenderListener[];
+    update?: EntityUpdateListener[];
+    tick?: EntityTickListener[];
+    create?: EntityCreateListener[];
 }
 
 type RemoveInterfaces<T> = Exclude<T, EntityListenerOverloads|EntityEmitterOverloads>;
@@ -49,35 +49,35 @@ export interface EntityListenerOverloads
      * Called before an user attempts to delete this entity.
      * The return value (true or false) will determine whether or not the user will be able to delete this entity.
      */
-    (event: "beforeDelete", callback: BeforeDeleteHandler): ForceEntity<this>;
+    (event: "beforeDelete", callback: EntityBeforeDeleteListener): ForceEntity<this>;
 
     /**
      * Called right after this entity gets deleted.
      * Useful for implementing cleanup code.
      */
-    (event: "delete", callback: DeleteHandler): ForceEntity<this>;
+    (event: "delete", callback: EntityDeleteListener): ForceEntity<this>;
 
     /**
      * This function will be called every server tick.
      */
-    (event: "tick", callback: TickHandler): ForceEntity<this>;
+    (event: "tick", callback: EntityTickListener): ForceEntity<this>;
 
     /**
      * Called before an user reads this entity's properties.
      */
-    (event: "render", callback: RenderHandler): ForceEntity<this>;
+    (event: "render", callback: EntityRenderListener): ForceEntity<this>;
 
     /**
      * Called before an user reads this entity's properties.
      */
-    (event: "update", callback: UpdateHandler): ForceEntity<this>;
+    (event: "update", callback: EntityUpdateListener): ForceEntity<this>;
 
     /**
      * Called after the entity is successfully created.
      *
      * Note: this function will not be called if the entity's _Constructor() method returns false, since this implies the entity won't be created.
      */
-     (event: "create", callback: CreateHandler): ForceEntity<this>;
+     (event: "create", callback: EntityCreateListener): ForceEntity<this>;
 }
 
 export interface EntityEmitterOverloads

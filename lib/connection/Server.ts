@@ -1,4 +1,4 @@
-import { KeyValue, ServerConfig, ServerEvents, ServerEmitterOverloads, ServerListenerOverloads } from "../types";
+import { KeyValue, ServerConfig, ServerEvents, ServerEmitterOverloads, ServerListenerOverloads, ServerStartListener } from "../types";
 import { User, Entity } from "../schema";
 import { HasEvents } from "../utils";
 import { SharedIORequest, Client } from ".";
@@ -126,7 +126,7 @@ export class Server extends HasEvents<ServerEvents, ServerListenerOverloads, Ser
     /**
      * Initializes the server
      */
-    start(): Server {
+    start(onStart?: ServerStartListener): Server {
         this.stop();
 
         const wss = new WS.Server({
@@ -150,6 +150,11 @@ export class Server extends HasEvents<ServerEvents, ServerListenerOverloads, Ser
 
         wss.on("connection", (ws) => this.handleNewConnection(ws));
         wss.on("close", () => this.handleServerStop(wss));
+
+        if (onStart) {
+            this.on("start", onStart);
+            this.emit("start");
+        }
 
         return this;
     }

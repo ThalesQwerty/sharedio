@@ -20,18 +20,18 @@ interface ClientWriteEvent {
 
 interface ClientCloseEvent {}
 
-type AuthHandler = (event: ClientAuthEvent) => void;
-type MessageHandler = (event: ClientMessageEvent) => void;
-type PongHandler = (event: ClientPongEvent) => void;
-type WriteHandler = (event: ClientWriteEvent) => void;
-type CloseHandler = () => void;
+type ClientAuthListener = (event: ClientAuthEvent) => void;
+type ClientMessageListener = (event: ClientMessageEvent) => void;
+type ClientPongListener = (event: ClientPongEvent) => void;
+type ClientWriteListener = (event: ClientWriteEvent) => void;
+type ClientCloseListener = () => void;
 
 export interface ClientEvents {
-    auth?: AuthHandler[];
-    message?: MessageHandler[];
-    pong?: PongHandler[];
-    write?: WriteHandler[];
-    close?: CloseHandler[];
+    auth?: ClientAuthListener[];
+    message?: ClientMessageListener[];
+    pong?: ClientPongListener[];
+    write?: ClientWriteListener[];
+    close?: ClientCloseListener[];
 }
 
 export interface ClientListenerOverloads
@@ -39,27 +39,27 @@ export interface ClientListenerOverloads
     /**
      * This function will be called when a new user authenticates
      */
-    (event: "auth", callback: AuthHandler): void;
+    (event: "auth", callback: ClientAuthListener): void;
 
     /**
      * This function will be called when a message arrives
      */
-    (event: "message", callback: MessageHandler): void;
+    (event: "message", callback: ClientMessageListener): void;
 
     /**
      * This function will be called when a user responds a "ping" with a "pong"
      */
-    (event: "pong", callback: PongHandler): void;
+    (event: "pong", callback: ClientPongListener): void;
 
     /**
      * This function will be called when a user attempts to edit a entity's attributes
      */
-     (event: "write", callback: WriteHandler): void;
+     (event: "write", callback: ClientWriteListener): void;
 
     /**
      * This function will be called when an user disconnects
      */
-    (event: "close", callback: CloseHandler): void;
+    (event: "close", callback: ClientCloseListener): void;
 }
 
 export interface ClientEmitterOverloads

@@ -26,11 +26,14 @@ export interface EmitterOverloads<
     (event: keyof EventNames, props?: KeyValue): unknown;
 }
 
+export type EventListener<Events, Listeners, Object> = Listeners | ((event: keyof Events, callback: Function) => Object);
+export type EventEmitter<Events, Emitters> = Emitters | ((event: keyof Events, props?: KeyValue) => unknown);
+
 /**
  * Base class for all objects that have custom event listeners
  */
 export abstract class HasEvents<
-    Events extends object,
+    Events extends KeyValue,
     Listeners extends ListenerOverloads<Events>,
     Emitters extends EmitterOverloads<Events>,
 > extends HasId {
@@ -42,9 +45,7 @@ export abstract class HasEvents<
     /**
      * Adds an event listener
      */
-    public on:
-        | Listeners
-        | ((event: keyof Events, callback: Function) => this) = (
+    public on: EventListener<Events, Listeners, this> = (
         event: keyof Events,
         callback: Function,
     ): this => {
@@ -63,9 +64,7 @@ export abstract class HasEvents<
     /**
      * Emits an event, calling its listeners following the order by which they were added
      */
-    protected emit:
-        | Emitters
-        | ((event: keyof Events, props?: KeyValue) => void) = (
+    protected emit: EventEmitter<Events, Emitters> = (
         event: keyof Events,
         props?: KeyValue,
     ): unknown => {
