@@ -6,7 +6,7 @@ import { KeyValue } from "../types";
  */
 export interface ListenerOverloads<
     EventNames extends object = object,
-> {
+    > {
     /**
      * Adds an event listener
      */
@@ -19,7 +19,7 @@ export interface ListenerOverloads<
 
 export interface EmitterOverloads<
     EventNames extends object = object,
-> {
+    > {
     /**
      * Emits an event
      */
@@ -60,6 +60,11 @@ export abstract class HasEvents<
 
         return this;
     };
+
+    /**
+     * Removes an event listener
+     */
+    public readonly off = this.removeAllListeners;
 
     /**
      * Emits an event, calling its listeners following the order by which they were added

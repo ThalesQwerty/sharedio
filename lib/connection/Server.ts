@@ -153,8 +153,11 @@ export class Server extends HasEvents<ServerEvents, ServerListenerOverloads, Ser
 
         if (onStart) {
             this.on("start", onStart);
-            this.emit("start");
         }
+
+        setTimeout(() => {
+            this.emit("start");
+        });
 
         return this;
     }
@@ -170,7 +173,7 @@ export class Server extends HasEvents<ServerEvents, ServerListenerOverloads, Ser
     }
 
     /**
-     * This function dispatches the tick event
+     * This function emits the tick event
      */
     private tick() {
         this._ticks++;

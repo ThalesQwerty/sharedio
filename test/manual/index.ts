@@ -5,13 +5,14 @@ import {
     Private,
     Readonly,
     Internal,
+    Controlled,
+    Writable,
     Get,
     Set,
     Cached,
     User,
     Rules,
 } from "../../lib";
-import { EntityAttributeName, KeyValue } from "../../lib/types";
 
 class Player extends Entity {
     @Public name = "Thales";
@@ -25,8 +26,8 @@ class Player extends Entity {
 
     @Private @Readonly immutableSecret = "Hello Person!";
 
-    @Public null = null;
-    @Public undefined = undefined;
+    // @Public null = null;
+    // @Public undefined = undefined;
 
     @Public
     shoot() {
@@ -42,9 +43,12 @@ class Player extends Entity {
         return user?.id;
     }
 
-    @Cached(2000)
-    @Get randomNumber() {
-        return Math.random();
+    @Public randomNumber = 0;
+
+    serverSideTest = 3;
+
+    @Controlled kick() {
+        // kicks the player (only the host can do that)
     }
 
     _Constructor() {
@@ -71,23 +75,21 @@ const server = new Server({
     port: 8080,
     debug: true,
     tickRate: 1
-}).start();
+}).start(() => {
+    console.dir(Rules.schema, { depth: null });
 
-setTimeout(() => console.dir(Rules.schema, { depth: null }), 0);
+    const newPlayer = new Player(server);
+});
 
 server.on("connection", ({user}) => {
     const owned = new Player(
         server,
         { name: "You", power: 0 },
         user,
-    ).on("create", () => {
-        console.log("owned player", Entity.printable(owned));
-    });
+    );
 
     const notOwned = new Player(
         server,
         { name: "You", power: 0 }
-    ).on("create", () => {
-        console.log("free player", Entity.printable(notOwned));
-    });
+    );
 });

@@ -1,7 +1,7 @@
-import { Entity, userAccessPolicyPresets } from ".";
+import { defaultUserAccessPolicy, Entity, userAccessPolicyPresets } from ".";
 import { EntityAttributeRules, EntityRuleSchema, EntityAttributeName, KeyValue } from '../types';
 import { User } from './User';
-import { EntityUserAccessPolicy, EntityUserRelation, EntityUserAccessModifier } from '../types/entity/EntityRules';
+import { EntityUserAccessPolicyModifier, EntityUserRelation, EntityUserAccessClauseModifier, EntityUserAccessPolicy } from '../types/entity/EntityRules';
 import _ from "lodash";
 
 /**
@@ -27,21 +27,22 @@ export abstract class Rules {
      * Gets the rules from an entity attribute
      */
     public static get<EntityType extends Entity>(entity: EntityType, attributeName: EntityAttributeName<EntityType>) {
-        return this.schema[entity.type][attributeName as string];
+        return this.schema[entity.type][attributeName as string] ?? this.default;
     }
 
     /**
-     * Default ruleset for entities
+     * Default ruleset for entities.
      */
     public static get default() { return _.cloneDeep(this._default) };
-
     private static readonly _default: EntityAttributeRules = {
-        visibility: "public",
+        isDefaultAccessPolicy: {
+            read: true,
+            write: true
+        },
         accessPolicy: {
             read: [],
             write: []
         },
-        readonly: false,
         isGetAccessor: false,
         cacheDuration: 0
     };
@@ -58,29 +59,57 @@ export abstract class Rules {
         setTimeout(() => {
             let { read, write } = rules.accessPolicy;
 
-            if (!read || !read.length) {
-                rules.accessPolicy.read = [...(userAccessPolicyPresets.default.read ?? [])];
+            if ((!read || !read.length) && rules.isDefaultAccessPolicy.read) {
+                read.push(...defaultUserAccessPolicy.read);
             }
-            if (!write || !write.length) {
-                rules.accessPolicy.write = [...(userAccessPolicyPresets.default.write ?? [])];
+            if ((!write || !write.length) && rules.isDefaultAccessPolicy.write) {
+                write.push(...defaultUserAccessPolicy.write);
             }
         }, 0);
 
         return this.schema[entityType][attributeName];
     }
 
+    public static modifyAccessPolicy({ accessPolicy, isDefaultAccessPolicy }: EntityAttributeRules, modifier: EntityUserAccessPolicyModifier) {
+        for (const _clauseType in modifier) {
+            const clauseType = _clauseType as keyof EntityUserAccessPolicyModifier;
+            const clauses = modifier[clauseType] ?? [];
+
+            if (clauses.length) isDefaultAccessPolicy[clauseType] = false;
+            let allowedUserRelations = accessPolicy[clauseType];
+
+            for (const clause of clauses) {
+                const accessModifier = clause.substring(0, 1) as EntityUserAccessClauseModifier;
+                const relationName = clause.substring(1) as EntityUserRelation;
+
+                switch (accessModifier) {
+                    case "+":
+                        if (!allowedUserRelations.find(name => name === relationName)) allowedUserRelations.push(relationName);
+                        break;
+                    case "-":
+                        allowedUserRelations = allowedUserRelations.filter(name => name !== relationName);
+                        break;
+                }
+            }
+
+            accessPolicy[clauseType] = allowedUserRelations;
+        }
+
+        return accessPolicy;
+    }
+
     /**
      * Verifies if a specific user can read or write an entity attribute
      */
-    public static verify<EntityType extends Entity>(user: User, action: keyof EntityUserAccessPolicy, entity: EntityType, attributeName: EntityAttributeName<EntityType>, debug?: boolean): boolean
+    public static verify<EntityType extends Entity>(user: User, action: keyof EntityUserAccessPolicy, entity: EntityType, attributeName: EntityAttributeName<EntityType>): boolean
 
      /**
      * Verifies if some user would be able read or write an entity attribute, given its relation to the entity
      */
-    public static verify<EntityType extends Entity>(userRelation: EntityUserRelation[], action: keyof EntityUserAccessPolicy, entity: EntityType, attributeName: EntityAttributeName<EntityType>, debug?: boolean): boolean
+    public static verify<EntityType extends Entity>(userRelation: EntityUserRelation[], action: keyof EntityUserAccessPolicy, entity: EntityType, attributeName: EntityAttributeName<EntityType>): boolean
 
 
-    public static verify<EntityType extends Entity>(userOrRelation: User|EntityUserRelation[], action: keyof EntityUserAccessPolicy, entity: EntityType, attributeName: EntityAttributeName<EntityType>, debug: boolean = false): boolean {
+    public static verify<EntityType extends Entity>(userOrRelation: User|EntityUserRelation[], action: keyof EntityUserAccessPolicy, entity: EntityType, attributeName: EntityAttributeName<EntityType>): boolean {
         const rules = Rules.get(entity, attributeName);
         const clauses = rules.accessPolicy[action] ?? [];
 
@@ -92,7 +121,7 @@ export abstract class Rules {
         let allowedUserRelations: EntityUserRelation[] = [];
 
         for (const clause of clauses) {
-            const accessModifier = clause.substring(0, 1) as EntityUserAccessModifier;
+            const accessModifier = clause.substring(0, 1) as EntityUserAccessClauseModifier;
             const relationName = clause.substring(1) as EntityUserRelation;
 
             switch (accessModifier) {
@@ -104,8 +133,6 @@ export abstract class Rules {
                     break;
             }
         }
-
-        userRelations.push("all" as EntityUserRelation);
 
         return !!_.intersection(userRelations, allowedUserRelations).length;
     }

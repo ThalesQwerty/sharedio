@@ -1,5 +1,4 @@
 import { ListenerOverloads, EmitterOverloads } from "../../utils";
-import { ServerTickEvent } from '../server/ServerEvents';
 import { Entity, User } from '../../schema';
 
 interface EntityCreateEvent<EntityType extends Entity = Entity> {

@@ -1,5 +1,5 @@
 import { User, Entity, Rules } from ".";
-import { KeyValue, SerializedEntity, EntityDefaultAttributeName } from "../types";
+import { KeyValue, SerializedEntity, EntityReservedAttributeName, EntityAttributeName } from "../types";
 import { Difference } from "../utils";
 import * as _ from "lodash";
 import { Cache } from "./Cache";
@@ -22,7 +22,7 @@ export class View {
     public get current() {
         return this._current;
     }
-    private _current: KeyValue<SerializedEntity> = {};
+    private _current: KeyValue<SerializedEntity, string> = {};
 
     /**
      * Returns a JSON that represents what the user will view in the next server tick
@@ -30,7 +30,7 @@ export class View {
     public get next() {
         return this._next;
     }
-    private _next: KeyValue<SerializedEntity> = {};
+    private _next: KeyValue<SerializedEntity, string> = {};
 
     /**
      * Returns the difference between the current view and the next view as a JSON
@@ -93,7 +93,7 @@ export class View {
     /**
      * Returns a serialized version of an entity, that can be sent as a JSON to the user
      */
-    public serialize(entity: Entity): SerializedEntity {
+    public serialize<EntityType extends Entity>(entity: EntityType): SerializedEntity {
         const clone = Entity.clone(entity);
 
         const serialized: SerializedEntity = {
@@ -109,8 +109,8 @@ export class View {
             delete (clone as any)["_" + name];
         }
 
-        for (const defaultAttribute of Entity.defaultAttributes) {
-            switch (defaultAttribute) {
+        for (const reservedAttribute of Entity.reservedAttributes) {
+            switch (reservedAttribute) {
                 case "id":
                     serialized.id = clone.id;
                     break;
@@ -121,21 +121,21 @@ export class View {
                     serialized.owned = !!(clone.owner?.id && clone.owner.is(this.user));
                     break;
             }
-            removeAttribute(defaultAttribute);
+            removeAttribute(reservedAttribute);
         }
 
         const currentEntityCache = Cache.get(entity);
 
-        for (const attributeName in clone) {
+        for (const _attributeName in clone) {
             if (
-                Entity.defaultAttributes.indexOf(
-                    attributeName as EntityDefaultAttributeName,
+                Entity.reservedAttributes.indexOf(
+                    _attributeName as EntityReservedAttributeName,
                 ) < 0
             ) {
+                const attributeName = _attributeName as EntityAttributeName<EntityType>;
+
                 const rawValue = (clone as any)[attributeName];
-                const rules =
-                    Rules.from(entity)[attributeName] ??
-                    Rules.default;
+                const rules = Rules.get(entity, attributeName);
 
                 const cached = currentEntityCache[attributeName];
                 const isCached = Object.keys(currentEntityCache).indexOf(attributeName) >= 0;

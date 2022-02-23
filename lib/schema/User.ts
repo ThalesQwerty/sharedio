@@ -85,7 +85,7 @@ export class User extends HasId {
      * In which categories does this user fall in relation to an entity?
      */
     public relations(entity: Entity): EntityUserRelation[] {
-        const relations:EntityUserRelation[] = [];
+        const relations:EntityUserRelation[] = ["all"];
 
         if (this.owns(entity)) relations.push("owner");
         // to-do: host and insider

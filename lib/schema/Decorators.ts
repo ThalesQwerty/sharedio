@@ -4,24 +4,26 @@ import {
     SharedIOError,
     EntityWithAttribute,
     EntityAttributeName,
-    GetAccessor,
-    SetAccessor,
+    EntityGetAccessor,
+    EntitySetAccessor,
     KeyValue,
-    EntityUserAccessPolicy,
-    EntityAttributeRules
+    EntityUserAccessPolicyModifier,
+    EntityAttributeRules,
+    EntityUserAccessPolicy
 } from "../types";
 
-const userAccessPolicyPresets: KeyValue<EntityUserAccessPolicy, "default"|"public"|"protected"|"private"|"internal"|"readonly"|"writable"|"controlled"> = {
-    default: {
-        read: ["+all"],
-        write: ["+owner"]
-    },
+const defaultUserAccessPolicy: EntityUserAccessPolicy = {
+    read: ["all"],
+    write: ["owner"]
+};
+
+const userAccessPolicyPresets: KeyValue<EntityUserAccessPolicyModifier, "public" | "protected" | "private" | "internal" | "readonly" | "writable" | "controlled"> = {
     public: {
         read: ["+all"],
         write: []
     },
     protected: {
-        read: ["+insider", "+owner"],
+        read: ["+insider"],
         write: []
     },
     private: {
@@ -46,32 +48,24 @@ const userAccessPolicyPresets: KeyValue<EntityUserAccessPolicy, "default"|"publi
     }
 };
 
-export { userAccessPolicyPresets };
+type EntityDecorator = <EntityType extends Entity>(
+    entity: EntityType,
+    attributeName: EntityAttributeName<EntityType>,
+) => void;
+
+export { defaultUserAccessPolicy, userAccessPolicyPresets };
 
 function prepareRuleSchema<EntityType extends Entity>(entity: EntityType, attributeName: EntityAttributeName<EntityType>): EntityAttributeRules {
     const type = entity.constructor.name;
 
     if (Entity.isDefaultAttribute(attributeName)) {
         throw new SharedIOError(
-            `Decorators cannot be applied to default member "${attributeName}" on entity ${type}.
+            `Decorators cannot be applied to reserved member "${attributeName}" on entity ${type}.
             Please remove the decorators you've added and try to run your code again.`,
         );
     }
 
-    console.log(type, attributeName);
-
     return Rules.create(type, attributeName);
-}
-
-function applyUserAccessPolicy(ruleSchema: EntityAttributeRules, accessPolicy: EntityUserAccessPolicy) {
-    const { read, write } = _.cloneDeep(accessPolicy);
-
-    ruleSchema.accessPolicy ??= {read: [], write: []};
-
-    if (read) ruleSchema.accessPolicy.read?.push(...read);
-    if (write) ruleSchema.accessPolicy.write?.push(...write);
-
-    console.log(ruleSchema.accessPolicy);
 }
 
 /**
@@ -79,13 +73,13 @@ function applyUserAccessPolicy(ruleSchema: EntityAttributeRules, accessPolicy: E
  *
  * Creates a custom user access policy
  */
-export function UsePolicy(accessPolicy: EntityUserAccessPolicy) {
-    return function<EntityType extends Entity>(
+export function UsePolicy(accessPolicy: EntityUserAccessPolicyModifier) {
+    return function <EntityType extends Entity>(
         entity: EntityType,
         attributeName: EntityAttributeName<EntityType>,
     ) {
         const rules = prepareRuleSchema(entity, attributeName);
-        applyUserAccessPolicy(rules, accessPolicy);
+        Rules.modifyAccessPolicy(rules, accessPolicy);
     }
 }
 
@@ -93,93 +87,76 @@ export function UsePolicy(accessPolicy: EntityUserAccessPolicy) {
  * @SharedIO Rule Decorator
  *
  * All users can read this attribute
+ *
+ * Equivalent to:
+ * ```ts
+ * UsePolicy({read: ["+all"]})
+ * ```
  */
-export function Public<EntityType extends Entity>(
-    entity: EntityType,
-    attributeName: EntityAttributeName<EntityType>,
-) {
-    const rules = prepareRuleSchema(entity, attributeName);
-
-    rules.visibility = "public";
-    applyUserAccessPolicy(rules, userAccessPolicyPresets.public);
-}
+const Public: EntityDecorator = UsePolicy(userAccessPolicyPresets.public);
 
 /**
  * @SharedIO Rule Decorator
  *
  * Only users inside this channel can read this attribute
+ *
+ * Equivalent to:
+ * ```ts
+ * UsePolicy({read: ["+insider"]})
  */
- export function Protected<EntityType extends Entity>(
-    entity: EntityType,
-    attributeName: EntityAttributeName<EntityType>,
-) {
-    const rules = prepareRuleSchema(entity, attributeName);
-
-    applyUserAccessPolicy(rules, userAccessPolicyPresets.protected);
-}
-
+const Protected: EntityDecorator = UsePolicy(userAccessPolicyPresets.protected);
 
 /**
  * @SharedIO Rule Decorator
  *
  * Only the entity's owner can read this attribute
+ *
+ * Equivalent to:
+ * ```ts
+ * UsePolicy({read: ["+owner"]})
+ * ```
  */
-export function Private<EntityType extends Entity>(
-    entity: EntityType,
-    attributeName: EntityAttributeName<EntityType>,
-) {
-    const rules = prepareRuleSchema(entity, attributeName);
+const Private: EntityDecorator = UsePolicy(userAccessPolicyPresets.private);
 
-    rules.visibility = "private";
-    applyUserAccessPolicy(rules, userAccessPolicyPresets.private);
-}
 
 /**
  * @SharedIO Rule Decorator
  *
  * No user can read this attribute, it's server-side only.
  *
- * This decorator is optional, since it's equivalent for using no decorator at all.
+ * Equivalent to:
+ * ```ts
+ * UsePolicy({read: ["-all"]})
+ * ```
+ *
+ * This decorator is optional, since it's also equivalent for using no decorator at all.
  */
-export function Internal<EntityType extends Entity>(
-    entity: EntityType,
-    attributeName: EntityAttributeName<EntityType>,
-) {
-    const rules = prepareRuleSchema(entity, attributeName);
-
-    rules.visibility = "internal";
-    rules.readonly = true;
-    applyUserAccessPolicy(rules, userAccessPolicyPresets.internal);
-}
+const Internal: EntityDecorator = UsePolicy(userAccessPolicyPresets.internal);
 
 /**
  * @SharedIO Rule Decorator
  *
  * Only the owner of the channel where this entity is in can read or write this attribute.
+ *
+ * Equivalent to:
+ * ```ts
+ * UsePolicy({read: ["+host"], write: ["+host"]})
+ * ```
  */
- export function Controlled<EntityType extends Entity>(
-    entity: EntityType,
-    attributeName: EntityAttributeName<EntityType>,
-) {
-    const rules = prepareRuleSchema(entity, attributeName);
+const Controlled: EntityDecorator = UsePolicy(userAccessPolicyPresets.controlled);
 
-    applyUserAccessPolicy(rules, userAccessPolicyPresets.controlled);
-}
 
 /**
  * @SharedIO Rule Decorator
  *
  * Denies write access to all users (the attribute value can still be altered by the server, though)
+ *
+ * Equivalent to:
+ * ```ts
+ * UsePolicy({write: ["-all"]})
+ * ```
  */
-export function Readonly<EntityType extends Entity>(
-    entity: EntityType,
-    attributeName: EntityAttributeName<EntityType>,
-) {
-    const rules = prepareRuleSchema(entity, attributeName);
-
-    rules.readonly = true;
-    applyUserAccessPolicy(rules, userAccessPolicyPresets.readonly);
-}
+const Readonly: EntityDecorator = UsePolicy(userAccessPolicyPresets.readonly);
 
 /**
  * @SharedIO Rule Decorator
@@ -187,16 +164,13 @@ export function Readonly<EntityType extends Entity>(
  * Grants write access to all users who can view this attribute
  *
  * NOTE: This is a dangerous policy, because it's the only one that can allow multiple users to edit simultaneously the same attribute, which can lead to latency issues. Don't use this decorator unless you're 100% sure about what you're doing.
+ *
+ * Equivalent to:
+ * ```ts
+ * UsePolicy({write: ["+all"]})
+ * ```
  */
- export function Writable<EntityType extends Entity>(
-    entity: EntityType,
-    attributeName: EntityAttributeName<EntityType>,
-) {
-    const rules = prepareRuleSchema(entity, attributeName);
-
-    rules.readonly = true;
-    applyUserAccessPolicy(rules, userAccessPolicyPresets.writable);
-}
+const Writable: EntityDecorator = UsePolicy(userAccessPolicyPresets.writable);
 
 /**
  * @SharedIO Rule Decorator
@@ -208,12 +182,10 @@ export function Readonly<EntityType extends Entity>(
 export function Get<EntityType extends Entity>(
     entity: EntityType,
     attributeName: EntityAttributeName<EntityType>,
-    descriptor: TypedPropertyDescriptor<GetAccessor>,
+    descriptor: TypedPropertyDescriptor<EntityGetAccessor>,
 ) {
     const rules = prepareRuleSchema(entity, attributeName);
-
     rules.isGetAccessor = true;
-    rules.readonly = true;
 }
 
 /**
@@ -230,7 +202,7 @@ export function Get<EntityType extends Entity>(
 export function Set<EntityType extends Entity>(
     entity: EntityType,
     attributeName: `_${EntityAttributeName<EntityType>}`,
-    descriptor: TypedPropertyDescriptor<SetAccessor>,
+    descriptor: TypedPropertyDescriptor<EntitySetAccessor>,
 ) {
     // to-do
 }
@@ -254,3 +226,5 @@ export function Cached(duration: number = 1000) {
         rules.cacheDuration = duration;
     };
 }
+
+export { Public, Private, Protected, Internal, Controlled, Readonly, Writable };

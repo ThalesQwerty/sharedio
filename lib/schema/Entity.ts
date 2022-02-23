@@ -1,20 +1,20 @@
 import { User } from ".";
-import { Server } from "../connection";
+import { Server } from "../connection/Server";
 import {
     EntityEvents,
     EntityListenerOverloads,
     EntityEmitterOverloads,
     KeyValue,
-    EntityDefaultAttributeName,
+    EntityReservedAttributeName,
     EntityAttributeName,
     EntityAttribute,
     SerializedEntity,
     PrintableEntity,
 } from "../types";
-import { HasEvents, HasId } from "../utils";
+import { HasEvents, HasId, EventListener } from "../utils";
 
 import * as _ from "lodash";
-interface EntityDefaultAttributes {
+interface EntityReservedAttributes {
     type: string;
     owner: User | null;
     server: Server | null;
@@ -26,34 +26,28 @@ export class Entity
         EntityListenerOverloads,
         EntityEmitterOverloads
     >
-    implements EntityDefaultAttributes
+    implements EntityReservedAttributes
 {
-    public static defaultAttributes: EntityDefaultAttributeName[] = [
-        "owner",
-        "type",
-        "server",
-        "id",
-        "is",
-        "constructor",
-        "resetId",
-        "emit",
-        "on",
-        "delete",
-        "exists",
-        "_listeners",
-        "removeAllListeners",
-        "_Constructor",
-    ];
+
+    /**
+     * Lists the names of the reserved entity attributes. Those names cannot be used to create custom attributes.
+     */
+    public static reservedAttributes = [
+        ...Object.getOwnPropertyNames(new Entity(new Server())),
+        ...Object.getOwnPropertyNames(Entity.prototype),
+        ...Object.getOwnPropertyNames(HasId.prototype),
+        ...Object.getOwnPropertyNames(HasEvents.prototype),
+    ] as EntityReservedAttributeName[];
 
     public static isDefaultAttribute(attributeName: string): boolean {
-        for (const defaultAttributeName of this.defaultAttributes) {
+        for (const reservedAttributeName of this.reservedAttributes) {
             if (
-                attributeName === defaultAttributeName ||
+                attributeName === reservedAttributeName ||
                 (attributeName[0] === "_" &&
                     attributeName.substring(1) ===
-                        defaultAttributeName) ||
-                (defaultAttributeName[0] === "_" &&
-                    defaultAttributeName.substring(1) ===
+                        reservedAttributeName) ||
+                (reservedAttributeName[0] === "_" &&
+                    reservedAttributeName.substring(1) ===
                         attributeName)
             )
                 return true;
@@ -96,6 +90,8 @@ export class Entity
     }
     private _type: string;
 
+    public readonly owned: undefined;
+
     /**
      * Returns the user who created this entity
      *
@@ -132,34 +128,34 @@ export class Entity
         const clone = Entity.clone(entity);
         const simplified: KeyValue = { ...clone };
 
-        for (const defaultAttribute of Entity.defaultAttributes) {
-            const value = entity[defaultAttribute];
+        for (const reservedAttribute of Entity.reservedAttributes) {
+            const value = entity[reservedAttribute];
 
             if (value instanceof HasId) {
-                simplified[defaultAttribute] = value.id;
+                simplified[reservedAttribute] = value.id;
             } else {
-                simplified[defaultAttribute] = value;
+                simplified[reservedAttribute] = value;
             }
         }
 
-        for (const defaultAttribute of Entity.defaultAttributes) {
-            const value = entity[defaultAttribute];
+        for (const reservedAttribute of Entity.reservedAttributes) {
+            const value = entity[reservedAttribute];
 
-            switch (defaultAttribute) {
+            switch (reservedAttribute) {
                 case "id":
                 case "type":
-                    simplified[defaultAttribute] = value;
+                    simplified[reservedAttribute] = value;
                     break;
                 default:
                     if (value instanceof HasId) {
-                        simplified[defaultAttribute] = value.id;
+                        simplified[reservedAttribute] = value.id;
                     } else {
-                        delete simplified[defaultAttribute];
+                        delete simplified[reservedAttribute];
                     }
                     break;
             }
 
-            delete simplified["_" + defaultAttribute];
+            delete simplified["_" + reservedAttribute];
         }
 
         return simplified as PrintableEntity<Type>;
@@ -186,10 +182,9 @@ export class Entity
         if (shouldCreate) {
             this._server.entities.push(this);
             if (initialState) {
-                Object.keys(initialState).forEach((key) => {
-                    if (key in this)
-                        (this as any)[key] = initialState[key];
-                });
+                for (const attributeName in initialState) {
+                    if (attributeName in this) (this as any)[attributeName] = initialState[attributeName];
+                }
             }
             setTimeout(() =>
                 this.emit("create", {
