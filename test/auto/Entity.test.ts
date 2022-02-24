@@ -2,7 +2,6 @@ import {
     Server,
     Entity,
     Rules,
-    AttributeRules,
     Public,
     Private,
     Internal,
@@ -42,7 +41,7 @@ class CreatableEntity extends Entity {
     }
 }
 
-describe("Decorators", () => {
+describe("Entity", () => {
     beforeEach(() => {
         server.start();
     });
@@ -96,25 +95,18 @@ describe("Decorators", () => {
     });
 
     it("Emits tick event", (done) => {
-        const entity = new CreatableEntity(server);
+        server.on("start", () => {
+            const entity = new CreatableEntity(server);
+            let lastTickCounter = entity.tickCounter;
 
-        let lastTickCounter = entity.tickCounter;
-
-        const timeout = setTimeout(() => {
-            expect(entity.tickCounter).toBeGreaterThan(
-                lastTickCounter,
-            );
-            done();
-        }, 2000);
-
-        server.on("tick", () => {
-            expect(entity.tickCounter).toBe(lastTickCounter + 1);
-            lastTickCounter = entity.tickCounter;
-            if (entity.tickCounter >= 10) {
-                entity.delete();
-                clearTimeout(timeout);
-                done();
-            }
-        });
+            server.on("tick", () => {
+                expect(entity.tickCounter).toBe(lastTickCounter + 1);
+                lastTickCounter = entity.tickCounter;
+                if (entity.tickCounter >= 1) {
+                    entity.delete();
+                    done();
+                }
+            });
+        })
     });
 });

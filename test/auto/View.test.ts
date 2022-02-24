@@ -2,13 +2,15 @@ import {
     Server,
     Entity,
     Rules,
-    AttributeRules,
     Public,
     Private,
+    Protected,
     Internal,
     Readonly,
+    userAccessPolicyPresets,
 } from "../..";
 import WebSocket from "ws";
+import { EntityAttributeName, EntityAttributeRules, EntityUserAccessPolicy } from "../../lib/types";
 
 jest.setTimeout(10000);
 
@@ -20,28 +22,19 @@ const server = new Server({
 const SERVER_URL = `ws://localhost:${server.config.port}`;
 
 class TestEntity extends Entity {
-    @Public name = "Thales";
+    @Public publicAttr = "public";
+    @Private privateAttr = "private";
+    @Protected protectedAttr = "protected";
+    @Internal internalAttr = "internal";
+    @Readonly readonlyAttr = "readonly";
 
-    @Private password = "Shh...";
-
-    @Internal power = 9001;
-
-    @Readonly color = "#123456";
-
-    @Private @Readonly secret = "Hello Person!";
-
-    @Public
-    shoot() {
-        // pew
-    }
-
-    @Private
-    shootPrivately() {
-        // pew (private)
-    }
+    @Private @Readonly privateReadonlyAttr = "private readonly";
+    @Private @Protected privateProtectedAttr = "private protected";
+    @Protected @Readonly protectedReadonlyAttr = "protected readonly";
+    @Private @Protected @Readonly privateProtectedReadonlyAttr = "private protected readonly";
 }
 
-describe("Decorators", () => {
+describe("View", () => {
     beforeEach(() => {
         server.start();
     });
@@ -56,49 +49,53 @@ describe("Decorators", () => {
 
         const rules = schema.TestEntity;
 
-        function checkRules(name: string, expected: AttributeRules) {
+        function checkAccessPolicy(name: EntityAttributeName<TestEntity>, expected: EntityUserAccessPolicy) {
             expect(rules).toHaveProperty(name);
 
-            for (const key in expected) {
-                expect((rules as any)[name][key]).toBe(
-                    (expected as any)[key],
-                );
-            }
+            const { read, write } = rules[name].accessPolicy;
+
+            expect(read).toBe(expected.read);
+            expect(write).toBe(expected.write);
         }
 
-        checkRules("name", {
-            readonly: false,
-            visibility: "public",
-            isGetAccessor: false,
-            cacheDuration: 0
+        checkAccessPolicy("publicAttr", {
+            read: ["all"],
+            write: ["owner"]
         });
 
-        checkRules("password", {
-            readonly: false,
-            visibility: "private",
-            isGetAccessor: false,
-            cacheDuration: 0
+        checkAccessPolicy("privateAttr", {
+            read: ["owner"],
+            write: ["owner"]
         });
 
-        checkRules("power", {
-            readonly: true,
-            visibility: "internal",
-            isGetAccessor: false,
-            cacheDuration: 0
+        checkAccessPolicy("protectedAttr", {
+            read: ["insider"],
+            write: ["owner"]
         });
 
-        checkRules("color", {
-            readonly: true,
-            visibility: "public",
-            isGetAccessor: false,
-            cacheDuration: 0
+        checkAccessPolicy("internalAttr", {
+            read: [],
+            write: ["owner"]
         });
 
-        checkRules("secret", {
-            readonly: true,
-            visibility: "private",
-            isGetAccessor: false,
-            cacheDuration: 0
+        checkAccessPolicy("privateReadonlyAttr", {
+            read: ["owner"],
+            write: []
+        });
+
+        checkAccessPolicy("privateProtectedAttr", {
+            read: ["owner", "insider"],
+            write: ["owner"]
+        });
+
+        checkAccessPolicy("privateProtectedReadonlyAttr", {
+            read: ["owner", "insider"],
+            write: []
+        });
+
+        checkAccessPolicy("protectedReadonlyAttr", {
+            read: ["insider"],
+            write: []
         });
 
         done();
@@ -116,7 +113,7 @@ describe("Decorators", () => {
             );
         };
 
-        server.on("connection", ({user}) => {
+        server.on("connection", ({ user }) => {
             const owned = server.createEntity(
                 TestEntity,
                 {},
@@ -132,24 +129,29 @@ describe("Decorators", () => {
                 const _owned = view.find(owned);
                 const _notOwned = view.find(notOwned);
 
-                expect(_owned?.owned).toBe(true);
-                expect(_owned?.state).toStrictEqual({
-                    name: owned.name,
-                    password: owned.password,
-                    color: owned.color,
-                    secret: owned.secret,
-                });
-                expect(_owned?.actions).toStrictEqual([
-                    "shoot",
-                    "shootPrivately",
-                ]);
+                type Attrs = EntityAttributeName<TestEntity>[];
 
+                const publicAttrs: Attrs = ["publicAttr", "readonlyAttr"];
+                const privateAttrs: Attrs = ["privateAttr", "privateReadonlyAttr"];
+                const internalAttrs: Attrs = ["internalAttr"];
+
+                expect(_owned?.owned).toBe(true);
                 expect(_notOwned?.owned).toBe(false);
-                expect(_notOwned?.state).toStrictEqual({
-                    name: notOwned.name,
-                    color: notOwned.color,
-                });
-                expect(_notOwned?.actions).toStrictEqual(["shoot"]);
+
+                for (const attr of publicAttrs) {
+                    expect(_owned?.state).toHaveProperty(attr);
+                    expect(_notOwned?.state).toHaveProperty(attr);
+                }
+
+                for (const attr of privateAttrs) {
+                    expect(_owned?.state).toHaveProperty(attr);
+                    expect(_notOwned?.state).not.toHaveProperty(attr);
+                }
+
+                for (const attr of internalAttrs) {
+                    expect(_owned?.state).not.toHaveProperty(attr);
+                    expect(_notOwned?.state).not.toHaveProperty(attr);
+                }
 
                 done();
             });
