@@ -24,4 +24,10 @@ export interface WriteRequest extends SharedIOBaseAction {
     props: KeyValue;
 }
 
-export type SharedIORequest = AuthRequest|PongRequest|WriteRequest;
+export interface CallRequest extends SharedIOBaseAction {
+    action: "call";
+    methodName: string,
+    params: unknown
+}
+
+export type SharedIORequest = AuthRequest|PongRequest|WriteRequest|CallRequest;

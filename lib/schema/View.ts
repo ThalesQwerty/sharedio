@@ -112,13 +112,13 @@ export class View {
         for (const reservedAttribute of Entity.reservedAttributes) {
             switch (reservedAttribute) {
                 case "id":
-                    serialized.id = clone.id;
+                    serialized.id = entity.id;
                     break;
                 case "type":
-                    serialized.type = clone.type;
+                    serialized.type = entity.type;
                     break;
                 case "owner":
-                    serialized.owned = !!(clone.owner?.id && clone.owner.is(this.user));
+                    serialized.owned = !!(entity.owner?.id && entity.owner.is(this.user));
                     break;
             }
             removeAttribute(reservedAttribute);

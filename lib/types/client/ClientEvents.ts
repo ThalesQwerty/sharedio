@@ -1,6 +1,6 @@
 import { SharedIORequest, AuthRequest, PongRequest } from "../..";
 import { ListenerOverloads, EmitterOverloads } from "../../utils";
-import { WriteRequest } from '../../connection/Request';
+import { WriteRequest, CallRequest } from '../../connection/Request';
 
 interface ClientAuthEvent {
     request: AuthRequest;
@@ -18,12 +18,17 @@ interface ClientWriteEvent {
     request: WriteRequest;
 }
 
+interface ClientCallEvent {
+    request: CallRequest;
+};
+
 interface ClientCloseEvent {}
 
 type ClientAuthListener = (event: ClientAuthEvent) => void;
 type ClientMessageListener = (event: ClientMessageEvent) => void;
 type ClientPongListener = (event: ClientPongEvent) => void;
 type ClientWriteListener = (event: ClientWriteEvent) => void;
+type ClientCallListener = (event: ClientCallEvent) => void;
 type ClientCloseListener = () => void;
 
 export interface ClientEvents {
@@ -31,6 +36,7 @@ export interface ClientEvents {
     message?: ClientMessageListener[];
     pong?: ClientPongListener[];
     write?: ClientWriteListener[];
+    call?: ClientCallListener[];
     close?: ClientCloseListener[];
 }
 
@@ -52,9 +58,14 @@ export interface ClientListenerOverloads
     (event: "pong", callback: ClientPongListener): void;
 
     /**
-     * This function will be called when a user attempts to edit a entity's attributes
+     * This function will be called when a user attempts to edit an entity's attributes
      */
      (event: "write", callback: ClientWriteListener): void;
+
+     /**
+     * This function will be called when a user attempts to call an entity's method
+     */
+      (event: "call", callback: ClientCallListener): void;
 
     /**
      * This function will be called when an user disconnects
@@ -68,5 +79,6 @@ export interface ClientEmitterOverloads
     (event: "message", props: ClientMessageEvent): void;
     (event: "pong", props: ClientPongEvent): void;
     (event: "write", props: ClientWriteEvent): void;
+    (event: "call", props: ClientCallEvent): void;
     (event: "close"): void;
 }

@@ -31,12 +31,12 @@ class Player extends Entity {
 
     @Public
     shoot() {
-        // pew
+        console.log("PEW!");
     }
 
     @Private
     shootPrivately() {
-        // pew (privately)
+        console.log("PEW! (privately)");
     }
 
     @Get myUserId(user?: User) {
@@ -75,21 +75,17 @@ const server = new Server({
     port: 8080,
     debug: true,
     tickRate: 1
-}).start(() => {
-    console.dir(Rules.schema, { depth: null });
-
-    const newPlayer = new Player(server);
-});
+}).start();
 
 server.on("connection", ({user}) => {
     const owned = new Player(
         server,
         { name: "You", power: 0 },
-        user,
+        user
     );
 
-    const notOwned = new Player(
-        server,
-        { name: "You", power: 0 }
-    );
+    // const notOwned = new Player(
+    //     server,
+    //     { name: "You", power: 0 }
+    // );
 });

@@ -171,15 +171,13 @@ export class Entity
         this._type = this.constructor.name;
         this._owner = owner ?? null;
 
-        if (!this.exists) this.server.entities.push(this);
-
         this.on("delete", () => {
             setTimeout(() => this.removeAllListeners(), 0);
         });
 
-        const shouldCreate = this._Constructor();
+        const created = this._Constructor();
 
-        if (shouldCreate) {
+        if (created) {
             this._server.entities.push(this);
             if (initialState) {
                 for (const attributeName in initialState) {
@@ -190,7 +188,7 @@ export class Entity
                 this.emit("create", {
                     entity: this,
                     user: owner,
-                }),
+                }), 0
             );
         } else {
             this.removeAllListeners();

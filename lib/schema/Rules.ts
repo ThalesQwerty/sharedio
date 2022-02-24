@@ -118,21 +118,7 @@ export abstract class Rules {
         // Can't write if can't read, bro
         if (action === "write" && !this.verify(userRelations, "read", entity, attributeName)) return false;
 
-        let allowedUserRelations: EntityUserRelation[] = [];
-
-        for (const clause of clauses) {
-            const accessModifier = clause.substring(0, 1) as EntityUserAccessClauseModifier;
-            const relationName = clause.substring(1) as EntityUserRelation;
-
-            switch (accessModifier) {
-                case "+":
-                    if (!allowedUserRelations.find(name => name === relationName)) allowedUserRelations.push(relationName);
-                    break;
-                case "-":
-                    allowedUserRelations = allowedUserRelations.filter(name => name !== relationName);
-                    break;
-            }
-        }
+        let allowedUserRelations: EntityUserRelation[] = clauses;
 
         return !!_.intersection(userRelations, allowedUserRelations).length;
     }

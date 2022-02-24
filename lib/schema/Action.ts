@@ -31,7 +31,6 @@ export class Action {
      * Attempts to write values into an entity's attributes
      */
     public write<EntityType extends Entity>(entity: EntityType, values: KeyValue<any, EntityAttributeName<EntityType>>) {
-        console.log("write", Entity.printable(entity), values);
         const viewed = this._user.view.current[entity.id];
 
         for (const _attributeName in values) {
@@ -46,6 +45,17 @@ export class Action {
                 }
             }
         }
-        console.log("-->", Entity.printable(entity));
+    }
+
+    /**
+     * Attempts to call an entity's method
+     */
+     public call<EntityType extends Entity>(entity: EntityType, methodName: EntityAttributeName<EntityType>, params?: unknown) {
+        const rulesVerification = Rules.verify(this._user, "read", entity, methodName);
+
+        if (rulesVerification && typeof entity[methodName] === "function") {
+            const method = entity[methodName] as unknown as Function;
+            method(params, this._user);
+        }
     }
 }

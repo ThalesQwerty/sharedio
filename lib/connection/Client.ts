@@ -141,6 +141,17 @@ export class Client extends HasEvents<ClientEvents, ClientListenerOverloads, Cli
                         this.user.action.write(entity, request.props);
                     }
                 }
+                break;
+            }
+            case "call": {
+                if (this.user) {
+                    const entity = Entity.find(request.entityId);
+
+                    if (entity) {
+                        this.user.action.call(entity as any, request.methodName, request.params);
+                    }
+                }
+                break;
             }
             default: {
                 this.emit("message", {request});
