@@ -18,6 +18,8 @@ class Player extends Entity {
     @Public name = "Thales";
     @Public power = 9001;
 
+    @Writable superPublic = "wooow";
+
     @Private secret = "Shh...";
 
     @Internal serverSide = 0;
@@ -74,7 +76,9 @@ class Player extends Entity {
 const server = new Server({
     port: 8080,
     debug: true,
-    tickRate: 1
+    tickRate: 1,
+    clientSchemaPath: "../client/src/sharedio",
+    clientSchemaName: "newSchema.ts",
 }).start();
 
 server.on("connection", ({user}) => {

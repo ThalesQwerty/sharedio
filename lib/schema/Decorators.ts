@@ -50,7 +50,7 @@ const userAccessPolicyPresets: KeyValue<EntityUserAccessPolicyModifier, "public"
 
 type EntityDecorator = <EntityType extends Entity>(
     entity: EntityType,
-    attributeName: EntityAttributeName<EntityType>,
+    attributeName: EntityAttributeName<EntityType>
 ) => void;
 
 export { defaultUserAccessPolicy, userAccessPolicyPresets };
@@ -73,13 +73,17 @@ function prepareRuleSchema<EntityType extends Entity>(entity: EntityType, attrib
  *
  * Creates a custom user access policy
  */
-export function UsePolicy(accessPolicy: EntityUserAccessPolicyModifier) {
+export function UsePolicy(accessPolicyModifier: EntityUserAccessPolicyModifier) {
     return function <EntityType extends Entity>(
         entity: EntityType,
-        attributeName: EntityAttributeName<EntityType>,
+        attributeName: EntityAttributeName<EntityType>
     ) {
         const rules = prepareRuleSchema(entity, attributeName);
-        Rules.modifyAccessPolicy(rules, accessPolicy);
+        Rules.modifyAccessPolicy(rules, accessPolicyModifier);
+
+        if (typeof entity[attributeName] === "function") {
+            if (!rules.hasGetAccessor && !rules.hasSetAccessor) rules.isMethod = true;
+        }
     }
 }
 
@@ -185,7 +189,8 @@ export function Get<EntityType extends Entity>(
     descriptor: TypedPropertyDescriptor<EntityGetAccessor>,
 ) {
     const rules = prepareRuleSchema(entity, attributeName);
-    rules.isGetAccessor = true;
+    rules.hasGetAccessor = true;
+    rules.isMethod = false;
 }
 
 /**

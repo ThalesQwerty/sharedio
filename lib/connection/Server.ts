@@ -1,5 +1,5 @@
 import { KeyValue, ServerConfig, ServerEvents, ServerEmitterOverloads, ServerListenerOverloads, ServerStartListener } from "../types";
-import { User, Entity } from "../schema";
+import { User, Entity, Rules, generateClientSchema } from "../schema";
 import { HasEvents } from "../utils";
 import { SharedIORequest, Client } from ".";
 import WS from "ws";
@@ -150,6 +150,15 @@ export class Server extends HasEvents<ServerEvents, ServerListenerOverloads, Ser
 
         wss.on("connection", (ws) => this.handleNewConnection(ws));
         wss.on("close", () => this.handleServerStop(wss));
+
+        this.on("start", () => {
+            if (this.config.clientSchemaPath != null) {
+                generateClientSchema(Rules.schema, this.config.clientSchemaPath, this.config.clientSchemaName);
+            } else {
+                console.warn(`No client schema file is being generated.\nIf you want to automatically generate a schema file to be used in the client-side, use the "clientSchemaPath" attribute of the server configuration.
+                `);
+            }
+        })
 
         if (onStart) {
             this.on("start", onStart);

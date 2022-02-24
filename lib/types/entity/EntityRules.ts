@@ -54,7 +54,14 @@ export interface EntityAttributeRules {
     /**
      * Determines whether or not this method will be treated as a computed property
      */
-    isGetAccessor: boolean;
+    hasGetAccessor: boolean;
+
+    /**
+     * Determines whether or not this method will be treated as a watched property
+     */
+    hasSetAccessor: boolean;
+
+    isMethod: boolean;
 
     /**
      * Determines for how long this property will be cached before being updated again for users

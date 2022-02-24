@@ -43,7 +43,9 @@ export abstract class Rules {
             read: [],
             write: []
         },
-        isGetAccessor: false,
+        isMethod: false,
+        hasSetAccessor: false,
+        hasGetAccessor: false,
         cacheDuration: 0
     };
 
