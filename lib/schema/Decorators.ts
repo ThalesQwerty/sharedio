@@ -274,7 +274,7 @@ export function If<EntitySubtypeNames extends string[] = string[]>(...subtypes: 
 export function Unless<EntitySubtypeNames extends string[] = string[]>(...subtypes: EntitySubtypeNames) {
     return function <EntityType extends Entity>(entity: EntityType, attributeName: EntitySubtypeNames extends EntitySubtypeName<EntityType>[] ? EntityAttributeName<EntityType> : never) {
         return UsePolicy<EntityType>({
-            read: subtypes.map(subtype => `+${subtype}`) as EntityUserAccessPolicyClause<EntityType>[]
+            read: subtypes.map(subtype => `-${subtype}`) as EntityUserAccessPolicyClause<EntityType>[]
         })(entity, attributeName);
     }
 }
