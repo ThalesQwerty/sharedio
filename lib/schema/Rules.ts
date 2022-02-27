@@ -1,5 +1,5 @@
 import { defaultUserAccessPolicy, Entity, userAccessPolicyPresets } from ".";
-import { EntityAttributeRules, EntityRuleSchema, EntityAttributeName, KeyValue } from '../types';
+import { EntityAttributeRules, EntityRuleSchema, EntityAttributeName, KeyValue, SharedIOError } from '../types';
 import { User } from './User';
 import { EntityUserAccessPolicyModifier, EntityUserRelation, EntityUserAccessClauseModifier, EntityUserAccessPolicy } from '../types/entity/EntityRules';
 import _ from "lodash";
@@ -26,8 +26,15 @@ export abstract class Rules {
     /**
      * Gets the rules from an entity attribute
      */
-    public static get<EntityType extends Entity>(entity: EntityType, attributeName: EntityAttributeName<EntityType>) {
-        return this.schema[entity.type][attributeName as string] ?? this.default;
+    public static get<EntityType extends Entity>(entity: EntityType, attributeName: EntityAttributeName<EntityType>): EntityAttributeRules;
+
+    /**
+     * Gets the rules from an entity attribute
+     */
+    public static get<EntityType extends Entity>(entity: string, attributeName: string): EntityAttributeRules;
+
+    public static get<EntityType extends Entity>(entity: EntityType|string, attributeName: string): EntityAttributeRules {
+        return this.schema[typeof entity === "string" ? entity : entity.type][attributeName as string] ?? this.default;
     }
 
     /**
@@ -108,17 +115,28 @@ export abstract class Rules {
      /**
      * Verifies if some user would be able read or write an entity attribute, given its relation to the entity
      */
-    public static verify<EntityType extends Entity>(userRelation: EntityUserRelation[], action: keyof EntityUserAccessPolicy, entity: EntityType, attributeName: EntityAttributeName<EntityType>): boolean
+    public static verify<EntityType extends Entity>(userRelations: EntityUserRelation[], action: keyof EntityUserAccessPolicy, entity: EntityType, attributeName: EntityAttributeName<EntityType>): boolean
 
+ /**
+     * Verifies if some user would be able read or write an entity attribute, given its relation to the entity and the entity type
+     */
+  public static verify<EntityType extends Entity>(userRelations: EntityUserRelation[], action: keyof EntityUserAccessPolicy, entity: string, attributeName: string): boolean
 
-    public static verify<EntityType extends Entity>(userOrRelation: User|EntityUserRelation[], action: keyof EntityUserAccessPolicy, entity: EntityType, attributeName: EntityAttributeName<EntityType>): boolean {
-        const rules = Rules.get(entity, attributeName);
+    public static verify<EntityType extends Entity>(userOrRelations: User|EntityUserRelation[], action: keyof EntityUserAccessPolicy, entityOrType: EntityType|string, attributeName: string): boolean {
+        const entityTypeName = typeof entityOrType === "string" ? entityOrType : entityOrType.type;
+
+        const rules = Rules.get(entityTypeName, attributeName);
         const clauses = rules.accessPolicy[action] ?? [];
 
-        const userRelations = userOrRelation instanceof User ? userOrRelation.relations(entity) : userOrRelation;
+        const userRelations = userOrRelations instanceof User ?
+            (typeof entityOrType !== "string" ?
+                userOrRelations.relations(entityOrType) : new SharedIOError(`Rules.verify(): Third parameter cannot be of type "string" if first parameter is of type "User"`)
+            ) : userOrRelations;
+
+        if (userRelations instanceof SharedIOError) throw userRelations;
 
         // Can't write if can't read, bro
-        if (action === "write" && !this.verify(userRelations, "read", entity, attributeName)) return false;
+        if (action === "write" && !this.verify(userRelations, "read", entityTypeName, attributeName)) return false;
 
         let allowedUserRelations: EntityUserRelation[] = clauses;
 

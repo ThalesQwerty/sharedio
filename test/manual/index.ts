@@ -73,12 +73,19 @@ class Player extends Entity {
     }
 }
 
+class Test extends Entity {
+    @Public hello = "world";
+}
+
 const server = new Server({
     port: 8080,
     debug: true,
     tickRate: 1,
-    clientSchemaPath: "../client/src/sharedio",
-    clientSchemaName: "newSchema.ts",
+    clientSchema: {
+        path: "../client/src/sharedio",
+        fileName: "newSchema.ts",
+        interfaceName: "Entities"
+    }
 }).start();
 
 server.on("connection", ({user}) => {

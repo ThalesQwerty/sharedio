@@ -1,5 +1,22 @@
 import { KeyValue } from "..";
 
+export interface ClientSchemaConfig {
+    /**
+     * Where the client schema should be generated (default is ".")
+     */
+    path?: string;
+
+    /**
+     * The name of the client schema file to be generated (default is "schema.ts")
+     */
+    fileName?: `${string}.ts`;
+
+    /**
+     * The name of the schema interface (default is "Schema")
+     */
+    interfaceName?: string;
+}
+
 export interface ServerConfig {
     debug?: boolean;
     port?: number;
@@ -10,13 +27,5 @@ export interface ServerConfig {
      */
     tickRate?: number;
 
-    /**
-     * Where the client schema should be generated
-     */
-    clientSchemaPath?: string;
-
-    /**
-     * The name of the client schema file to be generated (default is "schema.ts")
-     */
-    clientSchemaName?: `${string}.ts`
+    clientSchema?: ClientSchemaConfig
 }
