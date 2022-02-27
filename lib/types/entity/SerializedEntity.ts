@@ -1,7 +1,7 @@
 import { KeyValue } from "..";
 import { id } from "../../utils";
 import { Entity } from "../..";
-import { EntityReservedAttributeName } from './EntityAttributes';
+import { EntityReservedAttributeName } from "./EntityAttributes";
 
 export interface SerializedEntity {
     id: string;
@@ -11,9 +11,12 @@ export interface SerializedEntity {
     actions: string[];
 }
 
-export type PrintableEntity<Type extends Entity = Entity> = KeyValue<unknown, Exclude<keyof Type, EntityReservedAttributeName>> & {
+export type PrintableEntity<Type extends Entity = Entity> = KeyValue<
+    unknown,
+    Exclude<keyof Type, EntityReservedAttributeName>
+> & {
     id: id<"Entity">;
     type: string;
     owner: id<"User">;
     server: id<"Server">;
-}
+};

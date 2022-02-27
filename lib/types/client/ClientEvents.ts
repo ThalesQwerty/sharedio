@@ -1,6 +1,6 @@
 import { SharedIORequest, AuthRequest, PongRequest } from "../..";
 import { ListenerOverloads, EmitterOverloads } from "../../utils";
-import { WriteRequest, CallRequest } from '../../connection/Request';
+import { WriteRequest, CallRequest } from "../../connection/Request";
 
 interface ClientAuthEvent {
     request: AuthRequest;
@@ -20,7 +20,7 @@ interface ClientWriteEvent {
 
 interface ClientCallEvent {
     request: CallRequest;
-};
+}
 
 interface ClientCloseEvent {}
 
@@ -60,12 +60,12 @@ export interface ClientListenerOverloads
     /**
      * This function will be called when a user attempts to edit an entity's attributes
      */
-     (event: "write", callback: ClientWriteListener): void;
+    (event: "write", callback: ClientWriteListener): void;
 
-     /**
+    /**
      * This function will be called when a user attempts to call an entity's method
      */
-      (event: "call", callback: ClientCallListener): void;
+    (event: "call", callback: ClientCallListener): void;
 
     /**
      * This function will be called when an user disconnects

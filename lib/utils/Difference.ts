@@ -1,7 +1,9 @@
 import { JsonDiffer } from "json-difference";
 import { KeyValue } from "../types";
 
-export interface KeyValueDifference<Type extends KeyValue = KeyValue> {
+export interface KeyValueDifference<
+    Type extends KeyValue = KeyValue,
+> {
     add?: Type;
     remove?: string[];
 }

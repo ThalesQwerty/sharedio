@@ -77,7 +77,7 @@ describe("Entity", () => {
 
         setTimeout(() => {
             expect(entity.hasBeenCreated).toBe(true);
-        })
+        });
 
         done();
     });
@@ -107,6 +107,6 @@ describe("Entity", () => {
                     done();
                 }
             });
-        })
+        });
     });
 });

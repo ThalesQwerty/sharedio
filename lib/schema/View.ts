@@ -1,5 +1,10 @@
 import { User, Entity, Rules } from ".";
-import { KeyValue, SerializedEntity, EntityReservedAttributeName, EntityAttributeName } from "../types";
+import {
+    KeyValue,
+    SerializedEntity,
+    EntityReservedAttributeName,
+    EntityAttributeName,
+} from "../types";
 import { Difference } from "../utils";
 import * as _ from "lodash";
 import { Cache } from "./Cache";
@@ -93,7 +98,9 @@ export class View {
     /**
      * Returns a serialized version of an entity, that can be sent as a JSON to the user
      */
-    public serialize<EntityType extends Entity>(entity: EntityType): SerializedEntity {
+    public serialize<EntityType extends Entity>(
+        entity: EntityType,
+    ): SerializedEntity {
         const clone = Entity.clone(entity);
 
         const serialized: SerializedEntity = {
@@ -118,7 +125,9 @@ export class View {
                     serialized.type = entity.type;
                     break;
                 case "owner":
-                    serialized.owned = !!(entity.owner?.id && entity.owner.is(this.user));
+                    serialized.owned = !!(
+                        entity.owner?.id && entity.owner.is(this.user)
+                    );
                     break;
             }
             removeAttribute(reservedAttribute);
@@ -132,36 +141,61 @@ export class View {
                     _attributeName as EntityReservedAttributeName,
                 ) < 0
             ) {
-                const attributeName = _attributeName as EntityAttributeName<EntityType>;
+                const attributeName =
+                    _attributeName as EntityAttributeName<EntityType>;
 
                 const rawValue = (clone as any)[attributeName];
                 const rules = Rules.get(entity, attributeName);
 
                 const cached = currentEntityCache[attributeName];
-                const isCached = Object.keys(currentEntityCache).indexOf(attributeName) >= 0;
+                const isCached =
+                    Object.keys(currentEntityCache).indexOf(
+                        attributeName,
+                    ) >= 0;
 
-                let type:"attribute"|"method"|undefined = undefined;
+                let type: "attribute" | "method" | undefined =
+                    undefined;
                 let serializedValue = undefined;
 
-                if (Rules.verify(this.user, "read", entity as any, attributeName)) {
+                if (
+                    Rules.verify(
+                        this.user,
+                        "read",
+                        entity as any,
+                        attributeName,
+                    )
+                ) {
                     if (typeof rawValue === "function") {
                         if (rules.hasGetAccessor) {
                             type = "attribute";
-                            serializedValue = isCached ? cached : (rawValue as Function).call(entity, this.user);
+                            serializedValue = isCached
+                                ? cached
+                                : (rawValue as Function).call(
+                                      entity,
+                                      this.user,
+                                  );
                         } else {
                             type = "method";
                         }
-                    }
-                    else {
+                    } else {
                         type = "attribute";
-                        serializedValue = serialized.state[attributeName] = isCached ? cached : rawValue;
+                        serializedValue = serialized.state[
+                            attributeName
+                        ] = isCached ? cached : rawValue;
                     }
                 }
 
                 switch (type) {
                     case "attribute":
-                        if (rules.cacheDuration > 0 && !isCached) Cache.add(entity, attributeName, serializedValue, rules.cacheDuration);
-                        serialized.state[attributeName] = serializedValue;
+                        if (rules.cacheDuration > 0 && !isCached)
+                            Cache.add(
+                                entity,
+                                attributeName,
+                                serializedValue,
+                                rules.cacheDuration,
+                            );
+                        serialized.state[attributeName] =
+                            serializedValue;
                         break;
                     case "method":
                         serialized.actions.push(attributeName);

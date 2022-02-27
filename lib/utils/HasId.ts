@@ -47,9 +47,7 @@ export abstract class HasId {
     /**
      * Finds a SharedIO object by its ID
      */
-    public static find(
-        id: string,
-    ): HasId | null {
+    public static find(id: string): HasId | null {
         if (!id) return null;
 
         const found = this.list.filter((object) => object.id === id);

@@ -1,13 +1,26 @@
 import WS from "ws";
-import { Server, SharedIORequest, SharedIOResponse, PongRequest } from "./";
+import {
+    Server,
+    SharedIORequest,
+    SharedIOResponse,
+    PongRequest,
+} from "./";
 import { RandomHex } from "../utils";
-import { KeyValue, ClientEvents, ClientListenerOverloads, ClientEmitterOverloads} from "../types";
+import {
+    KeyValue,
+    ClientEvents,
+    ClientListenerOverloads,
+    ClientEmitterOverloads,
+} from "../types";
 import { HasEvents } from "../utils";
 import { Entity, User } from "../schema";
 
 const PING_SAMPLE_TIME = 1;
-export class Client extends HasEvents<ClientEvents, ClientListenerOverloads, ClientEmitterOverloads> {
-
+export class Client extends HasEvents<
+    ClientEvents,
+    ClientListenerOverloads,
+    ClientEmitterOverloads
+> {
     public get user() {
         return this._user;
     }
@@ -73,10 +86,7 @@ export class Client extends HasEvents<ClientEvents, ClientListenerOverloads, Cli
 
     private _debugMode = false;
 
-    constructor(
-        ws: WS.WebSocket,
-        server: Server,
-    ) {
+    constructor(ws: WS.WebSocket, server: Server) {
         super("Client");
         this._server = server;
         this._online = false;
@@ -148,13 +158,17 @@ export class Client extends HasEvents<ClientEvents, ClientListenerOverloads, Cli
                     const entity = Entity.find(request.entityId);
 
                     if (entity) {
-                        this.user.action.call(entity as any, request.methodName, request.params);
+                        this.user.action.call(
+                            entity as any,
+                            request.methodName,
+                            request.params,
+                        );
                     }
                 }
                 break;
             }
             default: {
-                this.emit("message", {request});
+                this.emit("message", { request });
                 break;
             }
         }

@@ -10,7 +10,11 @@ import {
     userAccessPolicyPresets,
 } from "../..";
 import WebSocket from "ws";
-import { EntityAttributeName, EntityAttributeRules, EntityUserAccessPolicy } from "../../lib/types";
+import {
+    EntityAttributeName,
+    EntityAttributeRules,
+    EntityUserAccessPolicy,
+} from "../../lib/types";
 
 jest.setTimeout(10000);
 
@@ -31,7 +35,8 @@ class TestEntity extends Entity {
     @Private @Readonly privateReadonlyAttr = "private readonly";
     @Private @Protected privateProtectedAttr = "private protected";
     @Protected @Readonly protectedReadonlyAttr = "protected readonly";
-    @Private @Protected @Readonly privateProtectedReadonlyAttr = "private protected readonly";
+    @Private @Protected @Readonly privateProtectedReadonlyAttr =
+        "private protected readonly";
 }
 
 describe("View", () => {
@@ -49,7 +54,10 @@ describe("View", () => {
 
         const rules = schema.TestEntity;
 
-        function checkAccessPolicy(name: EntityAttributeName<TestEntity>, expected: EntityUserAccessPolicy) {
+        function checkAccessPolicy(
+            name: EntityAttributeName<TestEntity>,
+            expected: EntityUserAccessPolicy,
+        ) {
             expect(rules).toHaveProperty(name);
 
             const { read, write } = rules[name].accessPolicy;
@@ -60,42 +68,42 @@ describe("View", () => {
 
         checkAccessPolicy("publicAttr", {
             read: ["all"],
-            write: ["owner"]
+            write: ["owner"],
         });
 
         checkAccessPolicy("privateAttr", {
             read: ["owner"],
-            write: ["owner"]
+            write: ["owner"],
         });
 
         checkAccessPolicy("protectedAttr", {
             read: ["insider"],
-            write: ["owner"]
+            write: ["owner"],
         });
 
         checkAccessPolicy("internalAttr", {
             read: [],
-            write: ["owner"]
+            write: ["owner"],
         });
 
         checkAccessPolicy("privateReadonlyAttr", {
             read: ["owner"],
-            write: []
+            write: [],
         });
 
         checkAccessPolicy("privateProtectedAttr", {
             read: ["owner", "insider"],
-            write: ["owner"]
+            write: ["owner"],
         });
 
         checkAccessPolicy("privateProtectedReadonlyAttr", {
             read: ["owner", "insider"],
-            write: []
+            write: [],
         });
 
         checkAccessPolicy("protectedReadonlyAttr", {
             read: ["insider"],
-            write: []
+            write: [],
         });
 
         done();
@@ -131,8 +139,14 @@ describe("View", () => {
 
                 type Attrs = EntityAttributeName<TestEntity>[];
 
-                const publicAttrs: Attrs = ["publicAttr", "readonlyAttr"];
-                const privateAttrs: Attrs = ["privateAttr", "privateReadonlyAttr"];
+                const publicAttrs: Attrs = [
+                    "publicAttr",
+                    "readonlyAttr",
+                ];
+                const privateAttrs: Attrs = [
+                    "privateAttr",
+                    "privateReadonlyAttr",
+                ];
                 const internalAttrs: Attrs = ["internalAttr"];
 
                 expect(_owned?.owned).toBe(true);

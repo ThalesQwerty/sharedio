@@ -1,4 +1,11 @@
-import { KeyValue, ServerConfig, ServerEvents, ServerEmitterOverloads, ServerListenerOverloads, ServerStartListener } from "../types";
+import {
+    KeyValue,
+    ServerConfig,
+    ServerEvents,
+    ServerEmitterOverloads,
+    ServerListenerOverloads,
+    ServerStartListener,
+} from "../types";
 import { User, Entity, Rules } from "../schema";
 import { generateClientSchema } from "../scripts";
 import { HasEvents } from "../utils";
@@ -7,7 +14,11 @@ import WS from "ws";
 
 const DEFAULT_PORT = 3000;
 const DEFAULT_TICK_RATE = 64;
-export class Server extends HasEvents<ServerEvents, ServerListenerOverloads, ServerEmitterOverloads> {
+export class Server extends HasEvents<
+    ServerEvents,
+    ServerListenerOverloads,
+    ServerEmitterOverloads
+> {
     static current: Server;
 
     private wss?: WS.Server;
@@ -154,12 +165,15 @@ export class Server extends HasEvents<ServerEvents, ServerListenerOverloads, Ser
 
         this.on("start", () => {
             if (this.config.clientSchema) {
-                generateClientSchema(Rules.schema, this.config.clientSchema);
+                generateClientSchema(
+                    Rules.schema,
+                    this.config.clientSchema,
+                );
             } else {
                 console.warn(`No client schema file is being generated.\nIf you want to automatically generate a schema file to be used in the client-side, use the "clientSchema" attribute of the server configuration.
                 `);
             }
-        })
+        });
 
         if (onStart) {
             this.on("start", onStart);
@@ -219,20 +233,20 @@ export class Server extends HasEvents<ServerEvents, ServerListenerOverloads, Ser
             if (!this._users.filter((user) => user.is(newUser))[0]) {
                 this._users.push(newUser);
                 this.emit("connection", {
-                    user: newUser
+                    user: newUser,
                 });
             }
 
             newClient.on("close", () => {
                 this.emit("disconnection", {
-                    user: newUser
+                    user: newUser,
                 });
                 newUser.view.reset();
-            })
+            });
 
             newClient.on("message", ({ request }) => {
                 this.emit("message", request);
-            })
+            });
         });
     }
 
@@ -256,7 +270,7 @@ export class Server extends HasEvents<ServerEvents, ServerListenerOverloads, Ser
         const newEntity = new Type({
             server: this,
             initialState,
-            owner
+            owner,
         }) as T;
         this._entities.push(newEntity);
 
@@ -266,7 +280,10 @@ export class Server extends HasEvents<ServerEvents, ServerListenerOverloads, Ser
     /**
      * Deletes an entity
      */
-    public deleteEntity(entity: Entity, user: User|null = null): Entity {
+    public deleteEntity(
+        entity: Entity,
+        user: User | null = null,
+    ): Entity {
         if (entity.exists) {
             this._entities = this._entities.filter(
                 (currentEntity) => !currentEntity.is(entity),

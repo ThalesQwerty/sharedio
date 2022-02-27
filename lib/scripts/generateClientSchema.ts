@@ -1,11 +1,23 @@
 import fs from "fs";
 import path from "path";
-import { ClientSchemaConfig, EntityAttributeRules, EntityRuleSchema, EntityVariantName, KeyValue } from "../types";
+import {
+    ClientSchemaConfig,
+    EntityAttributeRules,
+    EntityRuleSchema,
+    EntityVariantName,
+    KeyValue,
+} from "../types";
 import { exec } from "child_process";
 import { Rules } from "..";
 
-export function generateClientSchema(schema: EntityRuleSchema, config: ClientSchemaConfig) {
-    const newPath = path.join(config.path ?? ".", config.fileName ?? "schema.ts");
+export function generateClientSchema(
+    schema: EntityRuleSchema,
+    config: ClientSchemaConfig,
+) {
+    const newPath = path.join(
+        config.path ?? ".",
+        config.fileName ?? "schema.ts",
+    );
 
     let fileContent: string = `
     /*
@@ -16,13 +28,15 @@ export function generateClientSchema(schema: EntityRuleSchema, config: ClientSch
     `;
 
     type EntityVariantNameCombo =
-        EntityVariantName
+        | EntityVariantName
         | `${EntityVariantName}.${EntityVariantName}`
         | `${EntityVariantName}.${EntityVariantName}.${EntityVariantName}`
         | `${EntityVariantName}.${EntityVariantName}.${EntityVariantName}.${EntityVariantName}`;
 
-    const interfaceNames: Partial<KeyValue<string, EntityVariantNameCombo>> = {
-        "all": "Default",
+    const interfaceNames: Partial<
+        KeyValue<string, EntityVariantNameCombo>
+    > = {
+        all: "Default",
 
         "all.isHost": "Host",
         "all.isOwner": "Owner",
@@ -33,10 +47,15 @@ export function generateClientSchema(schema: EntityRuleSchema, config: ClientSch
         "all.isHost.isOwner": "OwnerHost",
 
         "all.isHost.isInside.isOwner": "OwnerHostInside",
-    }
+    };
 
     function isVariantBuiltin(variantName: string) {
-        return variantName === "all" || variantName === "isHost" || variantName === "isInside" || variantName === "isOwner";
+        return (
+            variantName === "all" ||
+            variantName === "isHost" ||
+            variantName === "isInside" ||
+            variantName === "isOwner"
+        );
     }
 
     const libName = "../../lib"; // "sharedio-client";
@@ -64,9 +83,13 @@ export function generateClientSchema(schema: EntityRuleSchema, config: ClientSch
             readonly inside: boolean;
         }
 
-        ${Object.keys(interfaceNames).map(
-        entityVariantCombo => createBaseEntityInterface(entityVariantCombo as EntityVariantNameCombo)
-    ).join(" ")}
+        ${Object.keys(interfaceNames)
+            .map((entityVariantCombo) =>
+                createBaseEntityInterface(
+                    entityVariantCombo as EntityVariantNameCombo,
+                ),
+            )
+            .join(" ")}
     };
     `;
 
@@ -85,84 +108,187 @@ export function generateClientSchema(schema: EntityRuleSchema, config: ClientSch
         delete variants.isInside;
 
         const interfaceNamesWithVariants: KeyValue = {
-            ...interfaceNames
+            ...interfaceNames,
         };
 
         for (const variantName in variants) {
             for (const key in interfaceNamesWithVariants) {
                 const interfaceName = interfaceNamesWithVariants[key];
-                interfaceNamesWithVariants[`${key}.${variantName}`] = interfaceName !== "Default" ? `${interfaceName}${variantName.substring(2)}` : variantName.substring(2);
+                interfaceNamesWithVariants[`${key}.${variantName}`] =
+                    interfaceName !== "Default"
+                        ? `${interfaceName}${variantName.substring(
+                              2,
+                          )}`
+                        : variantName.substring(2);
             }
         }
 
-        fileContent += createEntityNamespace(entityType, Object.keys(interfaceNamesWithVariants).map(
-            key => createEntityInterface(entityType, entitySchema, {
-                current: key.split(".") as EntityVariantName[],
-                currentBuiltin: key.split(".").filter(key => isVariantBuiltin(key)) as EntityVariantName[],
-                custom: Object.keys(variants) as EntityVariantName[]},
-                interfaceNamesWithVariants
-            )
-        ), interfaceNamesWithVariants);
+        fileContent += createEntityNamespace(
+            entityType,
+            Object.keys(interfaceNamesWithVariants).map((key) =>
+                createEntityInterface(
+                    entityType,
+                    entitySchema,
+                    {
+                        current: key.split(
+                            ".",
+                        ) as EntityVariantName[],
+                        currentBuiltin: key
+                            .split(".")
+                            .filter((key) =>
+                                isVariantBuiltin(key),
+                            ) as EntityVariantName[],
+                        custom: Object.keys(
+                            variants,
+                        ) as EntityVariantName[],
+                    },
+                    interfaceNamesWithVariants,
+                ),
+            ),
+            interfaceNamesWithVariants,
+        );
     }
 
     fileContent += `
-    export interface ${config.interfaceName ?? "Schema"} extends SharedIOSchema {
-        ${Object.keys(schema).map(entityType => createEntitySchemaList(entityType)).join(";")}
+    export interface ${
+        config.interfaceName ?? "Schema"
+    } extends SharedIOSchema {
+        ${Object.keys(schema)
+            .map((entityType) => createEntitySchemaList(entityType))
+            .join(";")}
     }`;
 
-    function createBaseEntityInterface(entityVariantCombo: EntityVariantNameCombo) {
-        const entityVariants = entityVariantCombo.split(".") as EntityVariantName[];
+    function createBaseEntityInterface(
+        entityVariantCombo: EntityVariantNameCombo,
+    ) {
+        const entityVariants = entityVariantCombo.split(
+            ".",
+        ) as EntityVariantName[];
         const interfaceName = interfaceNames[entityVariantCombo];
 
         return `
         export interface ${interfaceName}<EntityType extends string> extends Base<EntityType> {
-            readonly owned: ${!!entityVariants.find(entityVariant => entityVariant === "isOwner")};
-            readonly hosted: ${!!entityVariants.find(entityVariant => entityVariant === "isHost")};
-            readonly inside: ${!!entityVariants.find(entityVariant => entityVariant === "isInside")};
+            readonly owned: ${!!entityVariants.find(
+                (entityVariant) => entityVariant === "isOwner",
+            )};
+            readonly hosted: ${!!entityVariants.find(
+                (entityVariant) => entityVariant === "isHost",
+            )};
+            readonly inside: ${!!entityVariants.find(
+                (entityVariant) => entityVariant === "isInside",
+            )};
         }`;
     }
 
-    function createEntityNamespace(entityType: string, entityInterfaces: string[], interfaceNamesWithVariants: KeyValue<string, EntityVariantNameCombo>) {
+    function createEntityNamespace(
+        entityType: string,
+        entityInterfaces: string[],
+        interfaceNamesWithVariants: KeyValue<
+            string,
+            EntityVariantNameCombo
+        >,
+    ) {
         return `
         export namespace ${entityType} {
             ${entityInterfaces.join(" ")}
 
-            export type ${entityType} = ${Object.keys(interfaceNamesWithVariants).map(
-            entityVariantCombo => interfaceNamesWithVariants[entityVariantCombo as EntityVariantNameCombo]
-        ).join("|")};
+            export type ${entityType} = ${Object.keys(
+            interfaceNamesWithVariants,
+        )
+            .map(
+                (entityVariantCombo) =>
+                    interfaceNamesWithVariants[
+                        entityVariantCombo as EntityVariantNameCombo
+                    ],
+            )
+            .join("|")};
         }
         `;
     }
 
-    function createEntityInterface(entityType: string, entityRules: KeyValue<EntityAttributeRules>, variants: {current: EntityVariantName[], currentBuiltin: EntityVariantName[], custom: EntityVariantName[]}, interfaceNamesWithVariants: KeyValue<string, EntityVariantNameCombo>) {
-        const key = variants.current.join(".") as EntityVariantNameCombo;
-        const builtinKey = variants.currentBuiltin.join(".") as EntityVariantNameCombo;
+    function createEntityInterface(
+        entityType: string,
+        entityRules: KeyValue<EntityAttributeRules>,
+        variants: {
+            current: EntityVariantName[];
+            currentBuiltin: EntityVariantName[];
+            custom: EntityVariantName[];
+        },
+        interfaceNamesWithVariants: KeyValue<
+            string,
+            EntityVariantNameCombo
+        >,
+    ) {
+        const key = variants.current.join(
+            ".",
+        ) as EntityVariantNameCombo;
+        const builtinKey = variants.currentBuiltin.join(
+            ".",
+        ) as EntityVariantNameCombo;
 
         const interfaceName = interfaceNamesWithVariants[key];
         const extendedInterfaceName = interfaceNames[builtinKey];
 
-        return interfaceName ? `
+        return interfaceName
+            ? `
         export interface ${interfaceName} extends Entity.${extendedInterfaceName}<"${entityType}"> {
-            ${variants.custom.map(variant =>
-                `readonly ${variant}: ${variants.current.find(v => v === variant) ? "true" : "false"}`
-            ).join(";")}
+            ${variants.custom
+                .map(
+                    (variant) =>
+                        `readonly ${variant}: ${
+                            variants.current.find(
+                                (v) => v === variant,
+                            )
+                                ? "true"
+                                : "false"
+                        }`,
+                )
+                .join(";")}
 
-            ${Object.keys(entityRules).map(
-            attributeName => createEntityInterfaceMember(entityType, attributeName, entityRules[attributeName], variants.current)
-        ).filter(content => content).join(";")}
+            ${Object.keys(entityRules)
+                .map((attributeName) =>
+                    createEntityInterfaceMember(
+                        entityType,
+                        attributeName,
+                        entityRules[attributeName],
+                        variants.current,
+                    ),
+                )
+                .filter((content) => content)
+                .join(";")}
         }
-        ` : "";
+        `
+            : "";
     }
 
-    function createEntityInterfaceMember(entityType: string, attributeName: string, attributeRules: EntityAttributeRules, entityVariants: EntityVariantName[]) {
-        const readable = !attributeRules.isVariant && Rules.verify(entityVariants, "read", entityType, attributeName);
+    function createEntityInterfaceMember(
+        entityType: string,
+        attributeName: string,
+        attributeRules: EntityAttributeRules,
+        entityVariants: EntityVariantName[],
+    ) {
+        const readable =
+            !attributeRules.isVariant &&
+            Rules.verify(
+                entityVariants,
+                "read",
+                entityType,
+                attributeName,
+            );
         if (!readable) return "";
 
-        const writable = Rules.verify(entityVariants, "write", entityType, attributeName);
+        const writable = Rules.verify(
+            entityVariants,
+            "write",
+            entityType,
+            attributeName,
+        );
         const { isMethod } = attributeRules;
         const type = isMethod ? "() => void" : "any";
 
-        return `${writable ? "" : "readonly"} ${attributeName}: ${type}`;
+        return `${
+            writable ? "" : "readonly"
+        } ${attributeName}: ${type}`;
     }
 
     function createEntitySchemaList(entityType: string) {
@@ -172,7 +298,8 @@ export function generateClientSchema(schema: EntityRuleSchema, config: ClientSch
     fs.writeFileSync(newPath, fileContent);
 
     exec(`npx prettier --write ${newPath}`, () => {
-        console.log(`Client schema generated successfully at ${newPath}`)
+        console.log(
+            `Client schema generated successfully at ${newPath}`,
+        );
     });
 }
-

@@ -10,25 +10,40 @@ export type EntityReservedAttributeName =
     | "_listeners"
     | "emit"
     | "constructor"
-    | "removeAllListeners"
+    | "removeAllListeners";
 
 export interface EntityConfig<EntityType extends Entity = Entity> {
-    server: Server,
-    initialState?: Partial<KeyValue<EntityAttribute, EntityAttributeName<EntityType>>>,
-    owner?: User | null,
+    server: Server;
+    initialState?: Partial<
+        KeyValue<EntityAttribute, EntityAttributeName<EntityType>>
+    >;
+    owner?: User | null;
 }
 
-export type EntityAttributeName<EntityType extends Entity> = Exclude<keyof EntityType, EntityReservedAttributeName|number|symbol>
+export type EntityAttributeName<EntityType extends Entity> = Exclude<
+    keyof EntityType,
+    EntityReservedAttributeName | number | symbol
+>;
 
-export type EntityClassName = typeof Entity|string;
+export type EntityClassName = typeof Entity | string;
 
-type AttributePrimitives = string | number | boolean | null | undefined | HasId;
-export type EntityAttribute = AttributePrimitives | AttributePrimitives[] | KeyValue<AttributePrimitives|AttributePrimitives[]>;
+type AttributePrimitives =
+    | string
+    | number
+    | boolean
+    | null
+    | undefined
+    | HasId;
+export type EntityAttribute =
+    | AttributePrimitives
+    | AttributePrimitives[]
+    | KeyValue<AttributePrimitives | AttributePrimitives[]>;
 
 export type EntityMethod = Function;
 
-export type EntityWithAttribute<name extends string> = Entity&{[key in name]: any};
-
+export type EntityWithAttribute<name extends string> = Entity & {
+    [key in name]: any;
+};
 
 export type EntityGetAccessor = (
     /**
@@ -36,7 +51,7 @@ export type EntityGetAccessor = (
      *
      * Value will be undefined if property is being read by the server
      */
-    user?: User
+    user?: User,
 ) => any;
 
 export type EntitySetAccessor = <ValueType = any>(
@@ -50,14 +65,14 @@ export type EntitySetAccessor = <ValueType = any>(
      *
      * Value will be undefined if property is being read by the server
      */
-    user?: User
+    user?: User,
 ) => void;
 
 export type EntityVariant = (
     /**
      * Who is trying to interact with this entity?
      */
-    user?: User
+    user?: User,
 ) => boolean;
 
 /**
@@ -68,15 +83,24 @@ export type EntityVariant = (
  * @insider All users who are inside the entity (only applies if the entity is a channel)
  * @all All users who may interact with the entity
  */
-export type EntityDefaultVariantName = "isOwner"|"isHost"|"isInside"|"all";
-export type EntityCustomVariantName<EntityType extends Entity = Entity> = EntityAttributeName<EntityType>&`is${Capitalize<Letter>}${string}`;
+export type EntityDefaultVariantName =
+    | "isOwner"
+    | "isHost"
+    | "isInside"
+    | "all";
+export type EntityCustomVariantName<
+    EntityType extends Entity = Entity,
+> = EntityAttributeName<EntityType> &
+    `is${Capitalize<Letter>}${string}`;
 
-export type EntityVariantName<EntityType extends Entity = Entity> = EntityDefaultVariantName|EntityCustomVariantName<EntityType>;
+export type EntityVariantName<EntityType extends Entity = Entity> =
+    | EntityDefaultVariantName
+    | EntityCustomVariantName<EntityType>;
 
 /**
  * Allows (+) or denies (-) read/write access for an user class
  */
-export type EntityUserAccessClauseModifier = "+"|"-";
+export type EntityUserAccessClauseModifier = "+" | "-";
 
 /**
  * Allows (+) or denies (-) read/write access to an entity's attribute/method for an user class
@@ -86,30 +110,38 @@ export type EntityUserAccessClauseModifier = "+"|"-";
  * @insider All users who are inside the entity (only applies if the entity is a channel)
  * @all All users who may interact with the entity
  */
-export type EntityUserAccessPolicyClause<EntityType extends Entity = Entity> = `${EntityUserAccessClauseModifier}${EntityVariantName<EntityType>}`;
+export type EntityUserAccessPolicyClause<
+    EntityType extends Entity = Entity,
+> = `${EntityUserAccessClauseModifier}${EntityVariantName<EntityType>}`;
 
 /**
  * Specifies access rules for reading and writing an attribute
  */
-export type EntityUserAccessPolicyModifier<EntityType extends Entity = Entity> = {
-    read?: EntityUserAccessPolicyClause<EntityType>[],
-    write?: EntityUserAccessPolicyClause<EntityType>[]
+export type EntityUserAccessPolicyModifier<
+    EntityType extends Entity = Entity,
+> = {
+    read?: EntityUserAccessPolicyClause<EntityType>[];
+    write?: EntityUserAccessPolicyClause<EntityType>[];
 };
 
-export type EntityUserAccessPolicy<EntityType extends Entity = Entity> = {
-    read: EntityVariantName<EntityType>[],
-    write: EntityVariantName<EntityType>[]
-}
+export type EntityUserAccessPolicy<
+    EntityType extends Entity = Entity,
+> = {
+    read: EntityVariantName<EntityType>[];
+    write: EntityVariantName<EntityType>[];
+};
 
 export interface EntityRuleSchema {
     [entityType: string]: {
         [attributeName: string]: EntityAttributeRules;
     };
 }
-export interface EntityAttributeRules<EntityType extends Entity = Entity> {
+export interface EntityAttributeRules<
+    EntityType extends Entity = Entity,
+> {
     isDefaultAccessPolicy: {
-        [clauseType in keyof EntityUserAccessPolicy<EntityType>]: boolean
-    },
+        [clauseType in keyof EntityUserAccessPolicy<EntityType>]: boolean;
+    };
 
     /**
      * Determines who can read/write this attribute
@@ -130,7 +162,7 @@ export interface EntityAttributeRules<EntityType extends Entity = Entity> {
 
     isMethod: boolean;
 
-    methodImplementation?: Function,
+    methodImplementation?: Function;
 
     /**
      * Determines for how long this property will be cached before being updated again for users

@@ -27,5 +27,5 @@ export interface ServerConfig {
      */
     tickRate?: number;
 
-    clientSchema?: ClientSchemaConfig
+    clientSchema?: ClientSchemaConfig;
 }

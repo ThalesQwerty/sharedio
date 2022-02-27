@@ -19,8 +19,12 @@ interface ServerMessageEvent {
 export interface ServerTickEvent {}
 
 export type ServerStartListener = () => void;
-type ServerConnectionListener = (event: ServerConnectionEvent) => void;
-type ServerDisconnectionListener = (event: ServerDisconnectionEvent) => void;
+type ServerConnectionListener = (
+    event: ServerConnectionEvent,
+) => void;
+type ServerDisconnectionListener = (
+    event: ServerDisconnectionEvent,
+) => void;
 type ServerMessageListener = (event: ServerMessageEvent) => void;
 type ServerTickListener = () => void;
 
@@ -48,7 +52,10 @@ export interface ServerListenerOverloads
     /**
      * This function will be called whenever an user disconnects
      */
-    (event: "disconnection", callback: ServerDisconnectionListener): void;
+    (
+        event: "disconnection",
+        callback: ServerDisconnectionListener,
+    ): void;
 
     /**
      * This function will be called whenever a message is recieved from an user's websocket client

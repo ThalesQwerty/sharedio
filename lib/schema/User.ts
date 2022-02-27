@@ -2,7 +2,7 @@ import { Entity, View, Action, Rules } from ".";
 import { Server, Client } from "../connection";
 import { RandomHex, HasId } from "../utils";
 import * as _ from "lodash";
-import { EntityVariantName } from '../types';
+import { EntityVariantName } from "../types";
 
 export class User extends HasId {
     /**
@@ -84,8 +84,10 @@ export class User extends HasId {
     /**
      * Gets the variants of an entity in realtion to this user
      */
-    public variants<EntityType extends Entity>(entity: EntityType): EntityVariantName<EntityType>[] {
-        const variantNames:EntityVariantName<EntityType>[] = ["all"];
+    public variants<EntityType extends Entity>(
+        entity: EntityType,
+    ): EntityVariantName<EntityType>[] {
+        const variantNames: EntityVariantName<EntityType>[] = ["all"];
 
         if (this.owns(entity)) variantNames.push("isOwner");
 
@@ -94,7 +96,8 @@ export class User extends HasId {
         const entityVariants = Rules.variants(entity);
 
         for (const _variantName in entityVariants) {
-            const variantName = _variantName as EntityVariantName<EntityType>;
+            const variantName =
+                _variantName as EntityVariantName<EntityType>;
             const variant = entityVariants[variantName];
 
             if (variant.call(entity, this)) {

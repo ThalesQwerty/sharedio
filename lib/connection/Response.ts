@@ -1,8 +1,8 @@
-import { KeyValue, SerializedEntity } from '../types';
-import { KeyValueDifference } from '../utils';
+import { KeyValue, SerializedEntity } from "../types";
+import { KeyValueDifference } from "../utils";
 
 export interface SharedIOBaseResponse {
-    action: "auth"|"ping"|"view";
+    action: "auth" | "ping" | "view";
 }
 
 export interface AuthResponse extends SharedIOBaseResponse {
@@ -18,8 +18,13 @@ export interface PingResponse extends SharedIOBaseResponse {
     packetLossRatio: number;
 }
 
-export interface ViewResponse extends KeyValueDifference<KeyValue<SerializedEntity>>, SharedIOBaseResponse {
+export interface ViewResponse
+    extends KeyValueDifference<KeyValue<SerializedEntity>>,
+        SharedIOBaseResponse {
     action: "view";
 }
 
-export type SharedIOResponse = AuthResponse|PingResponse|ViewResponse;
+export type SharedIOResponse =
+    | AuthResponse
+    | PingResponse
+    | ViewResponse;

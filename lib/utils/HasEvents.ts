@@ -6,7 +6,7 @@ import { KeyValue } from "../types";
  */
 export interface ListenerOverloads<
     EventNames extends object = object,
-    > {
+> {
     /**
      * Adds an event listener
      */
@@ -19,15 +19,19 @@ export interface ListenerOverloads<
 
 export interface EmitterOverloads<
     EventNames extends object = object,
-    > {
+> {
     /**
      * Emits an event
      */
     (event: keyof EventNames, props?: KeyValue): unknown;
 }
 
-export type EventListener<Events, Listeners, Object> = Listeners | ((event: keyof Events, callback: Function) => Object);
-export type EventEmitter<Events, Emitters> = Emitters | ((event: keyof Events, props?: KeyValue) => unknown);
+export type EventListener<Events, Listeners, Object> =
+    | Listeners
+    | ((event: keyof Events, callback: Function) => Object);
+export type EventEmitter<Events, Emitters> =
+    | Emitters
+    | ((event: keyof Events, props?: KeyValue) => unknown);
 
 /**
  * Base class for all objects that have custom event listeners
@@ -40,7 +44,8 @@ export abstract class HasEvents<
     /**
      * List of event listeners for different types of events
      */
-    private _listeners: KeyValue<Function[], keyof Events> = {} as KeyValue<Function[], keyof Events>;
+    private _listeners: KeyValue<Function[], keyof Events> =
+        {} as KeyValue<Function[], keyof Events>;
 
     /**
      * Adds an event listener
@@ -76,7 +81,10 @@ export abstract class HasEvents<
         props ??= {};
         let returnedValue: unknown;
         for (const listener of this._listeners[event] ?? []) {
-            returnedValue = (listener as Function)(props, returnedValue);
+            returnedValue = (listener as Function)(
+                props,
+                returnedValue,
+            );
         }
         return returnedValue;
     };

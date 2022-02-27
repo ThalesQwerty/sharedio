@@ -13,53 +13,65 @@ import {
     EntityVariant,
     Letter,
     EntityVariantName,
-    EntityUserAccessPolicyClause
+    EntityUserAccessPolicyClause,
 } from "../types";
 
 const defaultUserAccessPolicy: EntityUserAccessPolicy = {
     read: ["all"],
-    write: ["isOwner"]
+    write: ["isOwner"],
 };
 
-const userAccessPolicyPresets: KeyValue<EntityUserAccessPolicyModifier, "public" | "protected" | "private" | "internal" | "readonly" | "writable" | "controlled"> = {
+const userAccessPolicyPresets: KeyValue<
+    EntityUserAccessPolicyModifier,
+    | "public"
+    | "protected"
+    | "private"
+    | "internal"
+    | "readonly"
+    | "writable"
+    | "controlled"
+> = {
     public: {
         read: ["+all"],
-        write: []
+        write: [],
     },
     protected: {
         read: ["+isInside"],
-        write: []
+        write: [],
     },
     private: {
         read: ["+isOwner"],
-        write: []
+        write: [],
     },
     internal: {
         read: ["-all"],
-        write: []
+        write: [],
     },
     readonly: {
         read: [],
-        write: ["-all"]
+        write: ["-all"],
     },
     writable: {
         read: [],
-        write: ["+all"]
+        write: ["+all"],
     },
     controlled: {
         read: ["+isHost"],
-        write: ["+isHost"]
-    }
+        write: ["+isHost"],
+    },
 };
 
 type EntityDecorator = <EntityType extends Entity>(
     entity: EntityType,
-    attributeName: EntityAttributeName<EntityType>
+    attributeName: EntityAttributeName<EntityType>,
 ) => void;
 
 export { defaultUserAccessPolicy, userAccessPolicyPresets };
 
-function prepareRuleSchema<EntityType extends Entity>(entity: EntityType, attributeName: EntityAttributeName<EntityType>): EntityAttributeRules {
+function prepareRuleSchema<EntityType extends Entity>(
+    entity: EntityType,
+    attributeName: EntityAttributeName<EntityType>,
+): EntityAttributeRules {
     const type = entity.constructor.name;
 
     if (Entity.isDefaultAttribute(attributeName)) {
@@ -77,18 +89,21 @@ function prepareRuleSchema<EntityType extends Entity>(entity: EntityType, attrib
  *
  * Creates a custom user access policy
  */
-export function UsePolicy<EntityType extends Entity>(accessPolicyModifier: EntityUserAccessPolicyModifier<EntityType>) {
+export function UsePolicy<EntityType extends Entity>(
+    accessPolicyModifier: EntityUserAccessPolicyModifier<EntityType>,
+) {
     return function <EntityType extends Entity>(
         entity: EntityType,
-        attributeName: EntityAttributeName<EntityType>
+        attributeName: EntityAttributeName<EntityType>,
     ) {
         const rules = prepareRuleSchema(entity, attributeName);
         Rules.modifyAccessPolicy(rules, accessPolicyModifier);
 
         if (typeof entity[attributeName] === "function") {
-            if (!rules.hasGetAccessor && !rules.hasSetAccessor) rules.isMethod = true;
+            if (!rules.hasGetAccessor && !rules.hasSetAccessor)
+                rules.isMethod = true;
         }
-    }
+    };
 }
 
 /**
@@ -101,7 +116,9 @@ export function UsePolicy<EntityType extends Entity>(accessPolicyModifier: Entit
  * UsePolicy({read: ["+all"]})
  * ```
  */
-const Public: EntityDecorator = UsePolicy(userAccessPolicyPresets.public);
+const Public: EntityDecorator = UsePolicy(
+    userAccessPolicyPresets.public,
+);
 
 /**
  * @SharedIO Rule Decorator
@@ -112,7 +129,9 @@ const Public: EntityDecorator = UsePolicy(userAccessPolicyPresets.public);
  * ```ts
  * UsePolicy({read: ["+isInside"]})
  */
-const Protected: EntityDecorator = UsePolicy(userAccessPolicyPresets.protected);
+const Protected: EntityDecorator = UsePolicy(
+    userAccessPolicyPresets.protected,
+);
 
 /**
  * @SharedIO Rule Decorator
@@ -124,8 +143,9 @@ const Protected: EntityDecorator = UsePolicy(userAccessPolicyPresets.protected);
  * UsePolicy({read: ["+isOwner"]})
  * ```
  */
-const Private: EntityDecorator = UsePolicy(userAccessPolicyPresets.private);
-
+const Private: EntityDecorator = UsePolicy(
+    userAccessPolicyPresets.private,
+);
 
 /**
  * @SharedIO Rule Decorator
@@ -139,7 +159,9 @@ const Private: EntityDecorator = UsePolicy(userAccessPolicyPresets.private);
  *
  * This decorator is optional, since it's also equivalent for using no decorator at all.
  */
-const Internal: EntityDecorator = UsePolicy(userAccessPolicyPresets.internal);
+const Internal: EntityDecorator = UsePolicy(
+    userAccessPolicyPresets.internal,
+);
 
 /**
  * @SharedIO Rule Decorator
@@ -151,8 +173,9 @@ const Internal: EntityDecorator = UsePolicy(userAccessPolicyPresets.internal);
  * UsePolicy({read: ["+isHost"], write: ["+isHost"]})
  * ```
  */
-const Controlled: EntityDecorator = UsePolicy(userAccessPolicyPresets.controlled);
-
+const Controlled: EntityDecorator = UsePolicy(
+    userAccessPolicyPresets.controlled,
+);
 
 /**
  * @SharedIO Rule Decorator
@@ -164,7 +187,9 @@ const Controlled: EntityDecorator = UsePolicy(userAccessPolicyPresets.controlled
  * UsePolicy({write: ["-all"]})
  * ```
  */
-const Readonly: EntityDecorator = UsePolicy(userAccessPolicyPresets.readonly);
+const Readonly: EntityDecorator = UsePolicy(
+    userAccessPolicyPresets.readonly,
+);
 
 /**
  * @SharedIO Rule Decorator
@@ -178,7 +203,9 @@ const Readonly: EntityDecorator = UsePolicy(userAccessPolicyPresets.readonly);
  * UsePolicy({write: ["+all"]})
  * ```
  */
-const Writable: EntityDecorator = UsePolicy(userAccessPolicyPresets.writable);
+const Writable: EntityDecorator = UsePolicy(
+    userAccessPolicyPresets.writable,
+);
 
 /**
  * @SharedIO Rule Decorator
@@ -247,7 +274,10 @@ export function Type<EntityType extends Entity>(
     attributeName: EntityVariantName<EntityType>,
     descriptor: TypedPropertyDescriptor<EntityVariant>,
 ) {
-    const rules = prepareRuleSchema(entity, attributeName as EntityAttributeName<EntityType>);
+    const rules = prepareRuleSchema(
+        entity,
+        attributeName as EntityAttributeName<EntityType>,
+    );
 
     rules.isVariant = true;
     rules.methodImplementation = (entity as any)[attributeName];
@@ -258,12 +288,21 @@ export function Type<EntityType extends Entity>(
  *
  * This property will only be readable if this entity is of certain variants
  */
-export function If<EntityVariantNames extends string[] = string[]>(...variants: EntityVariantNames) {
-    return function <EntityType extends Entity>(entity: EntityType, attributeName: EntityVariantNames extends EntityVariantName<EntityType>[] ? EntityAttributeName<EntityType> : never) {
+export function If<EntityVariantNames extends string[] = string[]>(
+    ...variants: EntityVariantNames
+) {
+    return function <EntityType extends Entity>(
+        entity: EntityType,
+        attributeName: EntityVariantNames extends EntityVariantName<EntityType>[]
+            ? EntityAttributeName<EntityType>
+            : never,
+    ) {
         return UsePolicy<EntityType>({
-            read: variants.map(variant => `+${variant}`) as EntityUserAccessPolicyClause<EntityType>[]
+            read: variants.map(
+                (variant) => `+${variant}`,
+            ) as EntityUserAccessPolicyClause<EntityType>[],
         })(entity, attributeName);
-    }
+    };
 }
 
 /**
@@ -271,12 +310,29 @@ export function If<EntityVariantNames extends string[] = string[]>(...variants: 
  *
  * This property will not be readable if this entity is of certain variants
  */
-export function Unless<EntityVariantNames extends string[] = string[]>(...variants: EntityVariantNames) {
-    return function <EntityType extends Entity>(entity: EntityType, attributeName: EntityVariantNames extends EntityVariantName<EntityType>[] ? EntityAttributeName<EntityType> : never) {
+export function Unless<
+    EntityVariantNames extends string[] = string[],
+>(...variants: EntityVariantNames) {
+    return function <EntityType extends Entity>(
+        entity: EntityType,
+        attributeName: EntityVariantNames extends EntityVariantName<EntityType>[]
+            ? EntityAttributeName<EntityType>
+            : never,
+    ) {
         return UsePolicy<EntityType>({
-            read: variants.map(variant => `-${variant}`) as EntityUserAccessPolicyClause<EntityType>[]
+            read: variants.map(
+                (variant) => `-${variant}`,
+            ) as EntityUserAccessPolicyClause<EntityType>[],
         })(entity, attributeName);
-    }
+    };
 }
 
-export { Public, Private, Protected, Internal, Controlled, Readonly, Writable };
+export {
+    Public,
+    Private,
+    Protected,
+    Internal,
+    Controlled,
+    Readonly,
+    Writable,
+};

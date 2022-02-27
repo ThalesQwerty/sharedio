@@ -2,18 +2,18 @@ import { Entity } from ".";
 import { KeyValue } from "../types";
 
 interface EntityCache {
-    [name: string]: CachedAttribute
+    [name: string]: CachedAttribute;
 }
 
 interface CachedAttribute {
     /**
      * The value being held by the cache
      */
-    value: any,
+    value: any;
     /**
      * The cache expiration timestamp (in milliseconds)
      */
-    expiration: number
+    expiration: number;
 }
 
 /**
@@ -29,14 +29,19 @@ export class Cache {
      * @param value The current value of the attribute
      * @param duration For how long (in milliseconds) will this cache be used?
      */
-    public static add(entity: Entity, attributeName: string, value: any, duration: number) {
+    public static add(
+        entity: Entity,
+        attributeName: string,
+        value: any,
+        duration: number,
+    ) {
         if (duration > 0) {
             const currentTimestamp = new Date().getTime();
             const newCache = this.entities[entity.id] ?? {};
 
             newCache[attributeName] = {
                 value,
-                expiration: currentTimestamp + duration
+                expiration: currentTimestamp + duration,
             };
 
             this.entities[entity.id] = newCache;
@@ -62,11 +67,14 @@ export class Cache {
         for (const entityId in this.entities) {
             const currentEntityCache = this.entities[entityId];
 
-            if (currentEntityCache) for (const attributeName in currentEntityCache) {
-                const currentCache = currentEntityCache[attributeName];
+            if (currentEntityCache)
+                for (const attributeName in currentEntityCache) {
+                    const currentCache =
+                        currentEntityCache[attributeName];
 
-                if (currentCache.expiration <= currentTimestamp) delete currentEntityCache[attributeName];
-            }
+                    if (currentCache.expiration <= currentTimestamp)
+                        delete currentEntityCache[attributeName];
+                }
         }
     }
 
@@ -81,14 +89,17 @@ export class Cache {
         for (const entityId in this.entities) {
             const currentEntityCache = this.entities[entityId];
 
-            if (currentEntityCache) for (const attributeName in currentEntityCache) {
-                const currentCache = currentEntityCache[attributeName];
+            if (currentEntityCache)
+                for (const attributeName in currentEntityCache) {
+                    const currentCache =
+                        currentEntityCache[attributeName];
 
-                if (currentCache.expiration <= currentTimestamp) delete currentEntityCache[attributeName];
-                else {
-                    values[attributeName] = currentCache.value;
+                    if (currentCache.expiration <= currentTimestamp)
+                        delete currentEntityCache[attributeName];
+                    else {
+                        values[attributeName] = currentCache.value;
+                    }
                 }
-            }
         }
 
         return values;

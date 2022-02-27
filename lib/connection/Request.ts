@@ -1,5 +1,5 @@
 import { ClientEvents } from "../types";
-import { KeyValue } from '../types/KeyValue';
+import { KeyValue } from "../types/KeyValue";
 
 export interface SharedIOBaseRequest {
     action: keyof ClientEvents;
@@ -26,8 +26,12 @@ export interface WriteRequest extends SharedIOBaseAction {
 
 export interface CallRequest extends SharedIOBaseAction {
     action: "call";
-    methodName: string,
-    params: unknown
+    methodName: string;
+    params: unknown;
 }
 
-export type SharedIORequest = AuthRequest|PongRequest|WriteRequest|CallRequest;
+export type SharedIORequest =
+    | AuthRequest
+    | PongRequest
+    | WriteRequest
+    | CallRequest;

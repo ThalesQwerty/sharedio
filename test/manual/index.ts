@@ -16,7 +16,7 @@ import {
     UsePolicy,
     If,
     Unless,
-    EntityConfig
+    EntityConfig,
 } from "../../lib";
 
 class Player extends Entity {
@@ -58,14 +58,14 @@ class Player extends Entity {
 }
 
 class Test extends Entity {
-
     @Type isFirst(user?: User) {
         return this.index <= 1;
     }
 
     @Public hello = "world";
 
-    @If("isFirst") @Writable
+    @If("isFirst")
+    @Writable
     easterEgg = "We're no strangers to love";
 
     @Readonly index = 1;
@@ -74,7 +74,9 @@ class Test extends Entity {
         super(params);
 
         this.on("create", () => {
-            this.index = this.server.entities.filter(entity => entity.type === this.type).length;
+            this.index = this.server.entities.filter(
+                (entity) => entity.type === this.type,
+            ).length;
         });
     }
 }
@@ -86,13 +88,13 @@ const server = new Server({
     clientSchema: {
         path: "../client/src/sharedio",
         fileName: "newSchema2.ts",
-        interfaceName: "Entities"
-    }
+        interfaceName: "Entities",
+    },
 }).start(() => {
     console.dir(Rules.from(Test), { depth: null });
 });
 
-server.on("connection", ({user}) => {
+server.on("connection", ({ user }) => {
     // const owned = new Player(
     //     server,
     //     { name: "You", power: 0 },
@@ -104,14 +106,11 @@ server.on("connection", ({user}) => {
     //     { name: "You", power: 0 }
     // );
 
-    const test1 = new Test({server});
+    const test1 = new Test({ server });
 
-    const test2 = new Test({server}).then(() => {
+    const test2 = new Test({ server }).then(() => {
         // test2.index = 30;
         // console.log(test1, test2);
-
         // console.log(user.variants(test1), user.variants(test2));
-    })
-
-
+    });
 });

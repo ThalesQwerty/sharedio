@@ -32,12 +32,13 @@ export class Entity
     >
     implements EntityReservedAttributes
 {
-
     /**
      * Lists the names of the reserved entity attributes. Those names cannot be used to create custom attributes.
      */
     public static reservedAttributes = [
-        ...Object.getOwnPropertyNames(new Entity({ server: new Server() })),
+        ...Object.getOwnPropertyNames(
+            new Entity({ server: new Server() }),
+        ),
         ...Object.getOwnPropertyNames(Entity.prototype),
         ...Object.getOwnPropertyNames(HasId.prototype),
         ...Object.getOwnPropertyNames(HasEvents.prototype),
@@ -59,17 +60,18 @@ export class Entity
         return false;
     }
 
-    public static get className() { return this.prototype.constructor.name };
+    public static get className() {
+        return this.prototype.constructor.name;
+    }
 
-    public static getClassName<EntityType extends Entity, T extends EntityClassName|EntityType>(entityOrType: T) {
-        if (typeof entityOrType === "string")
-            return entityOrType;
-
+    public static getClassName<
+        EntityType extends Entity,
+        T extends EntityClassName | EntityType,
+    >(entityOrType: T) {
+        if (typeof entityOrType === "string") return entityOrType;
         else if (entityOrType instanceof Entity)
             return (entityOrType as Entity).type;
-
-        else
-            return (entityOrType as typeof Entity).className;
+        else return (entityOrType as typeof Entity).className;
     }
 
     /**
@@ -143,7 +145,9 @@ export class Entity
     /**
      * Generates a simplified key-value pair that represents the entity. Useful for printing things on the console.
      */
-    public static printable<EntityType extends Entity>(entity: EntityType): PrintableEntity<EntityType> {
+    public static printable<EntityType extends Entity>(
+        entity: EntityType,
+    ): PrintableEntity<EntityType> {
         const clone = Entity.clone(entity);
         const simplified: KeyValue = { ...clone };
 
@@ -180,7 +184,7 @@ export class Entity
         return simplified as PrintableEntity<EntityType>;
     }
 
-    constructor({server, initialState, owner}: EntityConfig) {
+    constructor({ server, initialState, owner }: EntityConfig) {
         super("Entity");
         this._server = server;
         this._type = this.constructor.name;
@@ -199,8 +203,11 @@ export class Entity
                 if (initialState) {
                     for (const attributeName in initialState) {
                         if (attributeName in this) {
-                            const value = (initialState as any)[attributeName];
-                            if (value !== undefined) (this as any)[attributeName] = value;
+                            const value = (initialState as any)[
+                                attributeName
+                            ];
+                            if (value !== undefined)
+                                (this as any)[attributeName] = value;
                         }
                     }
                 }
@@ -213,7 +220,7 @@ export class Entity
                 // this.removeAllListeners();
                 // this.delete();
             }
-        }, 0)
+        }, 0);
     }
 
     /**
@@ -222,10 +229,11 @@ export class Entity
      * @param user Who is trying to delete? (it's **null** if entity is being deleted by the server)
      */
     public delete(user: User | null = null) {
-        if (this._exists == null) this.emit("failedCreate", {
-            entity: this,
-            user: this.owner
-        });
+        if (this._exists == null)
+            this.emit("failedCreate", {
+                entity: this,
+                user: this.owner,
+            });
 
         this._exists = false;
         this.server.deleteEntity(this, user);
@@ -234,10 +242,12 @@ export class Entity
     /**
      * This function will be called right after this entity is successfully created
      */
-    public readonly then = (listener: EntityCreateListener) => this.on("create", listener);
+    public readonly then = (listener: EntityCreateListener) =>
+        this.on("create", listener);
 
     /**
      * This function will be called if the entity fails to be created
      */
-    public readonly catch = (listener: EntityFailedCreateListener) => this.on("failedCreate", listener);
+    public readonly catch = (listener: EntityFailedCreateListener) =>
+        this.on("failedCreate", listener);
 }
