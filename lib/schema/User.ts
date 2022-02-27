@@ -89,7 +89,7 @@ export class User extends HasId {
     ): EntityVariantName<EntityType>[] {
         const variantNames: EntityVariantName<EntityType>[] = ["all"];
 
-        if (this.owns(entity)) variantNames.push("isOwner");
+        if (this.owns(entity)) variantNames.push("owner");
 
         // to-do: host and insider
 

@@ -75,9 +75,9 @@ export abstract class Rules {
         const rules = this.from(entityOrType);
         const variants: KeyValue<EntityVariant, EntityVariantName> = {
             all: () => true,
-            isOwner: (user) => user?.owns(this as any) || false,
-            isHost: () => false,
-            isInside: () => false,
+            owner: (user) => user?.owns(this as any) || false,
+            host: () => false,
+            insider: () => false,
         };
 
         for (const attributeName in rules) {

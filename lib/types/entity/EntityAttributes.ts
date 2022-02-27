@@ -84,9 +84,9 @@ export type EntityVariant = (
  * @all All users who may interact with the entity
  */
 export type EntityDefaultVariantName =
-    | "isOwner"
-    | "isHost"
-    | "isInside"
+    | "owner"
+    | "host"
+    | "insider"
     | "all";
 export type EntityCustomVariantName<
     EntityType extends Entity = Entity,

@@ -38,23 +38,23 @@ export function generateClientSchema(
     > = {
         all: "Default",
 
-        "all.isHost": "Host",
-        "all.isOwner": "Owner",
-        "all.isInside": "Inside",
+        "all.host": "Host",
+        "all.owner": "Owner",
+        "all.insider": "Inside",
 
-        "all.isHost.isInside": "HostInside",
-        "all.isInside.isOwner": "OwnerInside",
-        "all.isHost.isOwner": "OwnerHost",
+        "all.host.insider": "HostInsider",
+        "all.insider.owner": "OwnerInsider",
+        "all.host.owner": "OwnerHost",
 
-        "all.isHost.isInside.isOwner": "OwnerHostInside",
+        "all.host.insider.owner": "OwnerHostInsider",
     };
 
     function isVariantBuiltin(variantName: string) {
         return (
             variantName === "all" ||
-            variantName === "isHost" ||
-            variantName === "isInside" ||
-            variantName === "isOwner"
+            variantName === "host" ||
+            variantName === "insider" ||
+            variantName === "owner"
         );
     }
 
@@ -101,11 +101,11 @@ export function generateClientSchema(
         // @ts-expect-error
         delete variants.all;
         // @ts-expect-error
-        delete variants.isHost;
+        delete variants.host;
         // @ts-expect-error
-        delete variants.isOwner;
+        delete variants.owner;
         // @ts-expect-error
-        delete variants.isInside;
+        delete variants.insider;
 
         const interfaceNamesWithVariants: KeyValue = {
             ...interfaceNames,
@@ -169,13 +169,13 @@ export function generateClientSchema(
         return `
         export interface ${interfaceName}<EntityType extends string> extends Base<EntityType> {
             readonly owned: ${!!entityVariants.find(
-                (entityVariant) => entityVariant === "isOwner",
+                (entityVariant) => entityVariant === "owner",
             )};
             readonly hosted: ${!!entityVariants.find(
-                (entityVariant) => entityVariant === "isHost",
+                (entityVariant) => entityVariant === "host",
             )};
             readonly inside: ${!!entityVariants.find(
-                (entityVariant) => entityVariant === "isInside",
+                (entityVariant) => entityVariant === "insider",
             )};
         }`;
     }

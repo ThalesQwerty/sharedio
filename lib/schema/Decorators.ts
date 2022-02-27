@@ -18,7 +18,7 @@ import {
 
 const defaultUserAccessPolicy: EntityUserAccessPolicy = {
     read: ["all"],
-    write: ["isOwner"],
+    write: ["owner"],
 };
 
 const userAccessPolicyPresets: KeyValue<
@@ -36,11 +36,11 @@ const userAccessPolicyPresets: KeyValue<
         write: [],
     },
     protected: {
-        read: ["+isInside"],
+        read: ["+insider"],
         write: [],
     },
     private: {
-        read: ["+isOwner"],
+        read: ["+owner"],
         write: [],
     },
     internal: {
@@ -56,8 +56,8 @@ const userAccessPolicyPresets: KeyValue<
         write: ["+all"],
     },
     controlled: {
-        read: ["+isHost"],
-        write: ["+isHost"],
+        read: ["+host"],
+        write: ["+host"],
     },
 };
 
@@ -127,7 +127,7 @@ const Public: EntityDecorator = UsePolicy(
  *
  * Equivalent to:
  * ```ts
- * UsePolicy({read: ["+isInside"]})
+ * UsePolicy({read: ["+insider"]})
  */
 const Protected: EntityDecorator = UsePolicy(
     userAccessPolicyPresets.protected,
@@ -140,7 +140,7 @@ const Protected: EntityDecorator = UsePolicy(
  *
  * Equivalent to:
  * ```ts
- * UsePolicy({read: ["+isOwner"]})
+ * UsePolicy({read: ["+owner"]})
  * ```
  */
 const Private: EntityDecorator = UsePolicy(
@@ -170,7 +170,7 @@ const Internal: EntityDecorator = UsePolicy(
  *
  * Equivalent to:
  * ```ts
- * UsePolicy({read: ["+isHost"], write: ["+isHost"]})
+ * UsePolicy({read: ["+host"], write: ["+host"]})
  * ```
  */
 const Controlled: EntityDecorator = UsePolicy(
