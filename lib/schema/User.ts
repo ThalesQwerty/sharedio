@@ -2,7 +2,7 @@ import { Entity, View, Action, Rules } from ".";
 import { Server, Client } from "../connection";
 import { RandomHex, HasId } from "../utils";
 import * as _ from "lodash";
-import { EntitySubtypeName } from '../types';
+import { EntityVariantName } from '../types';
 
 export class User extends HasId {
     /**
@@ -82,26 +82,26 @@ export class User extends HasId {
     }
 
     /**
-     * Gets the subtypes of an entity in realtion to this user
+     * Gets the variants of an entity in realtion to this user
      */
-    public subtypes<EntityType extends Entity>(entity: EntityType): EntitySubtypeName<EntityType>[] {
-        const subtypeNames:EntitySubtypeName<EntityType>[] = ["all"];
+    public variants<EntityType extends Entity>(entity: EntityType): EntityVariantName<EntityType>[] {
+        const variantNames:EntityVariantName<EntityType>[] = ["all"];
 
-        if (this.owns(entity)) subtypeNames.push("isOwner");
+        if (this.owns(entity)) variantNames.push("isOwner");
 
         // to-do: host and insider
 
-        const entitySubtypes = Rules.subtypes(entity);
+        const entityVariants = Rules.variants(entity);
 
-        for (const _subtypeName in entitySubtypes) {
-            const subtypeName = _subtypeName as EntitySubtypeName<EntityType>;
-            const subtype = entitySubtypes[subtypeName];
+        for (const _variantName in entityVariants) {
+            const variantName = _variantName as EntityVariantName<EntityType>;
+            const variant = entityVariants[variantName];
 
-            if (subtype.call(entity, this)) {
-                subtypeNames.push(subtypeName);
+            if (variant.call(entity, this)) {
+                variantNames.push(variantName);
             }
         }
 
-        return subtypeNames;
+        return variantNames;
     }
 }

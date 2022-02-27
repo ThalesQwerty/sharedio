@@ -10,9 +10,9 @@ import {
     EntityUserAccessPolicyModifier,
     EntityAttributeRules,
     EntityUserAccessPolicy,
-    EntitySubtype,
+    EntityVariant,
     Letter,
-    EntitySubtypeName,
+    EntityVariantName,
     EntityUserAccessPolicyClause
 } from "../types";
 
@@ -240,28 +240,28 @@ export function Cached(duration: number = 1000) {
 /**
  * @SharedIO Rule Decorator
  *
- * Creates a subtype for this entity.
+ * Creates a variant for this entity.
  */
 export function Type<EntityType extends Entity>(
     entity: EntityType,
-    attributeName: EntitySubtypeName<EntityType>,
-    descriptor: TypedPropertyDescriptor<EntitySubtype>,
+    attributeName: EntityVariantName<EntityType>,
+    descriptor: TypedPropertyDescriptor<EntityVariant>,
 ) {
     const rules = prepareRuleSchema(entity, attributeName as EntityAttributeName<EntityType>);
 
-    rules.isSubtype = true;
+    rules.isVariant = true;
     rules.methodImplementation = (entity as any)[attributeName];
 }
 
 /**
  * @SharedIO Rule Decorator
  *
- * This property will only be readable if this entity is of certain subtypes
+ * This property will only be readable if this entity is of certain variants
  */
-export function If<EntitySubtypeNames extends string[] = string[]>(...subtypes: EntitySubtypeNames) {
-    return function <EntityType extends Entity>(entity: EntityType, attributeName: EntitySubtypeNames extends EntitySubtypeName<EntityType>[] ? EntityAttributeName<EntityType> : never) {
+export function If<EntityVariantNames extends string[] = string[]>(...variants: EntityVariantNames) {
+    return function <EntityType extends Entity>(entity: EntityType, attributeName: EntityVariantNames extends EntityVariantName<EntityType>[] ? EntityAttributeName<EntityType> : never) {
         return UsePolicy<EntityType>({
-            read: subtypes.map(subtype => `+${subtype}`) as EntityUserAccessPolicyClause<EntityType>[]
+            read: variants.map(variant => `+${variant}`) as EntityUserAccessPolicyClause<EntityType>[]
         })(entity, attributeName);
     }
 }
@@ -269,12 +269,12 @@ export function If<EntitySubtypeNames extends string[] = string[]>(...subtypes: 
 /**
  * @SharedIO Rule Decorator
  *
- * This property will not be readable if this entity is of certain subtypes
+ * This property will not be readable if this entity is of certain variants
  */
-export function Unless<EntitySubtypeNames extends string[] = string[]>(...subtypes: EntitySubtypeNames) {
-    return function <EntityType extends Entity>(entity: EntityType, attributeName: EntitySubtypeNames extends EntitySubtypeName<EntityType>[] ? EntityAttributeName<EntityType> : never) {
+export function Unless<EntityVariantNames extends string[] = string[]>(...variants: EntityVariantNames) {
+    return function <EntityType extends Entity>(entity: EntityType, attributeName: EntityVariantNames extends EntityVariantName<EntityType>[] ? EntityAttributeName<EntityType> : never) {
         return UsePolicy<EntityType>({
-            read: subtypes.map(subtype => `-${subtype}`) as EntityUserAccessPolicyClause<EntityType>[]
+            read: variants.map(variant => `-${variant}`) as EntityUserAccessPolicyClause<EntityType>[]
         })(entity, attributeName);
     }
 }

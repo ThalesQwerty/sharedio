@@ -53,7 +53,7 @@ export type EntitySetAccessor = <ValueType = any>(
     user?: User
 ) => void;
 
-export type EntitySubtype = (
+export type EntityVariant = (
     /**
      * Who is trying to interact with this entity?
      */
@@ -68,10 +68,10 @@ export type EntitySubtype = (
  * @insider All users who are inside the entity (only applies if the entity is a channel)
  * @all All users who may interact with the entity
  */
-export type EntityDefaultSubtypeName = "isOwner"|"isHost"|"isInside"|"all";
-export type EntityCustomSubtypeName<EntityType extends Entity = Entity> = EntityAttributeName<EntityType>&`is${Capitalize<Letter>}${string}`;
+export type EntityDefaultVariantName = "isOwner"|"isHost"|"isInside"|"all";
+export type EntityCustomVariantName<EntityType extends Entity = Entity> = EntityAttributeName<EntityType>&`is${Capitalize<Letter>}${string}`;
 
-export type EntitySubtypeName<EntityType extends Entity = Entity> = EntityDefaultSubtypeName|EntityCustomSubtypeName<EntityType>;
+export type EntityVariantName<EntityType extends Entity = Entity> = EntityDefaultVariantName|EntityCustomVariantName<EntityType>;
 
 /**
  * Allows (+) or denies (-) read/write access for an user class
@@ -86,7 +86,7 @@ export type EntityUserAccessClauseModifier = "+"|"-";
  * @insider All users who are inside the entity (only applies if the entity is a channel)
  * @all All users who may interact with the entity
  */
-export type EntityUserAccessPolicyClause<EntityType extends Entity = Entity> = `${EntityUserAccessClauseModifier}${EntitySubtypeName<EntityType>}`;
+export type EntityUserAccessPolicyClause<EntityType extends Entity = Entity> = `${EntityUserAccessClauseModifier}${EntityVariantName<EntityType>}`;
 
 /**
  * Specifies access rules for reading and writing an attribute
@@ -97,8 +97,8 @@ export type EntityUserAccessPolicyModifier<EntityType extends Entity = Entity> =
 };
 
 export type EntityUserAccessPolicy<EntityType extends Entity = Entity> = {
-    read: EntitySubtypeName<EntityType>[],
-    write: EntitySubtypeName<EntityType>[]
+    read: EntityVariantName<EntityType>[],
+    write: EntityVariantName<EntityType>[]
 }
 
 export interface EntityRuleSchema {
@@ -126,7 +126,7 @@ export interface EntityAttributeRules<EntityType extends Entity = Entity> {
      */
     hasSetAccessor: boolean;
 
-    isSubtype: boolean;
+    isVariant: boolean;
 
     isMethod: boolean;
 

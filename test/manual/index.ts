@@ -110,7 +110,7 @@ server.on("connection", ({user}) => {
         // test2.index = 30;
         // console.log(test1, test2);
 
-        // console.log(user.subtypes(test1), user.subtypes(test2));
+        // console.log(user.variants(test1), user.variants(test2));
     })
 
 
