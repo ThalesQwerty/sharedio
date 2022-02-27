@@ -1,8 +1,8 @@
-import { Entity, View, Action } from ".";
+import { Entity, View, Action, Rules } from ".";
 import { Server, Client } from "../connection";
 import { RandomHex, HasId } from "../utils";
 import * as _ from "lodash";
-import { EntityUserRelation } from '../types';
+import { EntitySubtypeName } from '../types';
 
 export class User extends HasId {
     /**
@@ -82,14 +82,26 @@ export class User extends HasId {
     }
 
     /**
-     * In which categories does this user fall in relation to an entity?
+     * Gets the subtypes of an entity in realtion to this user
      */
-    public relations(entity: Entity): EntityUserRelation[] {
-        const relations:EntityUserRelation[] = ["all"];
+    public subtypes<EntityType extends Entity>(entity: EntityType): EntitySubtypeName<EntityType>[] {
+        const subtypeNames:EntitySubtypeName<EntityType>[] = ["all"];
 
-        if (this.owns(entity)) relations.push("owner");
+        if (this.owns(entity)) subtypeNames.push("isOwner");
+
         // to-do: host and insider
 
-        return relations;
+        const entitySubtypes = Rules.subtypes(entity);
+
+        for (const _subtypeName in entitySubtypes) {
+            const subtypeName = _subtypeName as EntitySubtypeName<EntityType>;
+            const subtype = entitySubtypes[subtypeName];
+
+            if (subtype.call(entity, this)) {
+                subtypeNames.push(subtypeName);
+            }
+        }
+
+        return subtypeNames;
     }
 }

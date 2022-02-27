@@ -10,6 +10,10 @@ import {
     EntityAttribute,
     SerializedEntity,
     PrintableEntity,
+    EntityClassName,
+    EntityCreateListener,
+    EntityConfig,
+    EntityFailedCreateListener,
 } from "../types";
 import { HasEvents, HasId, EventListener } from "../utils";
 
@@ -33,7 +37,7 @@ export class Entity
      * Lists the names of the reserved entity attributes. Those names cannot be used to create custom attributes.
      */
     public static reservedAttributes = [
-        ...Object.getOwnPropertyNames(new Entity(new Server())),
+        ...Object.getOwnPropertyNames(new Entity({ server: new Server() })),
         ...Object.getOwnPropertyNames(Entity.prototype),
         ...Object.getOwnPropertyNames(HasId.prototype),
         ...Object.getOwnPropertyNames(HasEvents.prototype),
@@ -53,6 +57,19 @@ export class Entity
                 return true;
         }
         return false;
+    }
+
+    public static get className() { return this.prototype.constructor.name };
+
+    public static getClassName<EntityType extends Entity, T extends EntityClassName|EntityType>(entityOrType: T) {
+        if (typeof entityOrType === "string")
+            return entityOrType;
+
+        else if (entityOrType instanceof Entity)
+            return (entityOrType as Entity).type;
+
+        else
+            return (entityOrType as typeof Entity).className;
     }
 
     /**
@@ -113,18 +130,20 @@ export class Entity
     /**
      * Does this entity exist or has it been deleted?
      */
-    public get exists(): boolean {
-        return this.server.entities.find((currentEntity) =>
-            currentEntity.is(this),
-        )
-            ? true
-            : false;
+    public get exists() {
+        return this._exists;
+        // return this.server.entities.find((currentEntity) =>
+        //     currentEntity.is(this),
+        // )
+        //     ? true
+        //     : false;
     }
+    private _exists?: boolean;
 
     /**
      * Generates a simplified key-value pair that represents the entity. Useful for printing things on the console.
      */
-    public static printable<Type extends Entity>(entity: Type): PrintableEntity<Type> {
+    public static printable<EntityType extends Entity>(entity: EntityType): PrintableEntity<EntityType> {
         const clone = Entity.clone(entity);
         const simplified: KeyValue = { ...clone };
 
@@ -158,14 +177,10 @@ export class Entity
             delete simplified["_" + reservedAttribute];
         }
 
-        return simplified as PrintableEntity<Type>;
+        return simplified as PrintableEntity<EntityType>;
     }
 
-    constructor(
-        server: Server,
-        initialState?: KeyValue<EntityAttribute, string>,
-        owner?: User | null,
-    ) {
+    constructor({server, initialState, owner}: EntityConfig) {
         super("Entity");
         this._server = server;
         this._type = this.constructor.name;
@@ -175,45 +190,30 @@ export class Entity
             setTimeout(() => this.removeAllListeners(), 0);
         });
 
-        const created = this._Constructor();
+        setTimeout(() => {
+            const created = this.exists !== false; //this._Constructor() !== false;
 
-        if (created) {
-            this._server.entities.push(this);
-            if (initialState) {
-                for (const attributeName in initialState) {
-                    if (attributeName in this) (this as any)[attributeName] = initialState[attributeName];
+            if (created) {
+                this._server.entities.push(this);
+
+                if (initialState) {
+                    for (const attributeName in initialState) {
+                        if (attributeName in this) {
+                            const value = (initialState as any)[attributeName];
+                            if (value !== undefined) (this as any)[attributeName] = value;
+                        }
+                    }
                 }
-            }
-            setTimeout(() =>
+
                 this.emit("create", {
                     entity: this,
                     user: owner,
-                }), 0
-            );
-        } else {
-            this.removeAllListeners();
-            this.delete();
-        }
-    }
-
-    /**
-     * @SharedIO
-     * Constructor
-     *
-     * This is a special function that will be called automatically whenever a new instance of this entity is created.
-     *
-     * This function can be used for:
-     * - Initializing values
-     * - Setting up event listeners (use the "on" method)
-     * - Generating side effects on the server
-     * - Verifying whether or not the entity can be created by an user
-     *
-     * Return **false** to deny the creation of the entity, and **true** to allow it.
-     *
-     * Decorators such as "@Public" and "@Private" cannot be added to this method.
-     */
-    protected _Constructor(): boolean {
-        return true;
+                });
+            } else {
+                // this.removeAllListeners();
+                // this.delete();
+            }
+        }, 0)
     }
 
     /**
@@ -222,6 +222,22 @@ export class Entity
      * @param user Who is trying to delete? (it's **null** if entity is being deleted by the server)
      */
     public delete(user: User | null = null) {
+        if (this._exists == null) this.emit("failedCreate", {
+            entity: this,
+            user: this.owner
+        });
+
+        this._exists = false;
         this.server.deleteEntity(this, user);
     }
+
+    /**
+     * This function will be called right after this entity is successfully created
+     */
+    public readonly then = (listener: EntityCreateListener) => this.on("create", listener);
+
+    /**
+     * This function will be called if the entity fails to be created
+     */
+    public readonly catch = (listener: EntityFailedCreateListener) => this.on("failedCreate", listener);
 }

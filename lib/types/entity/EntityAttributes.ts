@@ -1,6 +1,7 @@
 import { Entity, User } from "../../schema";
-import { KeyValue } from "..";
+import { KeyValue, Letter } from "..";
 import { HasEvents, HasId } from "../../utils";
+import { Server } from "../../connection";
 
 export type EntityReservedAttributeName =
     | keyof Entity
@@ -10,9 +11,16 @@ export type EntityReservedAttributeName =
     | "emit"
     | "constructor"
     | "removeAllListeners"
-    | "_Constructor";
+
+export interface EntityConfig<EntityType extends Entity = Entity> {
+    server: Server,
+    initialState?: Partial<KeyValue<EntityAttribute, EntityAttributeName<EntityType>>>,
+    owner?: User | null,
+}
 
 export type EntityAttributeName<EntityType extends Entity> = Exclude<keyof EntityType, EntityReservedAttributeName|number|symbol>
+
+export type EntityClassName = typeof Entity|string;
 
 type AttributePrimitives = string | number | boolean | null | undefined | HasId;
 export type EntityAttribute = AttributePrimitives | AttributePrimitives[] | KeyValue<AttributePrimitives|AttributePrimitives[]>;
@@ -20,6 +28,7 @@ export type EntityAttribute = AttributePrimitives | AttributePrimitives[] | KeyV
 export type EntityMethod = Function;
 
 export type EntityWithAttribute<name extends string> = Entity&{[key in name]: any};
+
 
 export type EntityGetAccessor = (
     /**
@@ -43,3 +52,88 @@ export type EntitySetAccessor = <ValueType = any>(
      */
     user?: User
 ) => void;
+
+export type EntitySubtype = (
+    /**
+     * Who is trying to interact with this entity?
+     */
+    user?: User
+) => boolean;
+
+/**
+ * Classifies the main kinds of users in relation to an entity
+ *
+ * @owner The owner of the entity, usually the user who created it
+ * @host The owner of the channel where the entity is located
+ * @insider All users who are inside the entity (only applies if the entity is a channel)
+ * @all All users who may interact with the entity
+ */
+export type EntityDefaultSubtypeName = "isOwner"|"isHost"|"isInside"|"all";
+export type EntityCustomSubtypeName<EntityType extends Entity = Entity> = EntityAttributeName<EntityType>&`is${Capitalize<Letter>}${string}`;
+
+export type EntitySubtypeName<EntityType extends Entity = Entity> = EntityDefaultSubtypeName|EntityCustomSubtypeName<EntityType>;
+
+/**
+ * Allows (+) or denies (-) read/write access for an user class
+ */
+export type EntityUserAccessClauseModifier = "+"|"-";
+
+/**
+ * Allows (+) or denies (-) read/write access to an entity's attribute/method for an user class
+ *
+ * @owner The owner of the entity, usually the user who created it
+ * @host The owner of the channel where the entity is located
+ * @insider All users who are inside the entity (only applies if the entity is a channel)
+ * @all All users who may interact with the entity
+ */
+export type EntityUserAccessPolicyClause<EntityType extends Entity = Entity> = `${EntityUserAccessClauseModifier}${EntitySubtypeName<EntityType>}`;
+
+/**
+ * Specifies access rules for reading and writing an attribute
+ */
+export type EntityUserAccessPolicyModifier<EntityType extends Entity = Entity> = {
+    read?: EntityUserAccessPolicyClause<EntityType>[],
+    write?: EntityUserAccessPolicyClause<EntityType>[]
+};
+
+export type EntityUserAccessPolicy<EntityType extends Entity = Entity> = {
+    read: EntitySubtypeName<EntityType>[],
+    write: EntitySubtypeName<EntityType>[]
+}
+
+export interface EntityRuleSchema {
+    [entityType: string]: {
+        [attributeName: string]: EntityAttributeRules;
+    };
+}
+export interface EntityAttributeRules<EntityType extends Entity = Entity> {
+    isDefaultAccessPolicy: {
+        [clauseType in keyof EntityUserAccessPolicy<EntityType>]: boolean
+    },
+
+    /**
+     * Determines who can read/write this attribute
+     */
+    accessPolicy: EntityUserAccessPolicy;
+
+    /**
+     * Determines whether or not this method will be treated as a computed property
+     */
+    hasGetAccessor: boolean;
+
+    /**
+     * Determines whether or not this method will be treated as a watched property
+     */
+    hasSetAccessor: boolean;
+
+    isSubtype: boolean;
+
+    isMethod: boolean;
+
+    methodImplementation?: Function,
+
+    /**
+     * Determines for how long this property will be cached before being updated again for users
+     */
+    cacheDuration: number;
+}

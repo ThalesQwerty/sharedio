@@ -1,6 +1,6 @@
 import fs from "fs";
 import path from "path";
-import { ClientSchemaConfig, EntityAttributeRules, EntityRuleSchema, EntityUserRelation, KeyValue } from "../types";
+import { ClientSchemaConfig, EntityAttributeRules, EntityRuleSchema, EntitySubtypeName, KeyValue } from "../types";
 import { exec } from "child_process";
 import { Rules } from "..";
 
@@ -16,23 +16,23 @@ export function generateClientSchema(schema: EntityRuleSchema, config: ClientSch
     `;
 
     type EntityUserRelationCombination =
-        EntityUserRelation
-        |`${EntityUserRelation}.${EntityUserRelation}`
-        |`${EntityUserRelation}.${EntityUserRelation}.${EntityUserRelation}`
-        |`${EntityUserRelation}.${EntityUserRelation}.${EntityUserRelation}.${EntityUserRelation}`;
+        EntitySubtypeName
+        |`${EntitySubtypeName}.${EntitySubtypeName}`
+        |`${EntitySubtypeName}.${EntitySubtypeName}.${EntitySubtypeName}`
+        |`${EntitySubtypeName}.${EntitySubtypeName}.${EntitySubtypeName}.${EntitySubtypeName}`;
 
     const interfaceNames: Partial<KeyValue<string, EntityUserRelationCombination>> = {
         "all": "Default",
 
-        "all.host": "Hosted",
-        "all.owner": "Owned",
-        "all.insider": "Inside",
+        "all.isHost": "Hosted",
+        "all.isOwner": "Owned",
+        "all.isInside": "Inside",
 
-        "all.host.insider": "HostedInside",
-        "all.insider.owner": "OwnedInside",
-        "all.host.owner": "OwnedHosted",
+        "all.isHost.isInside": "HostedInside",
+        "all.isInside.isOwner": "OwnedInside",
+        "all.isHost.isOwner": "OwnedHosted",
 
-        "all.host.insider.owner": "OwnedHostedInside",
+        "all.isHost.isInside.isOwner": "OwnedHostedInside",
     }
 
     const libName = "../../lib"; // "sharedio-client";
@@ -70,7 +70,7 @@ export function generateClientSchema(schema: EntityRuleSchema, config: ClientSch
         const entitySchema = schema[entityType];
 
         fileContent += createEntityNamespace(entityType, Object.keys(interfaceNames).map(
-            userRelationCombination => createEntityInterface(entityType, entitySchema, userRelationCombination.split(".") as EntityUserRelation[])
+            userRelationCombination => createEntityInterface(entityType, entitySchema, userRelationCombination.split(".") as EntitySubtypeName[])
         ));
     }
 
@@ -80,14 +80,14 @@ export function generateClientSchema(schema: EntityRuleSchema, config: ClientSch
     }`;
 
     function createBaseEntityInterface(userRelationCombination: EntityUserRelationCombination) {
-        const userRelations = userRelationCombination.split(".") as EntityUserRelation[];
+        const userRelations = userRelationCombination.split(".") as EntitySubtypeName[];
         const interfaceName = interfaceNames[userRelationCombination];
 
         return `
         export interface ${interfaceName}<EntityType extends string> extends Base<EntityType> {
-            readonly owned: ${!!userRelations.find(userRelation => userRelation === "owner")};
-            readonly hosted: ${!!userRelations.find(userRelation => userRelation === "host")};
-            readonly inside: ${!!userRelations.find(userRelation => userRelation === "insider")};
+            readonly owned: ${!!userRelations.find(userRelation => userRelation === "isOwner")};
+            readonly hosted: ${!!userRelations.find(userRelation => userRelation === "isHost")};
+            readonly inside: ${!!userRelations.find(userRelation => userRelation === "isInside")};
         }`;
     }
 
@@ -103,7 +103,7 @@ export function generateClientSchema(schema: EntityRuleSchema, config: ClientSch
         `;
     }
 
-    function createEntityInterface(entityType: string, entityRules: KeyValue<EntityAttributeRules>, userRelations: EntityUserRelation[]) {
+    function createEntityInterface(entityType: string, entityRules: KeyValue<EntityAttributeRules>, userRelations: EntitySubtypeName[]) {
         const userRelationCombination = userRelations.join(".") as EntityUserRelationCombination;
         const interfaceName = interfaceNames[userRelationCombination];
 
@@ -116,7 +116,7 @@ export function generateClientSchema(schema: EntityRuleSchema, config: ClientSch
         ` : "";
     }
 
-    function createEntityInterfaceMember(entityType: string, attributeName: string, attributeRules: EntityAttributeRules, userRelations: EntityUserRelation[]) {
+    function createEntityInterfaceMember(entityType: string, attributeName: string, attributeRules: EntityAttributeRules, userRelations: EntitySubtypeName[]) {
         const readable = Rules.verify(userRelations, "read", entityType, attributeName);  // attributeRules.accessPolicy.read.find(group => group === userRelation || group === "all") ? true : false;
         if (!readable) return "";
 

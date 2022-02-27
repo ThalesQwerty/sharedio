@@ -1,7 +1,7 @@
 import { defaultUserAccessPolicy, Entity, userAccessPolicyPresets } from ".";
-import { EntityAttributeRules, EntityRuleSchema, EntityAttributeName, KeyValue, SharedIOError } from '../types';
+import { EntityAttributeRules, EntityRuleSchema, EntityAttributeName, KeyValue, SharedIOError, EntitySubtype, EntityClassName } from '../types';
 import { User } from './User';
-import { EntityUserAccessPolicyModifier, EntityUserRelation, EntityUserAccessClauseModifier, EntityUserAccessPolicy } from '../types/entity/EntityRules';
+import { EntityUserAccessPolicyModifier, EntitySubtypeName, EntityUserAccessClauseModifier, EntityUserAccessPolicy } from '../types';
 import _ from "lodash";
 
 /**
@@ -19,8 +19,8 @@ export abstract class Rules {
     /**
      * Gets the rules from an entity
      */
-     public static from(entity: Entity) {
-        return this.schema[entity.type];
+     public static from<EntityType extends Entity>(entityOrType: EntityClassName|EntityType) {
+        return this.schema[Entity.getClassName(entityOrType)];
     }
 
     /**
@@ -31,10 +31,28 @@ export abstract class Rules {
     /**
      * Gets the rules from an entity attribute
      */
-    public static get<EntityType extends Entity>(entity: string, attributeName: string): EntityAttributeRules;
+    public static get(entityType: EntityClassName, attributeName: string): EntityAttributeRules;
 
-    public static get<EntityType extends Entity>(entity: EntityType|string, attributeName: string): EntityAttributeRules {
-        return this.schema[typeof entity === "string" ? entity : entity.type][attributeName as string] ?? this.default;
+    public static get<EntityType extends Entity>(entityOrType: EntityClassName|EntityType, attributeName: string): EntityAttributeRules {
+        return this.schema[Entity.getClassName(entityOrType)][attributeName as string] ?? this.default;
+    }
+
+    public static subtypes<EntityType extends Entity>(entityOrType: EntityClassName|EntityType) {
+        const rules = this.from(entityOrType);
+        const subtypes: KeyValue<EntitySubtype, EntitySubtypeName> = {
+            all: () => true,
+            isOwner: (user) => user?.owns(this as any) || false,
+            isHost: () => false,
+            isInside: () => false
+        };
+
+        for (const attributeName in rules) {
+            const attributeRules = rules[attributeName];
+
+            if (attributeRules.isSubtype) subtypes[attributeName as EntitySubtypeName] = attributeRules.methodImplementation as EntitySubtype;
+        }
+
+        return subtypes as KeyValue<EntitySubtype, EntitySubtypeName<EntityType>>;
     }
 
     /**
@@ -50,6 +68,7 @@ export abstract class Rules {
             read: [],
             write: []
         },
+        isSubtype: false,
         isMethod: false,
         hasSetAccessor: false,
         hasGetAccessor: false,
@@ -79,9 +98,9 @@ export abstract class Rules {
         return this.schema[entityType][attributeName];
     }
 
-    public static modifyAccessPolicy({ accessPolicy, isDefaultAccessPolicy }: EntityAttributeRules, modifier: EntityUserAccessPolicyModifier) {
+    public static modifyAccessPolicy<EntityType extends Entity>({ accessPolicy, isDefaultAccessPolicy }: EntityAttributeRules, modifier: EntityUserAccessPolicyModifier<EntityType>) {
         for (const _clauseType in modifier) {
-            const clauseType = _clauseType as keyof EntityUserAccessPolicyModifier;
+            const clauseType = _clauseType as keyof EntityUserAccessPolicyModifier<EntityType>;
             const clauses = modifier[clauseType] ?? [];
 
             if (clauses.length) isDefaultAccessPolicy[clauseType] = false;
@@ -89,7 +108,7 @@ export abstract class Rules {
 
             for (const clause of clauses) {
                 const accessModifier = clause.substring(0, 1) as EntityUserAccessClauseModifier;
-                const relationName = clause.substring(1) as EntityUserRelation;
+                const relationName = clause.substring(1) as EntitySubtypeName;
 
                 switch (accessModifier) {
                     case "+":
@@ -115,22 +134,22 @@ export abstract class Rules {
      /**
      * Verifies if some user would be able read or write an entity attribute, given its relation to the entity
      */
-    public static verify<EntityType extends Entity>(userRelations: EntityUserRelation[], action: keyof EntityUserAccessPolicy, entity: EntityType, attributeName: EntityAttributeName<EntityType>): boolean
+    public static verify<EntityType extends Entity>(userRelations: EntitySubtypeName<EntityType>[], action: keyof EntityUserAccessPolicy, entity: EntityType, attributeName: EntityAttributeName<EntityType>): boolean
 
- /**
+    /**
      * Verifies if some user would be able read or write an entity attribute, given its relation to the entity and the entity type
      */
-  public static verify<EntityType extends Entity>(userRelations: EntityUserRelation[], action: keyof EntityUserAccessPolicy, entity: string, attributeName: string): boolean
+    public static verify<EntityType extends Entity>(userRelations: EntitySubtypeName<EntityType>[], action: keyof EntityUserAccessPolicy, entity: EntityClassName, attributeName: string): boolean
 
-    public static verify<EntityType extends Entity>(userOrRelations: User|EntityUserRelation[], action: keyof EntityUserAccessPolicy, entityOrType: EntityType|string, attributeName: string): boolean {
-        const entityTypeName = typeof entityOrType === "string" ? entityOrType : entityOrType.type;
+    public static verify<EntityType extends Entity>(userOrRelations: User|EntitySubtypeName<EntityType>[], action: keyof EntityUserAccessPolicy, entityOrType: EntityType|EntityClassName, attributeName: string): boolean {
+        const entityTypeName = Entity.getClassName(entityOrType);
 
         const rules = Rules.get(entityTypeName, attributeName);
         const clauses = rules.accessPolicy[action] ?? [];
 
         const userRelations = userOrRelations instanceof User ?
-            (typeof entityOrType !== "string" ?
-                userOrRelations.relations(entityOrType) : new SharedIOError(`Rules.verify(): Third parameter cannot be of type "string" if first parameter is of type "User"`)
+            (entityOrType instanceof Entity ?
+                userOrRelations.subtypes(entityOrType) : new SharedIOError(`Rules.verify(): Third parameter cannot be of type "string" if first parameter is of type "User"`)
             ) : userOrRelations;
 
         if (userRelations instanceof SharedIOError) throw userRelations;
@@ -138,7 +157,7 @@ export abstract class Rules {
         // Can't write if can't read, bro
         if (action === "write" && !this.verify(userRelations, "read", entityTypeName, attributeName)) return false;
 
-        let allowedUserRelations: EntityUserRelation[] = clauses;
+        let allowedUserRelations: EntitySubtypeName[] = clauses;
 
         return !!_.intersection(userRelations, allowedUserRelations).length;
     }

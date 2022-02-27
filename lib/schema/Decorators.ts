@@ -9,12 +9,16 @@ import {
     KeyValue,
     EntityUserAccessPolicyModifier,
     EntityAttributeRules,
-    EntityUserAccessPolicy
+    EntityUserAccessPolicy,
+    EntitySubtype,
+    Letter,
+    EntitySubtypeName,
+    EntityUserAccessPolicyClause
 } from "../types";
 
 const defaultUserAccessPolicy: EntityUserAccessPolicy = {
     read: ["all"],
-    write: ["owner"]
+    write: ["isOwner"]
 };
 
 const userAccessPolicyPresets: KeyValue<EntityUserAccessPolicyModifier, "public" | "protected" | "private" | "internal" | "readonly" | "writable" | "controlled"> = {
@@ -23,11 +27,11 @@ const userAccessPolicyPresets: KeyValue<EntityUserAccessPolicyModifier, "public"
         write: []
     },
     protected: {
-        read: ["+insider"],
+        read: ["+isInside"],
         write: []
     },
     private: {
-        read: ["+owner"],
+        read: ["+isOwner"],
         write: []
     },
     internal: {
@@ -43,8 +47,8 @@ const userAccessPolicyPresets: KeyValue<EntityUserAccessPolicyModifier, "public"
         write: ["+all"]
     },
     controlled: {
-        read: ["+host"],
-        write: ["+host"]
+        read: ["+isHost"],
+        write: ["+isHost"]
     }
 };
 
@@ -73,7 +77,7 @@ function prepareRuleSchema<EntityType extends Entity>(entity: EntityType, attrib
  *
  * Creates a custom user access policy
  */
-export function UsePolicy(accessPolicyModifier: EntityUserAccessPolicyModifier) {
+export function UsePolicy<EntityType extends Entity>(accessPolicyModifier: EntityUserAccessPolicyModifier<EntityType>) {
     return function <EntityType extends Entity>(
         entity: EntityType,
         attributeName: EntityAttributeName<EntityType>
@@ -106,7 +110,7 @@ const Public: EntityDecorator = UsePolicy(userAccessPolicyPresets.public);
  *
  * Equivalent to:
  * ```ts
- * UsePolicy({read: ["+insider"]})
+ * UsePolicy({read: ["+isInside"]})
  */
 const Protected: EntityDecorator = UsePolicy(userAccessPolicyPresets.protected);
 
@@ -117,7 +121,7 @@ const Protected: EntityDecorator = UsePolicy(userAccessPolicyPresets.protected);
  *
  * Equivalent to:
  * ```ts
- * UsePolicy({read: ["+owner"]})
+ * UsePolicy({read: ["+isOwner"]})
  * ```
  */
 const Private: EntityDecorator = UsePolicy(userAccessPolicyPresets.private);
@@ -144,7 +148,7 @@ const Internal: EntityDecorator = UsePolicy(userAccessPolicyPresets.internal);
  *
  * Equivalent to:
  * ```ts
- * UsePolicy({read: ["+host"], write: ["+host"]})
+ * UsePolicy({read: ["+isHost"], write: ["+isHost"]})
  * ```
  */
 const Controlled: EntityDecorator = UsePolicy(userAccessPolicyPresets.controlled);
@@ -191,6 +195,7 @@ export function Get<EntityType extends Entity>(
     const rules = prepareRuleSchema(entity, attributeName);
     rules.hasGetAccessor = true;
     rules.isMethod = false;
+    rules.methodImplementation = (entity as any)[attributeName];
 }
 
 /**
@@ -230,6 +235,48 @@ export function Cached(duration: number = 1000) {
 
         rules.cacheDuration = duration;
     };
+}
+
+/**
+ * @SharedIO Rule Decorator
+ *
+ * Creates a subtype for this entity.
+ */
+export function Type<EntityType extends Entity>(
+    entity: EntityType,
+    attributeName: EntitySubtypeName<EntityType>,
+    descriptor: TypedPropertyDescriptor<EntitySubtype>,
+) {
+    const rules = prepareRuleSchema(entity, attributeName as EntityAttributeName<EntityType>);
+
+    rules.isSubtype = true;
+    rules.methodImplementation = (entity as any)[attributeName];
+}
+
+/**
+ * @SharedIO Rule Decorator
+ *
+ * This property will only be readable if this entity is of certain subtypes
+ */
+export function If<EntitySubtypeNames extends string[] = string[]>(...subtypes: EntitySubtypeNames) {
+    return function <EntityType extends Entity>(entity: EntityType, attributeName: EntitySubtypeNames extends EntitySubtypeName<EntityType>[] ? EntityAttributeName<EntityType> : never) {
+        return UsePolicy<EntityType>({
+            read: subtypes.map(subtype => `+${subtype}`) as EntityUserAccessPolicyClause<EntityType>[]
+        })(entity, attributeName);
+    }
+}
+
+/**
+ * @SharedIO Rule Decorator
+ *
+ * This property will not be readable if this entity is of certain subtypes
+ */
+export function Unless<EntitySubtypeNames extends string[] = string[]>(...subtypes: EntitySubtypeNames) {
+    return function <EntityType extends Entity>(entity: EntityType, attributeName: EntitySubtypeNames extends EntitySubtypeName<EntityType>[] ? EntityAttributeName<EntityType> : never) {
+        return UsePolicy<EntityType>({
+            read: subtypes.map(subtype => `+${subtype}`) as EntityUserAccessPolicyClause<EntityType>[]
+        })(entity, attributeName);
+    }
 }
 
 export { Public, Private, Protected, Internal, Controlled, Readonly, Writable };

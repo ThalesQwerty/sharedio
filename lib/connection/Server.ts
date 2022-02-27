@@ -253,7 +253,11 @@ export class Server extends HasEvents<ServerEvents, ServerListenerOverloads, Ser
         initialState?: KeyValue,
         owner: User | null = null,
     ): T {
-        const newEntity = new Type(this, initialState, owner) as T;
+        const newEntity = new Type({
+            server: this,
+            initialState,
+            owner
+        }) as T;
         this._entities.push(newEntity);
 
         return newEntity;

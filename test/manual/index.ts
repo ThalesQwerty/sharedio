@@ -12,17 +12,22 @@ import {
     Cached,
     User,
     Rules,
+    Type,
+    UsePolicy,
+    If,
+    Unless,
+    EntityConfig
 } from "../../lib";
 
 class Player extends Entity {
+    @Internal serverSide = 0;
+
     @Public name = "Thales";
     @Public power = 9001;
 
     @Writable superPublic = "wooow";
 
     @Private secret = "Shh...";
-
-    @Internal serverSide = 0;
 
     @Readonly immutable = "Hello World!";
 
@@ -47,34 +52,31 @@ class Player extends Entity {
 
     @Public randomNumber = 0;
 
-    serverSideTest = 3;
-
     @Controlled kick() {
         // kicks the player (only the host can do that)
-    }
-
-    _Constructor() {
-        // setInterval(() => {
-        //     this.power = Math.floor(Math.random() * 10000);
-        // }, 1000);
-        // setTimeout(() => {
-        //     this.server.deleteEntity(this);
-        // }, 1000);
-
-        // this.on("delete", () => {
-        //     console.log("Aaaaaand it's gone! It's gone.");
-        // })
-
-        // this.on("tick", () => {
-        //     console.log(this.server.ticks);
-        // })
-
-        return true;
     }
 }
 
 class Test extends Entity {
+
+    @Type isFirst(user?: User) {
+        return this.index <= 1;
+    }
+
     @Public hello = "world";
+
+    @If("isFirst")
+    @Writable test = 2;
+
+    @Readonly index = 1;
+
+    constructor(params: EntityConfig<Test>) {
+        super(params);
+
+        this.on("create", () => {
+            this.index = this.server.entities.filter(entity => entity.type === this.type).length;
+        });
+    }
 }
 
 const server = new Server({
@@ -83,20 +85,34 @@ const server = new Server({
     tickRate: 1,
     clientSchema: {
         path: "../client/src/sharedio",
-        fileName: "newSchema.ts",
+        fileName: "newSchema2.ts",
         interfaceName: "Entities"
     }
-}).start();
+}).start(() => {
+    // console.log(Rules.from("Test"));
+    console.dir(Rules.from(Test), { depth: null });
+});
 
 server.on("connection", ({user}) => {
-    const owned = new Player(
-        server,
-        { name: "You", power: 0 },
-        user
-    );
+    // const owned = new Player(
+    //     server,
+    //     { name: "You", power: 0 },
+    //     user
+    // );
 
     // const notOwned = new Player(
     //     server,
     //     { name: "You", power: 0 }
     // );
+
+    const test1 = new Test({server});
+
+    const test2 = new Test({server}).then(() => {
+        // test2.index = 30;
+        // console.log(test1, test2);
+
+        console.log(user.subtypes(test1), user.subtypes(test2));
+    })
+
+
 });
