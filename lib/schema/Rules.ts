@@ -104,10 +104,10 @@ export abstract class Rules {
             const clauses = modifier[clauseType] ?? [];
 
             let implicitAll = false;
-            let allowedUserRelations = accessPolicy[clauseType];
+            let allowedEntityVariants = accessPolicy[clauseType];
 
             if (clauses.length) {
-                implicitAll = isDefaultAccessPolicy[clauseType] && allowedUserRelations.length === 0;
+                implicitAll = isDefaultAccessPolicy[clauseType] && allowedEntityVariants.length === 0;
                 isDefaultAccessPolicy[clauseType] = false;
             }
 
@@ -117,16 +117,16 @@ export abstract class Rules {
 
                 switch (accessModifier) {
                     case "+":
-                        if (!allowedUserRelations.find(name => name === relationName)) allowedUserRelations.push(relationName);
+                        if (!allowedEntityVariants.find(name => name === relationName)) allowedEntityVariants.push(relationName);
                         break;
                     case "-":
-                        if (implicitAll) allowedUserRelations.push("all");
-                        allowedUserRelations = allowedUserRelations.filter(name => name !== relationName);
+                        if (implicitAll) allowedEntityVariants.push("all");
+                        allowedEntityVariants = allowedEntityVariants.filter(name => name !== relationName);
                         break;
                 }
             }
 
-            accessPolicy[clauseType] = allowedUserRelations;
+            accessPolicy[clauseType] = allowedEntityVariants;
         }
 
         return accessPolicy;
@@ -140,31 +140,31 @@ export abstract class Rules {
      /**
      * Verifies if some user would be able read or write an entity attribute, given its relation to the entity
      */
-    public static verify<EntityType extends Entity>(userRelations: EntityVariantName<EntityType>[], action: keyof EntityUserAccessPolicy, entity: EntityType, attributeName: EntityAttributeName<EntityType>): boolean
+    public static verify<EntityType extends Entity>(entityVariants: EntityVariantName<EntityType>[], action: keyof EntityUserAccessPolicy, entity: EntityType, attributeName: EntityAttributeName<EntityType>): boolean
 
     /**
      * Verifies if some user would be able read or write an entity attribute, given its relation to the entity and the entity type
      */
-    public static verify<EntityType extends Entity>(userRelations: EntityVariantName<EntityType>[], action: keyof EntityUserAccessPolicy, entity: EntityClassName, attributeName: string): boolean
+    public static verify<EntityType extends Entity>(entityVariants: EntityVariantName<EntityType>[], action: keyof EntityUserAccessPolicy, entity: EntityClassName, attributeName: string): boolean
 
-    public static verify<EntityType extends Entity>(userOrRelations: User|EntityVariantName<EntityType>[], action: keyof EntityUserAccessPolicy, entityOrType: EntityType|EntityClassName, attributeName: string): boolean {
+    public static verify<EntityType extends Entity>(userOrEntityVariants: User|EntityVariantName<EntityType>[], action: keyof EntityUserAccessPolicy, entityOrType: EntityType|EntityClassName, attributeName: string): boolean {
         const entityTypeName = Entity.getClassName(entityOrType);
 
         const rules = Rules.get(entityTypeName, attributeName);
         const clauses = rules.accessPolicy[action] ?? [];
 
-        const userRelations = userOrRelations instanceof User ?
+        const entityVariants = userOrEntityVariants instanceof User ?
             (entityOrType instanceof Entity ?
-                userOrRelations.variants(entityOrType) : new SharedIOError(`Rules.verify(): Third parameter cannot be of type "string" if first parameter is of type "User"`)
-            ) : userOrRelations;
+                userOrEntityVariants.variants(entityOrType) : new SharedIOError(`Rules.verify(): Third parameter cannot be of type "string" if first parameter is of type "User"`)
+            ) : userOrEntityVariants;
 
-        if (userRelations instanceof SharedIOError) throw userRelations;
+        if (entityVariants instanceof SharedIOError) throw entityVariants;
 
         // Can't write if can't read, bro
-        if (action === "write" && !this.verify(userRelations, "read", entityTypeName, attributeName)) return false;
+        if (action === "write" && !this.verify(entityVariants, "read", entityTypeName, attributeName)) return false;
 
-        let allowedUserRelations: EntityVariantName[] = clauses;
+        let allowedEntityVariants: EntityVariantName[] = clauses;
 
-        return !!_.intersection(userRelations, allowedUserRelations).length;
+        return !!_.intersection(entityVariants, allowedEntityVariants).length;
     }
 }

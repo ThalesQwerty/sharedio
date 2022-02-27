@@ -240,7 +240,7 @@ export function Cached(duration: number = 1000) {
 /**
  * @SharedIO Rule Decorator
  *
- * Creates a variant for this entity.
+ * Creates a variant type for this entity.
  */
 export function Type<EntityType extends Entity>(
     entity: EntityType,

@@ -65,7 +65,7 @@ export function generateClientSchema(schema: EntityRuleSchema, config: ClientSch
         }
 
         ${Object.keys(interfaceNames).map(
-        userRelationCombination => createBaseEntityInterface(userRelationCombination as EntityVariantNameCombo)
+        entityVariantCombo => createBaseEntityInterface(entityVariantCombo as EntityVariantNameCombo)
     ).join(" ")}
     };
     `;
@@ -110,15 +110,15 @@ export function generateClientSchema(schema: EntityRuleSchema, config: ClientSch
         ${Object.keys(schema).map(entityType => createEntitySchemaList(entityType)).join(";")}
     }`;
 
-    function createBaseEntityInterface(userRelationCombination: EntityVariantNameCombo) {
-        const userRelations = userRelationCombination.split(".") as EntityVariantName[];
-        const interfaceName = interfaceNames[userRelationCombination];
+    function createBaseEntityInterface(entityVariantCombo: EntityVariantNameCombo) {
+        const entityVariants = entityVariantCombo.split(".") as EntityVariantName[];
+        const interfaceName = interfaceNames[entityVariantCombo];
 
         return `
         export interface ${interfaceName}<EntityType extends string> extends Base<EntityType> {
-            readonly owned: ${!!userRelations.find(userRelation => userRelation === "isOwner")};
-            readonly hosted: ${!!userRelations.find(userRelation => userRelation === "isHost")};
-            readonly inside: ${!!userRelations.find(userRelation => userRelation === "isInside")};
+            readonly owned: ${!!entityVariants.find(entityVariant => entityVariant === "isOwner")};
+            readonly hosted: ${!!entityVariants.find(entityVariant => entityVariant === "isHost")};
+            readonly inside: ${!!entityVariants.find(entityVariant => entityVariant === "isInside")};
         }`;
     }
 
@@ -128,7 +128,7 @@ export function generateClientSchema(schema: EntityRuleSchema, config: ClientSch
             ${entityInterfaces.join(" ")}
 
             export type ${entityType} = ${Object.keys(interfaceNamesWithVariants).map(
-            userRelationCombination => interfaceNamesWithVariants[userRelationCombination as EntityVariantNameCombo]
+            entityVariantCombo => interfaceNamesWithVariants[entityVariantCombo as EntityVariantNameCombo]
         ).join("|")};
         }
         `;
@@ -154,11 +154,11 @@ export function generateClientSchema(schema: EntityRuleSchema, config: ClientSch
         ` : "";
     }
 
-    function createEntityInterfaceMember(entityType: string, attributeName: string, attributeRules: EntityAttributeRules, userRelations: EntityVariantName[]) {
-        const readable = !attributeRules.isVariant && Rules.verify(userRelations, "read", entityType, attributeName);
+    function createEntityInterfaceMember(entityType: string, attributeName: string, attributeRules: EntityAttributeRules, entityVariants: EntityVariantName[]) {
+        const readable = !attributeRules.isVariant && Rules.verify(entityVariants, "read", entityType, attributeName);
         if (!readable) return "";
 
-        const writable = Rules.verify(userRelations, "write", entityType, attributeName);
+        const writable = Rules.verify(entityVariants, "write", entityType, attributeName);
         const { isMethod } = attributeRules;
         const type = isMethod ? "() => void" : "any";
 
