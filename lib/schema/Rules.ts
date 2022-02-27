@@ -103,8 +103,13 @@ export abstract class Rules {
             const clauseType = _clauseType as keyof EntityUserAccessPolicyModifier<EntityType>;
             const clauses = modifier[clauseType] ?? [];
 
-            if (clauses.length) isDefaultAccessPolicy[clauseType] = false;
+            let implicitAll = false;
             let allowedUserRelations = accessPolicy[clauseType];
+
+            if (clauses.length) {
+                implicitAll = isDefaultAccessPolicy[clauseType] && allowedUserRelations.length === 0;
+                isDefaultAccessPolicy[clauseType] = false;
+            }
 
             for (const clause of clauses) {
                 const accessModifier = clause.substring(0, 1) as EntityUserAccessClauseModifier;
@@ -115,6 +120,7 @@ export abstract class Rules {
                         if (!allowedUserRelations.find(name => name === relationName)) allowedUserRelations.push(relationName);
                         break;
                     case "-":
+                        if (implicitAll) allowedUserRelations.push("all");
                         allowedUserRelations = allowedUserRelations.filter(name => name !== relationName);
                         break;
                 }

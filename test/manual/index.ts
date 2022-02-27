@@ -65,8 +65,8 @@ class Test extends Entity {
 
     @Public hello = "world";
 
-    @If("isFirst")
-    @Writable test = 2;
+    @If("isFirst") @Writable
+    easterEgg = "We're no strangers to love";
 
     @Readonly index = 1;
 
@@ -89,7 +89,6 @@ const server = new Server({
         interfaceName: "Entities"
     }
 }).start(() => {
-    // console.log(Rules.from("Test"));
     console.dir(Rules.from(Test), { depth: null });
 });
 
@@ -111,7 +110,7 @@ server.on("connection", ({user}) => {
         // test2.index = 30;
         // console.log(test1, test2);
 
-        console.log(user.subtypes(test1), user.subtypes(test2));
+        // console.log(user.subtypes(test1), user.subtypes(test2));
     })
 
 

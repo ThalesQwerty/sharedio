@@ -17,22 +17,26 @@ export function generateClientSchema(schema: EntityRuleSchema, config: ClientSch
 
     type EntityUserRelationCombination =
         EntitySubtypeName
-        |`${EntitySubtypeName}.${EntitySubtypeName}`
-        |`${EntitySubtypeName}.${EntitySubtypeName}.${EntitySubtypeName}`
-        |`${EntitySubtypeName}.${EntitySubtypeName}.${EntitySubtypeName}.${EntitySubtypeName}`;
+        | `${EntitySubtypeName}.${EntitySubtypeName}`
+        | `${EntitySubtypeName}.${EntitySubtypeName}.${EntitySubtypeName}`
+        | `${EntitySubtypeName}.${EntitySubtypeName}.${EntitySubtypeName}.${EntitySubtypeName}`;
 
     const interfaceNames: Partial<KeyValue<string, EntityUserRelationCombination>> = {
         "all": "Default",
 
-        "all.isHost": "Hosted",
-        "all.isOwner": "Owned",
+        "all.isHost": "Host",
+        "all.isOwner": "Owner",
         "all.isInside": "Inside",
 
-        "all.isHost.isInside": "HostedInside",
-        "all.isInside.isOwner": "OwnedInside",
-        "all.isHost.isOwner": "OwnedHosted",
+        "all.isHost.isInside": "HostInside",
+        "all.isInside.isOwner": "OwnerInside",
+        "all.isHost.isOwner": "OwnerHost",
 
-        "all.isHost.isInside.isOwner": "OwnedHostedInside",
+        "all.isHost.isInside.isOwner": "OwnerHostInside",
+    }
+
+    function isSubtypeBuiltin(subtypeName: string) {
+        return subtypeName === "all" || subtypeName === "isHost" || subtypeName === "isInside" || subtypeName === "isOwner";
     }
 
     const libName = "../../lib"; // "sharedio-client";
@@ -61,17 +65,44 @@ export function generateClientSchema(schema: EntityRuleSchema, config: ClientSch
         }
 
         ${Object.keys(interfaceNames).map(
-            userRelationCombination => createBaseEntityInterface(userRelationCombination as EntityUserRelationCombination)
-        ).join(" ")}
+        userRelationCombination => createBaseEntityInterface(userRelationCombination as EntityUserRelationCombination)
+    ).join(" ")}
     };
     `;
 
     for (const entityType in schema) {
         const entitySchema = schema[entityType];
 
-        fileContent += createEntityNamespace(entityType, Object.keys(interfaceNames).map(
-            userRelationCombination => createEntityInterface(entityType, entitySchema, userRelationCombination.split(".") as EntitySubtypeName[])
-        ));
+        const subtypes = { ...Rules.subtypes(entityType) };
+
+        // @ts-expect-error
+        delete subtypes.all;
+        // @ts-expect-error
+        delete subtypes.isHost;
+        // @ts-expect-error
+        delete subtypes.isOwner;
+        // @ts-expect-error
+        delete subtypes.isInside;
+
+        const interfaceNamesWithSubtypes: KeyValue = {
+            ...interfaceNames
+        };
+
+        for (const subtypeName in subtypes) {
+            for (const key in interfaceNamesWithSubtypes) {
+                const interfaceName = interfaceNamesWithSubtypes[key];
+                interfaceNamesWithSubtypes[`${key}.${subtypeName}`] = interfaceName !== "Default" ? `${interfaceName}${subtypeName.substring(2)}` : subtypeName.substring(2);
+            }
+        }
+
+        fileContent += createEntityNamespace(entityType, Object.keys(interfaceNamesWithSubtypes).map(
+            key => createEntityInterface(entityType, entitySchema, {
+                current: key.split(".") as EntitySubtypeName[],
+                currentBuiltin: key.split(".").filter(key => isSubtypeBuiltin(key)) as EntitySubtypeName[],
+                custom: Object.keys(subtypes) as EntitySubtypeName[]},
+                interfaceNamesWithSubtypes
+            )
+        ), interfaceNamesWithSubtypes);
     }
 
     fileContent += `
@@ -91,33 +122,40 @@ export function generateClientSchema(schema: EntityRuleSchema, config: ClientSch
         }`;
     }
 
-    function createEntityNamespace(entityType: string, entityInterfaces: string[]) {
+    function createEntityNamespace(entityType: string, entityInterfaces: string[], interfaceNamesWithSubtypes: KeyValue<string, EntityUserRelationCombination>) {
         return `
         export namespace ${entityType} {
             ${entityInterfaces.join(" ")}
 
-            export type ${entityType} = ${Object.keys(interfaceNames).map(
-                userRelationCombination => interfaceNames[userRelationCombination as EntityUserRelationCombination]
-            ).join("|")};
+            export type ${entityType} = ${Object.keys(interfaceNamesWithSubtypes).map(
+            userRelationCombination => interfaceNamesWithSubtypes[userRelationCombination as EntityUserRelationCombination]
+        ).join("|")};
         }
         `;
     }
 
-    function createEntityInterface(entityType: string, entityRules: KeyValue<EntityAttributeRules>, userRelations: EntitySubtypeName[]) {
-        const userRelationCombination = userRelations.join(".") as EntityUserRelationCombination;
-        const interfaceName = interfaceNames[userRelationCombination];
+    function createEntityInterface(entityType: string, entityRules: KeyValue<EntityAttributeRules>, subtypes: {current: EntitySubtypeName[], currentBuiltin: EntitySubtypeName[], custom: EntitySubtypeName[]}, interfaceNamesWithSubtypes: KeyValue<string, EntityUserRelationCombination>) {
+        const key = subtypes.current.join(".") as EntityUserRelationCombination;
+        const builtinKey = subtypes.currentBuiltin.join(".") as EntityUserRelationCombination;
+
+        const interfaceName = interfaceNamesWithSubtypes[key];
+        const extendedInterfaceName = interfaceNames[builtinKey];
 
         return interfaceName ? `
-        export interface ${interfaceName} extends Entity.${interfaceName}<"${entityType}"> {
+        export interface ${interfaceName} extends Entity.${extendedInterfaceName}<"${entityType}"> {
+            ${subtypes.custom.map(subtype =>
+                `readonly ${subtype}: ${subtypes.current.find(v => v === subtype) ? "true" : "false"}`
+            ).join(";")}
+
             ${Object.keys(entityRules).map(
-                attributeName => createEntityInterfaceMember(entityType, attributeName, entityRules[attributeName], userRelations)
-            ).filter(content => content).join(";")}
+            attributeName => createEntityInterfaceMember(entityType, attributeName, entityRules[attributeName], subtypes.current)
+        ).filter(content => content).join(";")}
         }
         ` : "";
     }
 
     function createEntityInterfaceMember(entityType: string, attributeName: string, attributeRules: EntityAttributeRules, userRelations: EntitySubtypeName[]) {
-        const readable = Rules.verify(userRelations, "read", entityType, attributeName);  // attributeRules.accessPolicy.read.find(group => group === userRelation || group === "all") ? true : false;
+        const readable = !attributeRules.isSubtype && Rules.verify(userRelations, "read", entityType, attributeName);
         if (!readable) return "";
 
         const writable = Rules.verify(userRelations, "write", entityType, attributeName);
