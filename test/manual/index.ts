@@ -18,8 +18,6 @@ import {
     Unless,
     EntityConfig,
 } from "../../lib";
-import { ObjectTransform } from "../../lib/utils";
-
 class Player extends Entity {
     @Internal serverSide = 0;
 
@@ -69,13 +67,13 @@ class Player extends Entity {
     }
 }
 class Test extends Entity {
-    @Type isFirst() {
-        return this.index <= 1;
+    @Type first() {
+        return this.index === 1;
     }
 
     @Public hello = "world";
 
-    @If("isFirst")
+    @If("first")
     @Writable
     easterEgg = "We're no strangers to love";
 

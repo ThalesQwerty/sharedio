@@ -267,7 +267,7 @@ export function Cached(duration: number = 1000) {
 /**
  * @SharedIO Rule Decorator
  *
- * Creates a variant type for this entity.
+ * Declares a variant type of this entity.
  */
 export function Type<EntityType extends Entity>(
     entity: EntityType,
@@ -285,6 +285,17 @@ export function Type<EntityType extends Entity>(
     rules.methodImplementation = (entity as any)[attributeName];
 }
 
+function verifyVariantOrFail(entity: Entity, variantName: EntityVariantName) {
+    if (variantName === "all" || variantName === "host" || variantName === "insider" || variantName === "owner") return true;
+
+    const entityType = entity.constructor.name;
+
+    const rules = Rules.get(entityType, variantName);
+
+    if (!rules || !rules.isVariant) throw new SharedIOError(`Variant "${variantName}" does not exist on entity of type "${entityType}". Verify if you've correctly declared this variant (you must use the @Type decorator).`)
+    return true;
+}
+
 /**
  * @SharedIO Rule Decorator
  *
@@ -299,6 +310,7 @@ export function If<EntityVariantNames extends string[] = string[]>(
             ? EntityAttributeName<EntityType>
             : never,
     ) {
+        setImmediate(() => variants.forEach(variantName => verifyVariantOrFail(entity, variantName as EntityVariantName)));
         return UsePolicy<EntityType>({
             read: variants.map(
                 (variant) => `+${variant}`,
@@ -321,6 +333,7 @@ export function Unless<
             ? EntityAttributeName<EntityType>
             : never,
     ) {
+        setImmediate(() => variants.forEach(variantName => verifyVariantOrFail(entity, variantName as EntityVariantName)));
         return UsePolicy<EntityType>({
             read: variants.map(
                 (variant) => `-${variant}`,

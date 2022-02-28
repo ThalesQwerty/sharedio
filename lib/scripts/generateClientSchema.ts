@@ -118,12 +118,11 @@ export function generateClientSchema(
         for (const variantName in variants) {
             for (const key in interfaceNamesWithVariants) {
                 const interfaceName = interfaceNamesWithVariants[key];
+                const capitalizedVariantName = variantName.substring(0, 1).toUpperCase() + variantName.substring(1);
                 interfaceNamesWithVariants[`${key}.${variantName}`] =
                     interfaceName !== "Default"
-                        ? `${interfaceName}${variantName.substring(
-                              2,
-                          )}`
-                        : variantName.substring(2);
+                        ? `${interfaceName}${capitalizedVariantName}`
+                        : capitalizedVariantName;
             }
         }
 

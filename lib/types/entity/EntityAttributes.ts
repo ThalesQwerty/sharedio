@@ -88,10 +88,13 @@ export type EntityDefaultVariantName =
     | "host"
     | "insider"
     | "all";
+
+type PartialKeyOf<ObjectType, ValueType> = {[KeyName in keyof ObjectType]: ObjectType[KeyName] extends ValueType ? KeyName : never}[keyof ObjectType];
+
 export type EntityCustomVariantName<
     EntityType extends Entity = Entity,
-> = EntityAttributeName<EntityType> &
-    `is${Capitalize<Letter>}${string}`;
+> = EntityAttributeName<EntityType> & PartialKeyOf<EntityType, EntityVariant>
+    //`is${Capitalize<Letter>}${string}`;
 
 export type EntityVariantName<EntityType extends Entity = Entity> =
     | EntityDefaultVariantName
