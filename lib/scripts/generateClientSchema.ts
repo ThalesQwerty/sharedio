@@ -58,6 +58,10 @@ export function generateClientSchema(
         );
     }
 
+    function unionType(entityName: string) {
+        return "Variants";
+    }
+
     const libName = "../../lib"; // "sharedio-client";
 
     fileContent += `import type { SharedIOSchema, EntityListSchema } from "${libName}";
@@ -192,7 +196,7 @@ export function generateClientSchema(
         export namespace ${entityType} {
             ${entityInterfaces.join(" ")}
 
-            export type ${entityType} = ${Object.keys(
+            export type ${unionType(entityType)} = ${Object.keys(
             interfaceNamesWithVariants,
         )
             .map(
@@ -292,7 +296,7 @@ export function generateClientSchema(
     }
 
     function createEntitySchemaList(entityType: string) {
-        return `${entityType}: EntityListSchema<${entityType}.${entityType}>`;
+        return `${entityType}: EntityListSchema<${entityType}.${unionType(entityType)}>`;
     }
 
     fs.writeFileSync(newPath, fileContent);

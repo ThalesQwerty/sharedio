@@ -91,7 +91,7 @@ const server = new Server({
         interfaceName: "Entities",
     },
 }).start(() => {
-    console.dir(Rules.from(Player), { depth: null });
+    // console.dir(Rules.from(Test), { depth: null });
 });
 
 server.on("connection", ({ user }) => {

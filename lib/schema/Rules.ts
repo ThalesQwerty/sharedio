@@ -131,17 +131,23 @@ export abstract class Rules {
         setTimeout(() => {
             let { read, write } = rules.accessPolicy;
 
-            if (
-                (!read || !read.length) &&
-                rules.isDefaultAccessPolicy.read
-            ) {
-                read.push(...defaultUserAccessPolicy.read);
+            if (rules.isVariant) {
+                rules.accessPolicy.read = ["all"],
+                rules.accessPolicy.write = []
             }
-            if (
-                (!write || !write.length) &&
-                rules.isDefaultAccessPolicy.write
-            ) {
-                write.push(...defaultUserAccessPolicy.write);
+            else {
+                if (
+                    (!read || !read.length) &&
+                    rules.isDefaultAccessPolicy.read
+                ) {
+                    read.push(...defaultUserAccessPolicy.read);
+                }
+                if (
+                    (!write || !write.length) &&
+                    rules.isDefaultAccessPolicy.write
+                ) {
+                    write.push(...defaultUserAccessPolicy.write);
+                }
             }
         }, 0);
 
@@ -241,7 +247,7 @@ export abstract class Rules {
         const entityTypeName = Entity.getClassName(entityOrType);
 
         const rules = Rules.get(entityTypeName, attributeName);
-        const clauses = rules.accessPolicy[action] ?? [];
+        const clauses = [...rules.accessPolicy[action]] ?? [];
 
         const entityVariants =
             userOrEntityVariants instanceof User

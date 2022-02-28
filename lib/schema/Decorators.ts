@@ -280,6 +280,8 @@ export function Type<EntityType extends Entity>(
     );
 
     rules.isVariant = true;
+    rules.hasGetAccessor = true;
+    rules.isMethod = false;
     rules.methodImplementation = (entity as any)[attributeName];
 }
 
