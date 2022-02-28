@@ -58,7 +58,7 @@ class Player extends Entity {
 }
 
 class Test extends Entity {
-    @Type isFirst(user?: User) {
+    @Type isFirst() {
         return this.index <= 1;
     }
 
@@ -91,26 +91,10 @@ const server = new Server({
         interfaceName: "Entities",
     },
 }).start(() => {
-    console.dir(Rules.from(Test), { depth: null });
+    console.dir(Rules.from(Player), { depth: null });
 });
 
 server.on("connection", ({ user }) => {
-    // const owned = new Player(
-    //     server,
-    //     { name: "You", power: 0 },
-    //     user
-    // );
-
-    // const notOwned = new Player(
-    //     server,
-    //     { name: "You", power: 0 }
-    // );
-
     const test1 = new Test({ server });
-
-    const test2 = new Test({ server }).then(() => {
-        // test2.index = 30;
-        // console.log(test1, test2);
-        // console.log(user.variants(test1), user.variants(test2));
-    });
+    const test2 = new Test({ server });
 });
