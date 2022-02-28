@@ -3,7 +3,7 @@
 - [X] Adjust user access policies on @Type fields
 - [ ] Fix negative user access policies (ex: "-owner")
 - [ ] Update tests
-- [ ] Fix json difference calculator (it currently doesn't work properly with null/undefined values)
+- [X] Fix json difference calculator (it currently doesn't work properly with null/undefined values)
 - [ ] Add extra methods on server entity list
 - [ ] Implement @Set accessors
 - [ ] Implement entity deletion on client

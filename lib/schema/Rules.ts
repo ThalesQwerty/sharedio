@@ -128,7 +128,7 @@ export abstract class Rules {
 
         const rules = this.schema[entityType][attributeName];
 
-        setTimeout(() => {
+        process.nextTick(() => {
             let { read, write } = rules.accessPolicy;
 
             if (rules.isVariant) {

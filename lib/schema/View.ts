@@ -5,7 +5,7 @@ import {
     EntityReservedAttributeName,
     EntityAttributeName,
 } from "../types";
-import { Difference } from "../utils";
+import { ObjectTransform, KeyValueDifference } from "../utils";
 import * as _ from "lodash";
 import { Cache } from "./Cache";
 
@@ -41,10 +41,10 @@ export class View {
      * Returns the difference between the current view and the next view as a JSON
      */
     public get changes() {
-        return Difference<KeyValue<SerializedEntity>>(
+        return ObjectTransform.delta(
             this._current,
             this._next,
-        );
+        ) as KeyValueDifference<KeyValue<SerializedEntity>>;
     }
 
     /**
@@ -78,7 +78,7 @@ export class View {
     public update() {
         const difference = this.changes;
 
-        if (difference.add || difference.remove) {
+        if (Object.keys(difference.add).length || difference.remove.length) {
             this.user.client.send({
                 action: "view",
                 ...difference,

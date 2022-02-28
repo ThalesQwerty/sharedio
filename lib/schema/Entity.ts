@@ -191,11 +191,11 @@ export class Entity
         this._owner = owner ?? null;
 
         this.on("delete", () => {
-            setTimeout(() => this.removeAllListeners(), 0);
+            process.nextTick(() => this.removeAllListeners(), 0);
         });
 
-        setTimeout(() => {
-            const created = this.exists !== false; //this._Constructor() !== false;
+        process.nextTick(() => {
+            const created = this.exists !== false;
 
             if (created) {
                 this._server.entities.push(this);
@@ -216,11 +216,8 @@ export class Entity
                     entity: this,
                     user: owner,
                 });
-            } else {
-                // this.removeAllListeners();
-                // this.delete();
             }
-        }, 0);
+        });
     }
 
     /**

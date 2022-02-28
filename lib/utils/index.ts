@@ -1,4 +1,4 @@
 export * from "./RandomHex";
-export * from "./Difference";
+export * from "./ObjectTransform";
 export * from "./HasId";
 export * from "./HasEvents";

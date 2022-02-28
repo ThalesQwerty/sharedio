@@ -179,7 +179,7 @@ export class Server extends HasEvents<
             this.on("start", onStart);
         }
 
-        setTimeout(() => {
+        process.nextTick(() => {
             this.emit("start");
         });
 
@@ -232,10 +232,11 @@ export class Server extends HasEvents<
 
             if (!this._users.filter((user) => user.is(newUser))[0]) {
                 this._users.push(newUser);
-                this.emit("connection", {
-                    user: newUser,
-                });
             }
+
+            this.emit("connection", {
+                user: newUser,
+            });
 
             newClient.on("close", () => {
                 this.emit("disconnection", {

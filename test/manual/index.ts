@@ -18,6 +18,7 @@ import {
     Unless,
     EntityConfig,
 } from "../../lib";
+import { ObjectTransform } from "../../lib/utils";
 
 class Player extends Entity {
     @Internal serverSide = 0;
@@ -34,7 +35,6 @@ class Player extends Entity {
     @Private @Readonly immutableSecret = "Hello Person!";
 
     // @Public null = null;
-    // @Public undefined = undefined;
 
     @Public
     shoot() {
@@ -55,8 +55,19 @@ class Player extends Entity {
     @Controlled kick() {
         // kicks the player (only the host can do that)
     }
-}
 
+    constructor(config: EntityConfig) {
+        super(config);
+
+        const interval = setInterval(() => {
+            // this.randomNumber = Math.floor(Math.random() * 10000);
+        }, 1000);
+
+        this.on("delete", () => {
+            clearInterval(interval);
+        })
+    }
+}
 class Test extends Entity {
     @Type isFirst() {
         return this.index <= 1;
@@ -70,13 +81,23 @@ class Test extends Entity {
 
     @Readonly index = 1;
 
+    @Readonly unstable:null|undefined = null;
+
     constructor(params: EntityConfig<Test>) {
         super(params);
 
-        this.on("create", () => {
-            this.index = this.server.entities.filter(
-                (entity) => entity.type === this.type,
-            ).length;
+        // this.on("create", () => {
+        //     this.index = this.server.entities.filter(
+        //         (entity) => entity.type === this.type,
+        //     ).length;
+        // });
+
+        const interval = setInterval(() => {
+            this.unstable = this.unstable === null ? undefined : null;
+        }, 1000);
+
+        this.on("delete", () => {
+            clearInterval(interval);
         });
     }
 }
@@ -87,14 +108,15 @@ const server = new Server({
     tickRate: 1,
     clientSchema: {
         path: "../client/src/sharedio",
-        fileName: "newSchema2.ts",
+        fileName: "schema.ts",
         interfaceName: "Entities",
     },
-}).start(() => {
-    // console.dir(Rules.from(Test), { depth: null });
-});
+}).start();
 
 server.on("connection", ({ user }) => {
-    const test1 = new Test({ server });
-    const test2 = new Test({ server });
+    const test = new Test({ server });
+
+    user.client.on("close", () => {
+        test.delete();
+    });
 });
