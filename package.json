@@ -7,7 +7,7 @@
     "scripts": {
         "build": "tsc",
         "test": "jest --detectOpenHandles",
-        "dev": "ts-node test/manual",
+        "dev": "npx nodemon test/manual/index.ts",
         "lint": "eslint --ignore-path .gitignore --ext .js,.jsx,.ts,.tsx .",
         "lint:fix": "eslint --fix --ignore-path .gitignore --ext .js,.jsx,.ts,.tsx .",
         "format": "prettier --write ."
@@ -39,7 +39,6 @@
     },
     "dependencies": {
         "difference-json": "^1.0.6",
-        "json-difference": "^1.0.4",
         "lodash": "^4.17.21",
         "reflect-metadata": "^0.1.13",
         "typescript": "^4.4.3",
