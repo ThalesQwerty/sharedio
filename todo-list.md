@@ -1,7 +1,7 @@
 # To-do list
 
 - [X] Adjust user access policies on @Type fields
-- [ ] Fix negative user access policies (ex: "-owner")
+- [X] Fix negative user access policies (ex: "-owner")
 - [ ] Update tests
 - [X] Fix json difference calculator (it currently doesn't work properly with null/undefined values)
 - [ ] Add extra methods on server entity list

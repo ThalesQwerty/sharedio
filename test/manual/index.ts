@@ -18,7 +18,12 @@ import {
     Unless,
     EntityConfig,
 } from "../../lib";
+import { EntityIntersectionVariantName, EntityVariantName } from "../../lib/types";
 class Player extends Entity {
+    @Type ally() {
+        return true;
+    }
+
     @Internal serverSide = 0;
 
     @Public name = "Thales";
@@ -31,6 +36,9 @@ class Player extends Entity {
     @Readonly immutable = "Hello World!";
 
     @Private @Readonly immutableSecret = "Hello Person!";
+
+    @If("ally")
+    health = 100;
 
     // @Public null = null;
 
@@ -66,39 +74,6 @@ class Player extends Entity {
         })
     }
 }
-class Test extends Entity {
-    @Type first() {
-        return this.index === 1;
-    }
-
-    @Public hello = "world";
-
-    @If("first")
-    @Writable
-    easterEgg = "We're no strangers to love";
-
-    @Readonly index = 1;
-
-    @Readonly unstable:null|undefined = null;
-
-    constructor(params: EntityConfig<Test>) {
-        super(params);
-
-        // this.on("create", () => {
-        //     this.index = this.server.entities.filter(
-        //         (entity) => entity.type === this.type,
-        //     ).length;
-        // });
-
-        const interval = setInterval(() => {
-            this.unstable = this.unstable === null ? undefined : null;
-        }, 1000);
-
-        this.on("delete", () => {
-            clearInterval(interval);
-        });
-    }
-}
 
 const server = new Server({
     port: 8080,
@@ -111,8 +86,12 @@ const server = new Server({
     },
 }).start();
 
+setImmediate(() => {
+    console.dir(Rules.schema, { depth: null});
+});
+
 server.on("connection", ({ user }) => {
-    const test = new Test({ server });
+    const test = new Player({ server });
 
     user.client.on("close", () => {
         test.delete();

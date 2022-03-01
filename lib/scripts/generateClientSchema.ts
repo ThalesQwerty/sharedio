@@ -100,7 +100,7 @@ export function generateClientSchema(
     for (const entityType in schema) {
         const entitySchema = schema[entityType];
 
-        const variants = { ...Rules.variants(entityType) };
+        const variants = { ...Rules.variants(entityType, "public") };
 
         // @ts-expect-error
         delete variants.all;

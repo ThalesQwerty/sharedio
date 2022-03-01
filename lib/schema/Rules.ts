@@ -1,7 +1,5 @@
 import {
-    defaultUserAccessPolicy,
     Entity,
-    userAccessPolicyPresets,
 } from ".";
 import {
     EntityAttributeRules,
@@ -11,14 +9,13 @@ import {
     SharedIOError,
     EntityVariant,
     EntityClassName,
+    EntityVariantName,
+    EntityUserAccessPolicy,
+    EntityUserAccessPolicyClause,
+    AllowedEntityVariant,
+    DeniedEntityVariant
 } from "../types";
 import { User } from "./User";
-import {
-    EntityUserAccessPolicyModifier,
-    EntityVariantName,
-    EntityUserAccessClauseModifier,
-    EntityUserAccessPolicy,
-} from "../types";
 import _ from "lodash";
 
 /**
@@ -71,6 +68,7 @@ export abstract class Rules {
 
     public static variants<EntityType extends Entity>(
         entityOrType: EntityClassName | EntityType,
+        readability?: "public"|"internal"
     ) {
         const rules = this.from(entityOrType);
         const variants: KeyValue<EntityVariant, EntityVariantName> = {
@@ -83,7 +81,11 @@ export abstract class Rules {
         for (const attributeName in rules) {
             const attributeRules = rules[attributeName];
 
-            if (attributeRules.isVariant)
+            if (attributeRules.isVariant && (
+                !readability ||
+                (readability === "public" && attributeRules.accessPolicy.read[0] === undefined) ||
+                (readability === "internal" && attributeRules.accessPolicy.read[0] === "!all")
+            ))
                 variants[attributeName as EntityVariantName] =
                     attributeRules.methodImplementation as EntityVariant;
         }
@@ -101,9 +103,11 @@ export abstract class Rules {
         return _.cloneDeep(this._default);
     }
     private static readonly _default: EntityAttributeRules = {
-        isDefaultAccessPolicy: {
-            read: true,
-            write: true,
+        entityType: "Entity",
+        attributeName: "",
+        loaded: {
+            read: false,
+            write: false
         },
         accessPolicy: {
             read: [],
@@ -123,86 +127,71 @@ export abstract class Rules {
         this.schema[entityType] ??= {};
 
         if (!this.schema[entityType][attributeName]) {
-            this.schema[entityType][attributeName] = this.default;
+            this.schema[entityType][attributeName] = {
+                ...this.default,
+                entityType,
+                attributeName
+            }
         }
-
-        const rules = this.schema[entityType][attributeName];
-
-        process.nextTick(() => {
-            let { read, write } = rules.accessPolicy;
-
-            if (rules.isVariant) {
-                rules.accessPolicy.read = ["all"],
-                rules.accessPolicy.write = []
-            }
-            else {
-                if (
-                    (!read || !read.length) &&
-                    rules.isDefaultAccessPolicy.read
-                ) {
-                    read.push(...defaultUserAccessPolicy.read);
-                }
-                if (
-                    (!write || !write.length) &&
-                    rules.isDefaultAccessPolicy.write
-                ) {
-                    write.push(...defaultUserAccessPolicy.write);
-                }
-            }
-        }, 0);
 
         return this.schema[entityType][attributeName];
     }
 
     public static modifyAccessPolicy<EntityType extends Entity>(
-        { accessPolicy, isDefaultAccessPolicy }: EntityAttributeRules,
-        modifier: EntityUserAccessPolicyModifier<EntityType>,
+        { accessPolicy, entityType, loaded, isMethod, isVariant }: EntityAttributeRules<EntityType>,
+        changes: Partial<EntityUserAccessPolicy<EntityType>>,
     ) {
-        for (const _clauseType in modifier) {
-            const clauseType =
-                _clauseType as keyof EntityUserAccessPolicyModifier<EntityType>;
-            const clauses = modifier[clauseType] ?? [];
+        for (const _action in accessPolicy) {
+            const action =
+                _action as keyof EntityUserAccessPolicy<EntityType>;
 
-            let implicitAll = false;
-            let allowedEntityVariants = accessPolicy[clauseType];
+            if (changes[action]) accessPolicy[action].push(...changes[action] as any);
 
-            if (clauses.length) {
-                implicitAll =
-                    isDefaultAccessPolicy[clauseType] &&
-                    allowedEntityVariants.length === 0;
-                isDefaultAccessPolicy[clauseType] = false;
-            }
+            process.nextTick(() => {
+                if (!loaded[action]) {
+                    loaded[action] = true;
 
-            for (const clause of clauses) {
-                const accessModifier = clause.substring(
-                    0,
-                    1,
-                ) as EntityUserAccessClauseModifier;
-                const relationName = clause.substring(
-                    1,
-                ) as EntityVariantName;
+                    if (isVariant) {
+                        // attributes with @Type decorator are always @Public @Readonly
 
-                switch (accessModifier) {
-                    case "+":
-                        if (
-                            !allowedEntityVariants.find(
-                                (name) => name === relationName,
-                            )
-                        )
-                            allowedEntityVariants.push(relationName);
-                        break;
-                    case "-":
-                        if (implicitAll)
-                            allowedEntityVariants.push("all");
-                        allowedEntityVariants =
-                            allowedEntityVariants.filter(
-                                (name) => name !== relationName,
-                            );
-                        break;
+                        switch (action) {
+                            case "read":
+                                accessPolicy[action] = accessPolicy[action][0] === "!all" ? ["!all"] : ["all"];
+                                break;
+                            case "write":
+                                accessPolicy[action] = [];
+                                break;
+                        }
+
+                        return;
+                    }
+
+                    const unloadedAccessPolicy = _.uniq([...accessPolicy[action]]);
+
+                    if (!unloadedAccessPolicy.length) {
+                        // loads the default policy (@Public for attributes, @Private for methods)
+                        switch (action) {
+                            case "read":
+                                accessPolicy[action] = isMethod ? ["owner"] : ["all"];
+                                break;
+                            case "write":
+                                accessPolicy[action] = ["owner"];
+                                break;
+                        }
+
+                        return;
+                    }
+
+                    // loads all modifiers into the access policy
+
+                    const isWhitelist = unloadedAccessPolicy[0].substring(0, 1) !== "!";
+                    if (isWhitelist) {
+                        accessPolicy[action] = unloadedAccessPolicy.filter(variantName => variantName.substring(0, 1) !== "!") as EntityUserAccessPolicyClause;
+                    } else {
+                        accessPolicy[action] = unloadedAccessPolicy.filter(variantName => variantName.substring(0, 1) === "!") as EntityUserAccessPolicyClause;
+                    }
                 }
-            }
-
-            accessPolicy[clauseType] = allowedEntityVariants;
+            });
         }
 
         return accessPolicy;
@@ -247,9 +236,11 @@ export abstract class Rules {
         const entityTypeName = Entity.getClassName(entityOrType);
 
         const rules = Rules.get(entityTypeName, attributeName);
-        const clauses = [...rules.accessPolicy[action]] ?? [];
+        const variantList = [...rules.accessPolicy[action]] ?? [];
 
-        const entityVariants =
+        const listShouldContainUser = !variantList.length || variantList[0].substring(0, 1) !== "!";
+
+        const currentVariants =
             userOrEntityVariants instanceof User
                 ? entityOrType instanceof Entity
                     ? userOrEntityVariants.variants(entityOrType)
@@ -258,14 +249,14 @@ export abstract class Rules {
                       )
                 : userOrEntityVariants;
 
-        if (entityVariants instanceof SharedIOError)
-            throw entityVariants;
+        if (currentVariants instanceof SharedIOError)
+            throw currentVariants;
 
         // Can't write if can't read, bro
         if (
             action === "write" &&
             !this.verify(
-                entityVariants,
+                currentVariants,
                 "read",
                 entityTypeName,
                 attributeName,
@@ -273,9 +264,12 @@ export abstract class Rules {
         )
             return false;
 
-        let allowedEntityVariants: EntityVariantName[] = clauses;
+        const allowUserAction = !!_.intersection(currentVariants, variantList.map(name => name.replace("!", "")) as string[]).length; /*!!variantList.filter(variantName => {
+            const subvariants = variantName.split("&");
+            return subvariants.filter(subvariant => subvariant.substring(0, 1) === "!" ?
+                currentVariants.indexOf(subvariant as any) < 0 : currentVariants.indexOf(subvariant as any) >= 0).length === subvariants.length;
+        }).length */
 
-        return !!_.intersection(entityVariants, allowedEntityVariants)
-            .length;
+        return allowUserAction;
     }
 }

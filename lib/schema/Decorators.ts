@@ -1,19 +1,19 @@
 import _ from "lodash";
-import { Entity, Rules, User } from ".";
+import { Entity, Rules } from ".";
 import {
     SharedIOError,
-    EntityWithAttribute,
     EntityAttributeName,
     EntityGetAccessor,
     EntitySetAccessor,
     KeyValue,
-    EntityUserAccessPolicyModifier,
     EntityAttributeRules,
     EntityUserAccessPolicy,
     EntityVariant,
-    Letter,
     EntityVariantName,
-    EntityUserAccessPolicyClause,
+    AllowedEntityVariant,
+    DeniedEntityVariant,
+    EntityIntersectionVariantName,
+    EntityIntersectionVariantCamelCaseName,
 } from "../types";
 
 const defaultUserAccessPolicy: EntityUserAccessPolicy = {
@@ -22,7 +22,7 @@ const defaultUserAccessPolicy: EntityUserAccessPolicy = {
 };
 
 const userAccessPolicyPresets: KeyValue<
-    EntityUserAccessPolicyModifier,
+    Partial<EntityUserAccessPolicy>,
     | "public"
     | "protected"
     | "private"
@@ -32,32 +32,32 @@ const userAccessPolicyPresets: KeyValue<
     | "controlled"
 > = {
     public: {
-        read: ["+all"],
+        read: ["all"],
         write: [],
     },
     protected: {
-        read: ["+insider"],
+        read: ["insider"],
         write: [],
     },
     private: {
-        read: ["+owner"],
+        read: ["owner"],
         write: [],
     },
     internal: {
-        read: ["-all"],
+        read: ["!all"],
         write: [],
     },
     readonly: {
         read: [],
-        write: ["-all"],
+        write: ["!all"],
     },
     writable: {
         read: [],
-        write: ["+all"],
+        write: ["all"],
     },
     controlled: {
-        read: ["+host"],
-        write: ["+host"],
+        read: ["host"],
+        write: ["host"],
     },
 };
 
@@ -90,17 +90,17 @@ function prepareRuleSchema<EntityType extends Entity>(
  * Creates a custom user access policy
  */
 export function UsePolicy<EntityType extends Entity>(
-    accessPolicyModifier: EntityUserAccessPolicyModifier<EntityType>,
+    accessPolicyChanges: Partial<EntityUserAccessPolicy<EntityType>>,
 ) {
     return function <EntityType extends Entity>(
         entity: EntityType,
         attributeName: EntityAttributeName<EntityType>,
     ) {
         const rules = prepareRuleSchema(entity, attributeName);
-        Rules.modifyAccessPolicy(rules, accessPolicyModifier);
+        Rules.modifyAccessPolicy(rules, accessPolicyChanges as EntityUserAccessPolicy);
 
         if (typeof entity[attributeName] === "function") {
-            if (!rules.hasGetAccessor && !rules.hasSetAccessor)
+            if (!rules.hasGetAccessor && !rules.hasSetAccessor && !rules.isVariant)
                 rules.isMethod = true;
         }
     };
@@ -271,7 +271,7 @@ export function Cached(duration: number = 1000) {
  */
 export function Type<EntityType extends Entity>(
     entity: EntityType,
-    attributeName: EntityVariantName<EntityType>,
+    attributeName: Exclude<EntityVariantName<EntityType>, EntityIntersectionVariantCamelCaseName<EntityType>>,
     descriptor: TypedPropertyDescriptor<EntityVariant>,
 ) {
     const rules = prepareRuleSchema(
@@ -290,9 +290,12 @@ function verifyVariantOrFail(entity: Entity, variantName: EntityVariantName) {
 
     const entityType = entity.constructor.name;
 
-    const rules = Rules.get(entityType, variantName);
+    for (const subvariantName of (variantName as string).split("&")) {
+        const rules = Rules.get(entityType, subvariantName);
 
-    if (!rules || !rules.isVariant) throw new SharedIOError(`Variant "${variantName}" does not exist on entity of type "${entityType}". Verify if you've correctly declared this variant (you must use the @Type decorator).`)
+        if (!rules || !rules.isVariant) throw new SharedIOError(`Variant "${subvariantName}" does not exist on entity of type "${entityType}". Verify if you've correctly declared this variant (you must use the @Type decorator).`)
+    }
+
     return true;
 }
 
@@ -306,15 +309,15 @@ export function If<EntityVariantNames extends string[] = string[]>(
 ) {
     return function <EntityType extends Entity>(
         entity: EntityType,
-        attributeName: EntityVariantNames extends EntityVariantName<EntityType>[]
+        attributeName: EntityVariantNames extends (EntityVariantName<EntityType>|EntityIntersectionVariantName<EntityType>)[]
             ? EntityAttributeName<EntityType>
             : never,
     ) {
         setImmediate(() => variants.forEach(variantName => verifyVariantOrFail(entity, variantName as EntityVariantName)));
         return UsePolicy<EntityType>({
             read: variants.map(
-                (variant) => `+${variant}`,
-            ) as EntityUserAccessPolicyClause<EntityType>[],
+                (variant) => `${variant}`,
+            ) as AllowedEntityVariant<EntityType>[],
         })(entity, attributeName);
     };
 }
@@ -329,15 +332,15 @@ export function Unless<
 >(...variants: EntityVariantNames) {
     return function <EntityType extends Entity>(
         entity: EntityType,
-        attributeName: EntityVariantNames extends EntityVariantName<EntityType>[]
+        attributeName: EntityVariantNames extends (EntityVariantName<EntityType>|EntityIntersectionVariantName<EntityType>)[]
             ? EntityAttributeName<EntityType>
             : never,
     ) {
         setImmediate(() => variants.forEach(variantName => verifyVariantOrFail(entity, variantName as EntityVariantName)));
         return UsePolicy<EntityType>({
             read: variants.map(
-                (variant) => `-${variant}`,
-            ) as EntityUserAccessPolicyClause<EntityType>[],
+                (variant) => `!${variant}`,
+            ) as DeniedEntityVariant<EntityType>[],
         })(entity, attributeName);
     };
 }
