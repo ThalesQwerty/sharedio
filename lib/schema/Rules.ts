@@ -12,8 +12,6 @@ import {
     EntityVariantName,
     EntityUserAccessPolicy,
     EntityUserAccessPolicyClause,
-    AllowedEntityVariant,
-    DeniedEntityVariant
 } from "../types";
 import { User } from "./User";
 import _ from "lodash";
@@ -75,7 +73,7 @@ export abstract class Rules {
             all: () => true,
             owner: (user) => user?.owns(this as any) || false,
             host: () => false,
-            insider: () => false,
+            inside: () => false,
         };
 
         for (const attributeName in rules) {
@@ -204,7 +202,7 @@ export abstract class Rules {
         user: User,
         action: keyof EntityUserAccessPolicy,
         entity: EntityType,
-        attributeName: EntityAttributeName<EntityType>,
+        attributeName: EntityAttributeName<EntityType>
     ): boolean;
 
     /**
@@ -215,6 +213,7 @@ export abstract class Rules {
         action: keyof EntityUserAccessPolicy,
         entity: EntityType,
         attributeName: EntityAttributeName<EntityType>,
+        safe?: boolean
     ): boolean;
 
     /**
@@ -225,6 +224,7 @@ export abstract class Rules {
         action: keyof EntityUserAccessPolicy,
         entity: EntityClassName,
         attributeName: string,
+        safe?: boolean
     ): boolean;
 
     public static verify<EntityType extends Entity>(
@@ -232,27 +232,27 @@ export abstract class Rules {
         action: keyof EntityUserAccessPolicy,
         entityOrType: EntityType | EntityClassName,
         attributeName: string,
+        safe: boolean = true
     ): boolean {
         const entityTypeName = Entity.getClassName(entityOrType);
 
         const rules = Rules.get(entityTypeName, attributeName);
-        const variantList = [...rules.accessPolicy[action]] ?? [];
+        const accessPolicyExpressions = [...rules.accessPolicy[action]] ?? [];
 
-        const listShouldContainUser = !variantList.length || variantList[0].substring(0, 1) !== "!";
+        // needs to be sorted by length (descending), in order to avoid bugs on regex
+        // ex: type "ally" contains the string "all" in it, so "ally" has to be checked before "all"
+        const variantList = Object.keys(Rules.variants(entityOrType)).sort((a, b) => a.length < b.length ? 1 : -1);
 
         const currentVariants =
             userOrEntityVariants instanceof User
                 ? entityOrType instanceof Entity
                     ? userOrEntityVariants.variants(entityOrType)
-                    : new SharedIOError(
-                          `Rules.verify(): Third parameter cannot be of type "string" if first parameter is of type "User"`,
-                      )
+                    : new SharedIOError("noConcreteUserAndAbstractEntity")
                 : userOrEntityVariants;
 
         if (currentVariants instanceof SharedIOError)
             throw currentVariants;
 
-        // Can't write if can't read, bro
         if (
             action === "write" &&
             !this.verify(
@@ -260,12 +260,28 @@ export abstract class Rules {
                 "read",
                 entityTypeName,
                 attributeName,
+                safe
             )
         )
             return false;
 
-        const listContainsUser = !!_.intersection(currentVariants, variantList.map(name => name.replace("!", "")) as string[]).length;
+        const originalExpression: string = accessPolicyExpressions.map(expression => `(${expression})`).join(" | ");
+        let booleanExpression = originalExpression;
 
-        return listContainsUser === listShouldContainUser;
+        for (const variantName of variantList) {
+            booleanExpression = booleanExpression.replace(new RegExp(variantName, "g"), currentVariants.indexOf(variantName as EntityVariantName) >= 0 ? "1" : "0");
+        }
+
+        if (!safe) {
+            const invalidVariants = booleanExpression.replace(/[01]/g, "").replace(/[&!|()]/g, " ").trim().replace(/\s+/, ", ");
+
+            if (invalidVariants !== "") {
+                throw new SharedIOError("entityVariantNotFound", entityTypeName, invalidVariants.split(", "))
+            }
+        }
+
+        const allow = !!eval(booleanExpression);
+
+        return allow;
     }
 }

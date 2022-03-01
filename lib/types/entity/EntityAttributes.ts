@@ -80,13 +80,13 @@ export type EntityVariant = (
  *
  * @owner The owner of the entity, usually the user who created it
  * @host The owner of the channel where the entity is located
- * @insider All users who are inside the entity (only applies if the entity is a channel)
+ * @inside All users who are inside the entity (only applies if the entity is a channel)
  * @all All users who may interact with the entity
  */
 export type EntityDefaultVariantName =
     | "owner"
     | "host"
-    | "insider"
+    | "inside"
     | "all";
 
 type PartialKeyOf<ObjectType, ValueType> = { [KeyName in keyof ObjectType]: ObjectType[KeyName] extends ValueType ? KeyName : never }[keyof ObjectType];
@@ -104,10 +104,19 @@ export type EntityIntersectionVariantCamelCaseName<EntityType extends Entity> =
     | `${EntityVariantName<EntityType>}${Capitalize<EntityVariantName<EntityType>>}`
     | `${EntityVariantName<EntityType>}${Capitalize<EntityVariantName<EntityType>>}${Capitalize<EntityVariantName<EntityType>>}`
 
-export type EntityIntersectionVariantName<EntityType extends Entity> =
-    | `${EntityVariantName<EntityType>}&${EntityVariantName<EntityType>}`
-    | `${EntityVariantName<EntityType>}&${EntityVariantName<EntityType>}&${EntityVariantName<EntityType>}`
-    | `${string}&${string}&${string}&${string}`
+// export type EntityIntersectionVariantName<EntityType extends Entity> =
+//     | `${EntityVariantName<EntityType>}&${EntityVariantName<EntityType>}`
+//     | `${EntityVariantName<EntityType>}&${EntityVariantName<EntityType>}&${EntityVariantName<EntityType>}`
+//     | `${string}&${string}&${string}&${string}`
+
+type EntityVariantBooleanOperator = "&"|"|";
+type OP = EntityVariantBooleanOperator|` ${EntityVariantBooleanOperator} `;
+
+type SingleExpression<T extends Entity> = (EntityVariantName<T>|`!${EntityVariantName<T>}`)|(`(!${EntityVariantName<T>})`);
+type DoubleExpresison<T extends Entity> = `${SingleExpression<T>}${OP}${SingleExpression<T>}`|`(${SingleExpression<T>}${OP}${SingleExpression<T>})`|`!(${SingleExpression<T>}${OP}${SingleExpression<T>})`;
+type MultiExpression<T extends Entity> = `${string}${OP}${string}${OP}${string}`;
+
+export type EntityVariantBooleanExpression<EntityType extends Entity = Entity> = SingleExpression<EntityType> | DoubleExpresison<EntityType> | MultiExpression<EntityType>;
 
 /**
  * Allows (+) or denies (-) read/write access for an user class
@@ -116,7 +125,7 @@ export type AllowedEntityVariant<EntityType extends Entity = Entity> = EntityVar
 
 export type DeniedEntityVariant<EntityType extends Entity = Entity> = `!${EntityVariantName<EntityType>}`;
 
-export type EntityUserAccessPolicyClause<EntityType extends Entity = Entity> = AllowedEntityVariant<EntityType>[] | DeniedEntityVariant<EntityType>[];
+export type EntityUserAccessPolicyClause<EntityType extends Entity = Entity> = EntityVariantBooleanExpression<EntityType>[];
 
 export type EntityUserAccessPolicy<
     EntityType extends Entity = Entity,

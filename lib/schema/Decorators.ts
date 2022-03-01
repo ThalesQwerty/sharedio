@@ -12,8 +12,8 @@ import {
     EntityVariantName,
     AllowedEntityVariant,
     DeniedEntityVariant,
-    EntityIntersectionVariantName,
     EntityIntersectionVariantCamelCaseName,
+    EntityVariantBooleanExpression,
 } from "../types";
 
 const defaultUserAccessPolicy: EntityUserAccessPolicy = {
@@ -36,7 +36,7 @@ const userAccessPolicyPresets: KeyValue<
         write: [],
     },
     protected: {
-        read: ["insider"],
+        read: ["inside"],
         write: [],
     },
     private: {
@@ -72,16 +72,29 @@ function prepareRuleSchema<EntityType extends Entity>(
     entity: EntityType,
     attributeName: EntityAttributeName<EntityType>,
 ): EntityAttributeRules {
-    const type = entity.constructor.name;
+    const entityType = entity.constructor.name;
 
     if (Entity.isDefaultAttribute(attributeName)) {
-        throw new SharedIOError(
-            `Decorators cannot be applied to reserved member "${attributeName}" on entity ${type}.
-            Please remove the decorators you've added and try to run your code again.`,
-        );
+        throw new SharedIOError("noDecoratorOnReservedAttribute", entityType, attributeName);
     }
 
-    return Rules.create(type, attributeName);
+    return Rules.create(entityType, attributeName);
+}
+
+function verifyVariantOrFail(entity: Entity, variantName: EntityVariantName) {
+    const entityType = entity.constructor.name;
+
+    const subvariants = (variantName as string).replace(/[&!|()]/g, " ").trim().replace(/\s+/g, " ").split(" ");
+
+    for (const subvariantName of subvariants) {
+        if (subvariantName === "all" || subvariantName === "host" || subvariantName === "inside" || subvariantName === "owner") continue;
+
+        const rules = Rules.get(entityType, subvariantName);
+
+        if (!rules || !rules.isVariant) throw new SharedIOError("entityVariantNotFound", entityType, [subvariantName]);
+    }
+
+    return true;
 }
 
 /**
@@ -113,7 +126,7 @@ export function UsePolicy<EntityType extends Entity>(
  *
  * Equivalent to:
  * ```ts
- * UsePolicy({read: ["+all"]})
+ * @If("all")
  * ```
  */
 const Public: EntityDecorator = UsePolicy(
@@ -127,7 +140,7 @@ const Public: EntityDecorator = UsePolicy(
  *
  * Equivalent to:
  * ```ts
- * UsePolicy({read: ["+insider"]})
+ * @If("inside")
  */
 const Protected: EntityDecorator = UsePolicy(
     userAccessPolicyPresets.protected,
@@ -140,7 +153,7 @@ const Protected: EntityDecorator = UsePolicy(
  *
  * Equivalent to:
  * ```ts
- * UsePolicy({read: ["+owner"]})
+ * @If("owner")
  * ```
  */
 const Private: EntityDecorator = UsePolicy(
@@ -154,7 +167,7 @@ const Private: EntityDecorator = UsePolicy(
  *
  * Equivalent to:
  * ```ts
- * UsePolicy({read: ["-all"]})
+ * @Unless("all")
  * ```
  *
  * This decorator is optional, since it's also equivalent for using no decorator at all.
@@ -170,7 +183,7 @@ const Internal: EntityDecorator = UsePolicy(
  *
  * Equivalent to:
  * ```ts
- * UsePolicy({read: ["+host"], write: ["+host"]})
+ * @If("host") @WritableIf("host")
  * ```
  */
 const Controlled: EntityDecorator = UsePolicy(
@@ -184,7 +197,7 @@ const Controlled: EntityDecorator = UsePolicy(
  *
  * Equivalent to:
  * ```ts
- * UsePolicy({write: ["-all"]})
+ * @WritableUnless("all")
  * ```
  */
 const Readonly: EntityDecorator = UsePolicy(
@@ -200,7 +213,7 @@ const Readonly: EntityDecorator = UsePolicy(
  *
  * Equivalent to:
  * ```ts
- * UsePolicy({write: ["+all"]})
+ * @WritableIf("all")
  * ```
  */
 const Writable: EntityDecorator = UsePolicy(
@@ -285,18 +298,14 @@ export function Type<EntityType extends Entity>(
     rules.methodImplementation = (entity as any)[attributeName];
 }
 
-function verifyVariantOrFail(entity: Entity, variantName: EntityVariantName) {
-    const entityType = entity.constructor.name;
+function saveExpression<EntityType extends Entity>(entity: EntityType, attributeName: EntityAttributeName<EntityType>, expressions: string[], action: "read"|"write", clause: "if"|"unless" = "if") {
+    setImmediate(() => expressions.forEach(variantName => verifyVariantOrFail(entity, variantName as EntityVariantName)));
 
-    for (const subvariantName of (variantName as string).split("&")) {
-        if (subvariantName === "all" || subvariantName === "host" || subvariantName === "insider" || subvariantName === "owner") continue;
+    const unifiedExpression = expressions.map(expression => `(${expression})`).join("|");
 
-        const rules = Rules.get(entityType, subvariantName);
-
-        if (!rules || !rules.isVariant) throw new SharedIOError(`Variant "${subvariantName}" does not exist on entity of type "${entityType}". Verify if you've correctly declared this variant (you must use the @Type decorator).`)
-    }
-
-    return true;
+    return UsePolicy<EntityType>({
+        [action]: [clause === "if" ? unifiedExpression : `!(${unifiedExpression})`] as EntityVariantBooleanExpression[],
+    })(entity, attributeName);
 }
 
 /**
@@ -304,21 +313,53 @@ function verifyVariantOrFail(entity: Entity, variantName: EntityVariantName) {
  *
  * This property will only be readable if this entity is of certain variants
  */
-export function If<EntityVariantNames extends string[] = string[]>(
-    ...variants: EntityVariantNames
+export function If<Expression extends string[] = string[]>(
+    ...expressions: Expression
 ) {
     return function <EntityType extends Entity>(
         entity: EntityType,
-        attributeName: EntityVariantNames extends (EntityVariantName<EntityType>|EntityIntersectionVariantName<EntityType>)[]
+        attributeName: Expression extends EntityVariantBooleanExpression<EntityType>[]
             ? EntityAttributeName<EntityType>
             : never,
     ) {
-        setImmediate(() => variants.forEach(variantName => verifyVariantOrFail(entity, variantName as EntityVariantName)));
-        return UsePolicy<EntityType>({
-            read: variants.map(
-                (variant) => `${variant}`,
-            ) as AllowedEntityVariant<EntityType>[],
-        })(entity, attributeName);
+        return saveExpression(entity, attributeName, expressions, "read", "if");
+    };
+}
+
+/**
+ * @SharedIO Rule Decorator
+ *
+ * This property will only be writable if this entity is of certain variants
+ */
+ export function WritableIf<Expression extends string[] = string[]>(
+    ...expressions: Expression
+) {
+    return function <EntityType extends Entity>(
+        entity: EntityType,
+        attributeName: Expression extends EntityVariantBooleanExpression<EntityType>[]
+            ? EntityAttributeName<EntityType>
+            : never,
+    ) {
+        return saveExpression(entity, attributeName, expressions, "write", "if");
+    };
+}
+
+
+/**
+ * @SharedIO Rule Decorator
+ *
+ * This property will not be readable if this entity is of certain variants
+ */
+export function Unless<
+Expression extends string[] = string[],
+>(...expressions: Expression) {
+    return function <EntityType extends Entity>(
+        entity: EntityType,
+        attributeName: Expression extends EntityVariantBooleanExpression<EntityType>[]
+            ? EntityAttributeName<EntityType>
+            : never,
+    ) {
+        return saveExpression(entity, attributeName, expressions, "read", "unless");
     };
 }
 
@@ -327,23 +368,18 @@ export function If<EntityVariantNames extends string[] = string[]>(
  *
  * This property will not be readable if this entity is of certain variants
  */
-export function Unless<
-    EntityVariantNames extends string[] = string[],
->(...variants: EntityVariantNames) {
-    return function <EntityType extends Entity>(
-        entity: EntityType,
-        attributeName: EntityVariantNames extends (EntityVariantName<EntityType>|EntityIntersectionVariantName<EntityType>)[]
-            ? EntityAttributeName<EntityType>
-            : never,
-    ) {
-        setImmediate(() => variants.forEach(variantName => verifyVariantOrFail(entity, variantName as EntityVariantName)));
-        return UsePolicy<EntityType>({
-            read: variants.map(
-                (variant) => `!${variant}`,
-            ) as DeniedEntityVariant<EntityType>[],
-        })(entity, attributeName);
-    };
-}
+ export function WritableUnless<
+ Expression extends string[] = string[],
+ >(...expressions: Expression) {
+     return function <EntityType extends Entity>(
+         entity: EntityType,
+         attributeName: Expression extends EntityVariantBooleanExpression<EntityType>[]
+             ? EntityAttributeName<EntityType>
+             : never,
+     ) {
+         return saveExpression(entity, attributeName, expressions, "write", "unless");
+     };
+ }
 
 export {
     Public,

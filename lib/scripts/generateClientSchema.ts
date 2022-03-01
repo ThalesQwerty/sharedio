@@ -40,20 +40,20 @@ export function generateClientSchema(
 
         "all.host": "Host",
         "all.owner": "Owner",
-        "all.insider": "Inside",
+        "all.inside": "inside",
 
-        "all.host.insider": "HostInsider",
-        "all.insider.owner": "OwnerInsider",
+        "all.host.inside": "HostInsider",
+        "all.inside.owner": "OwnerInsider",
         "all.host.owner": "OwnerHost",
 
-        "all.host.insider.owner": "OwnerHostInsider",
+        "all.host.inside.owner": "OwnerHostInsider",
     };
 
     function isVariantBuiltin(variantName: string) {
         return (
             variantName === "all" ||
             variantName === "host" ||
-            variantName === "insider" ||
+            variantName === "inside" ||
             variantName === "owner"
         );
     }
@@ -109,7 +109,7 @@ export function generateClientSchema(
         // @ts-expect-error
         delete variants.owner;
         // @ts-expect-error
-        delete variants.insider;
+        delete variants.inside;
 
         const interfaceNamesWithVariants: KeyValue = {
             ...interfaceNames,
@@ -178,7 +178,7 @@ export function generateClientSchema(
                 (entityVariant) => entityVariant === "host",
             )};
             readonly inside: ${!!entityVariants.find(
-                (entityVariant) => entityVariant === "insider",
+                (entityVariant) => entityVariant === "inside",
             )};
         }`;
     }
@@ -277,6 +277,7 @@ export function generateClientSchema(
                 "read",
                 entityType,
                 attributeName,
+                false
             );
         if (!readable) return "";
 
@@ -285,6 +286,7 @@ export function generateClientSchema(
             "write",
             entityType,
             attributeName,
+            false
         );
         const { isMethod } = attributeRules;
         const type = isMethod ? "() => void" : "any";

@@ -18,7 +18,7 @@ import {
     Unless,
     EntityConfig,
 } from "../../lib";
-import { EntityIntersectionVariantName, EntityVariantName } from "../../lib/types";
+import { EntityVariantBooleanExpression, EntityVariantName } from "../../lib/types";
 class Player extends Entity {
     @Type ally() {
         return true;
@@ -26,11 +26,6 @@ class Player extends Entity {
 
     @Type dead() {
         return this.health <= 0;
-    }
-
-    // this type will not be specified on client schema
-    @Internal @Type alive() {
-        return !this.dead();
     }
 
     @Internal serverSide = 0;
@@ -54,12 +49,12 @@ class Player extends Entity {
         this.health -= hp;
     }
 
-    @Unless("dead")
+    @If("!(ally & dead)")
     shoot() {
         console.log("PEW!");
     }
 
-    @If("owner&alive")
+    @If("owner & !dead")
     shootPrivately() {
         console.log("PEW! (privately)");
     }
@@ -99,7 +94,7 @@ const server = new Server({
 }).start();
 
 setImmediate(() => {
-    console.dir(Rules.schema, { depth: null});
+    console.dir(Rules.from(Player), { depth: null} );
 });
 
 server.on("connection", ({ user }) => {

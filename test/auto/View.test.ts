@@ -77,7 +77,7 @@ describe("View", () => {
         });
 
         checkAccessPolicy("protectedAttr", {
-            read: ["insider"],
+            read: ["inside"],
             write: ["owner"],
         });
 
@@ -92,17 +92,17 @@ describe("View", () => {
         });
 
         checkAccessPolicy("privateProtectedAttr", {
-            read: ["owner", "insider"],
+            read: ["owner", "inside"],
             write: ["owner"],
         });
 
         checkAccessPolicy("privateProtectedReadonlyAttr", {
-            read: ["owner", "insider"],
+            read: ["owner", "inside"],
             write: [],
         });
 
         checkAccessPolicy("protectedReadonlyAttr", {
-            read: ["insider"],
+            read: ["inside"],
             write: [],
         });
 

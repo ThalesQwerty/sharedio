@@ -91,7 +91,7 @@ export class User extends HasId {
 
         if (this.owns(entity)) variantNames.push("owner");
 
-        // to-do: host and insider
+        // to-do: host and inside
 
         const entityVariants = Rules.variants(entity);
 
