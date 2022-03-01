@@ -14,6 +14,7 @@ import {
     EntityAttributeName,
     EntityAttributeRules,
     EntityUserAccessPolicy,
+    EntityVariantName,
 } from "../../lib/types";
 
 jest.setTimeout(10000);
@@ -48,62 +49,36 @@ describe("View", () => {
         server.stop();
     });
 
-    it("Creates rules schema correctly", (done) => {
+    it.only("Creates rules schema correctly", (done) => {
         const { schema } = Rules;
         expect(schema).toHaveProperty("TestEntity");
 
         const rules = schema.TestEntity;
 
-        function checkAccessPolicy(
-            name: EntityAttributeName<TestEntity>,
-            expected: EntityUserAccessPolicy,
-        ) {
-            expect(rules).toHaveProperty(name);
+        function checkIf(attributeName: EntityAttributeName<TestEntity>, expectedOutcome: `is ${"INVISIBLE"|"READONLY"|"WRITABLE"} for`, ...variants: EntityVariantName<TestEntity>[]) {
+            // console.log(`Checking if ${attributeName} ${expectedOutcome} ${variants.join(", ")}`)
+            expect(rules).toHaveProperty(attributeName);
+            variants.push("all");
 
-            const { read, write } = rules[name].accessPolicy;
+            const { read, write } = rules[attributeName].accessPolicy;
 
-            expect(read).toBe(expected.read);
-            expect(write).toBe(expected.write);
+            expect(Rules.test(variants, TestEntity, read)).toBe(expectedOutcome === "is INVISIBLE for" ? false : true);
+            expect(Rules.test(variants, TestEntity, write)).toBe(expectedOutcome === "is WRITABLE for" ? true : false);
         }
 
-        checkAccessPolicy("publicAttr", {
-            read: ["all"],
-            write: ["owner"],
-        });
+        setImmediate(() => {
+            checkIf("publicAttr", "is READONLY for", "all", "host", "inside");
+            checkIf("publicAttr", "is WRITABLE for", "owner");
 
-        checkAccessPolicy("privateAttr", {
-            read: ["owner"],
-            write: ["owner"],
-        });
+            checkIf("privateAttr", "is INVISIBLE for", "all", "host", "inside");
+            checkIf("privateAttr", "is WRITABLE for", "owner");
 
-        checkAccessPolicy("protectedAttr", {
-            read: ["inside"],
-            write: ["owner"],
-        });
+            checkIf("internalAttr", "is INVISIBLE for", "all", "owner", "host", "inside");
 
-        checkAccessPolicy("internalAttr", {
-            read: [],
-            write: ["owner"],
-        });
+            checkIf("readonlyAttr", "is READONLY for", "all", "owner", "host", "inside");
 
-        checkAccessPolicy("privateReadonlyAttr", {
-            read: ["owner"],
-            write: [],
-        });
-
-        checkAccessPolicy("privateProtectedAttr", {
-            read: ["owner", "inside"],
-            write: ["owner"],
-        });
-
-        checkAccessPolicy("privateProtectedReadonlyAttr", {
-            read: ["owner", "inside"],
-            write: [],
-        });
-
-        checkAccessPolicy("protectedReadonlyAttr", {
-            read: ["inside"],
-            write: [],
+            checkIf("privateReadonlyAttr", "is INVISIBLE for", "all", "host", "inside");
+            checkIf("privateReadonlyAttr", "is READONLY for", "owner")
         });
 
         done();
