@@ -24,6 +24,15 @@ class Player extends Entity {
         return true;
     }
 
+    @Type dead() {
+        return this.health <= 0;
+    }
+
+    // this type will not be specified on client schema
+    @Internal @Type alive() {
+        return !this.dead();
+    }
+
     @Internal serverSide = 0;
 
     @Public name = "Thales";
@@ -37,17 +46,20 @@ class Player extends Entity {
 
     @Private @Readonly immutableSecret = "Hello Person!";
 
-    @If("ally")
+    @If("ally", "host")
     health = 100;
 
-    // @Public null = null;
+    @Unless("ally", "owner")
+    damage(hp: number) {
+        this.health -= hp;
+    }
 
-    @Public
+    @Unless("dead")
     shoot() {
         console.log("PEW!");
     }
 
-    @Private
+    @If("owner&alive")
     shootPrivately() {
         console.log("PEW! (privately)");
     }

@@ -286,11 +286,11 @@ export function Type<EntityType extends Entity>(
 }
 
 function verifyVariantOrFail(entity: Entity, variantName: EntityVariantName) {
-    if (variantName === "all" || variantName === "host" || variantName === "insider" || variantName === "owner") return true;
-
     const entityType = entity.constructor.name;
 
     for (const subvariantName of (variantName as string).split("&")) {
+        if (subvariantName === "all" || subvariantName === "host" || subvariantName === "insider" || subvariantName === "owner") continue;
+
         const rules = Rules.get(entityType, subvariantName);
 
         if (!rules || !rules.isVariant) throw new SharedIOError(`Variant "${subvariantName}" does not exist on entity of type "${entityType}". Verify if you've correctly declared this variant (you must use the @Type decorator).`)

@@ -264,12 +264,8 @@ export abstract class Rules {
         )
             return false;
 
-        const allowUserAction = !!_.intersection(currentVariants, variantList.map(name => name.replace("!", "")) as string[]).length; /*!!variantList.filter(variantName => {
-            const subvariants = variantName.split("&");
-            return subvariants.filter(subvariant => subvariant.substring(0, 1) === "!" ?
-                currentVariants.indexOf(subvariant as any) < 0 : currentVariants.indexOf(subvariant as any) >= 0).length === subvariants.length;
-        }).length */
+        const listContainsUser = !!_.intersection(currentVariants, variantList.map(name => name.replace("!", "")) as string[]).length;
 
-        return allowUserAction;
+        return listContainsUser === listShouldContainUser;
     }
 }
