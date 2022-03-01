@@ -12,6 +12,7 @@ import {
     EntityVariantName,
     EntityUserAccessPolicy,
     EntityUserAccessPolicyClause,
+    EntityVariantBooleanExpression,
 } from "../types";
 import { User } from "./User";
 import _ from "lodash";
@@ -108,8 +109,8 @@ export abstract class Rules {
             write: false
         },
         accessPolicy: {
-            read: [],
-            write: [],
+            read: "",
+            write: "",
         },
         isVariant: false,
         isMethod: false,
@@ -143,7 +144,7 @@ export abstract class Rules {
             const action =
                 _action as keyof EntityUserAccessPolicy<EntityType>;
 
-            if (changes[action]) accessPolicy[action].push(...changes[action] as any);
+            if (changes[action]) accessPolicy[action] += accessPolicy[action] ? `|(${changes[action]})` : changes[action];
 
             process.nextTick(() => {
                 if (!loaded[action]) {
@@ -154,39 +155,12 @@ export abstract class Rules {
 
                         switch (action) {
                             case "read":
-                                accessPolicy[action] = accessPolicy[action][0] === "!all" ? ["!all"] : ["all"];
+                                accessPolicy[action] = accessPolicy[action] === "!all" ? "!all" : "all";
                                 break;
                             case "write":
-                                accessPolicy[action] = [];
+                                accessPolicy[action] = "";
                                 break;
                         }
-
-                        return;
-                    }
-
-                    const unloadedAccessPolicy = _.uniq([...accessPolicy[action]]);
-
-                    if (!unloadedAccessPolicy.length) {
-                        // loads the default policy (@Public for attributes, @Private for methods)
-                        switch (action) {
-                            case "read":
-                                accessPolicy[action] = isMethod ? ["owner"] : ["all"];
-                                break;
-                            case "write":
-                                accessPolicy[action] = ["owner"];
-                                break;
-                        }
-
-                        return;
-                    }
-
-                    // loads all modifiers into the access policy
-
-                    const isWhitelist = unloadedAccessPolicy[0].substring(0, 1) !== "!";
-                    if (isWhitelist) {
-                        accessPolicy[action] = unloadedAccessPolicy.filter(variantName => variantName.substring(0, 1) !== "!") as EntityUserAccessPolicyClause;
-                    } else {
-                        accessPolicy[action] = unloadedAccessPolicy.filter(variantName => variantName.substring(0, 1) === "!") as EntityUserAccessPolicyClause;
                     }
                 }
             });
@@ -236,12 +210,7 @@ export abstract class Rules {
     ): boolean {
         const entityTypeName = Entity.getClassName(entityOrType);
 
-        const rules = Rules.get(entityTypeName, attributeName);
-        const accessPolicyExpressions = [...rules.accessPolicy[action]] ?? [];
-
-        // needs to be sorted by length (descending), in order to avoid bugs on regex
-        // ex: type "ally" contains the string "all" in it, so "ally" has to be checked before "all"
-        const variantList = Object.keys(Rules.variants(entityOrType)).sort((a, b) => a.length < b.length ? 1 : -1);
+        const { accessPolicy } = Rules.get(entityTypeName, attributeName);
 
         const currentVariants =
             userOrEntityVariants instanceof User
@@ -265,23 +234,36 @@ export abstract class Rules {
         )
             return false;
 
-        const originalExpression: string = accessPolicyExpressions.map(expression => `(${expression})`).join(" | ");
-        let booleanExpression = originalExpression;
+        return this.test(currentVariants, entityTypeName, accessPolicy[action]);
+    }
 
-        for (const variantName of variantList) {
+    public static test(currentVariants: string[], entityType: EntityClassName, expression: EntityVariantBooleanExpression|"", possibleVariants?: string[]) {
+        console.log(currentVariants, expression);
+
+        if (!expression) return false;
+
+        const entityTypeName = Entity.getClassName(entityType);
+
+        possibleVariants ??= Object.keys(Rules.variants(entityTypeName));
+
+        // needs to be sorted by length (descending), in order to avoid some bugs in the regex
+        // ex: type "ally" contains the string "all" in it, so "ally" has to be checked before "all"
+        possibleVariants.sort((a, b) => a.length < b.length ? 1 : -1);
+
+        let booleanExpression: string = expression;
+
+        for (const variantName of possibleVariants) {
             booleanExpression = booleanExpression.replace(new RegExp(variantName, "g"), currentVariants.indexOf(variantName as EntityVariantName) >= 0 ? "1" : "0");
         }
 
-        if (!safe) {
-            const invalidVariants = booleanExpression.replace(/[01]/g, "").replace(/[&!|()]/g, " ").trim().replace(/\s+/, ", ");
+        const invalidVariants = booleanExpression.replace(/[01]/g, "").replace(/[&!|()]/g, " ").trim().replace(/\s+/, ", ");
 
-            if (invalidVariants !== "") {
-                throw new SharedIOError("entityVariantNotFound", entityTypeName, invalidVariants.split(", "))
-            }
+        if (invalidVariants !== "") {
+            throw new SharedIOError("entityVariantNotFound", entityTypeName, invalidVariants.split(", "))
         }
 
-        const allow = !!eval(booleanExpression);
+        const passed = !!eval(booleanExpression);
 
-        return allow;
+        return passed;
     }
 }

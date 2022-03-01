@@ -14,11 +14,12 @@ import {
     DeniedEntityVariant,
     EntityIntersectionVariantCamelCaseName,
     EntityVariantBooleanExpression,
+    EntityDefaultVariantName,
 } from "../types";
 
 const defaultUserAccessPolicy: EntityUserAccessPolicy = {
-    read: ["all"],
-    write: ["owner"],
+    read: "all",
+    write: "owner",
 };
 
 const userAccessPolicyPresets: KeyValue<
@@ -32,32 +33,26 @@ const userAccessPolicyPresets: KeyValue<
     | "controlled"
 > = {
     public: {
-        read: ["all"],
-        write: [],
+        read: "all",
     },
     protected: {
-        read: ["inside"],
-        write: [],
+        read: "inside",
     },
     private: {
-        read: ["owner"],
-        write: [],
+        read: "owner",
     },
     internal: {
-        read: ["!all"],
-        write: [],
+        read: "!all",
     },
     readonly: {
-        read: [],
-        write: ["!all"],
+        write: "!all",
     },
     writable: {
-        read: [],
-        write: ["all"],
+        write: "all",
     },
     controlled: {
-        read: ["host"],
-        write: ["host"],
+        read: "host",
+        write: "host",
     },
 };
 
@@ -284,7 +279,7 @@ export function Cached(duration: number = 1000) {
  */
 export function Type<EntityType extends Entity>(
     entity: EntityType,
-    attributeName: Exclude<EntityVariantName<EntityType>, EntityIntersectionVariantCamelCaseName<EntityType>>,
+    attributeName: Exclude<EntityVariantName<EntityType>, EntityIntersectionVariantCamelCaseName<EntityType>|EntityDefaultVariantName>,
     descriptor: TypedPropertyDescriptor<EntityVariant>,
 ) {
     const rules = prepareRuleSchema(

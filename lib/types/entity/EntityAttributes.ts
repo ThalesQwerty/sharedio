@@ -130,8 +130,8 @@ export type EntityUserAccessPolicyClause<EntityType extends Entity = Entity> = E
 export type EntityUserAccessPolicy<
     EntityType extends Entity = Entity,
     > = {
-        read: EntityUserAccessPolicyClause<EntityType>;
-        write: EntityUserAccessPolicyClause<EntityType>;
+        read: EntityVariantBooleanExpression<EntityType>|"";
+        write: EntityVariantBooleanExpression<EntityType>|"";
     };
 
 export interface EntityRuleSchema {
