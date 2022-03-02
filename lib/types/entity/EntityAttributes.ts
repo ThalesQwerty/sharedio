@@ -25,6 +25,8 @@ export type EntityAttributeName<EntityType extends Entity> = Exclude<
     EntityReservedAttributeName | number | symbol
 >;
 
+export type EntityAttributeType = "number"|"string"|"boolean"|"any";
+
 export type EntitySetAcessorName<EntityType extends Entity> = `_${EntityAttributeName<EntityType>}`|`set${Capitalize<EntityAttributeName<EntityType>>}`;
 
 export type EntityClassName = typeof Entity | string;
@@ -140,6 +142,8 @@ export interface EntityAttributeRules<
     > {
     entityType: string;
     attributeName: string;
+
+    valueType: EntityAttributeType,
 
     finished: {
         [action in keyof EntityUserAccessPolicy<EntityType>]: boolean

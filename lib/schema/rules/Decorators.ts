@@ -7,6 +7,11 @@ import {
     EntityUserAccessPolicy,
 } from "../../types";
 
+export type EntityDecorator = <EntityType extends Entity>(
+    entity: EntityType,
+    attributeName: EntityAttributeName<EntityType>,
+) => void;
+
 export function prepareRuleSchema<EntityType extends Entity>(
     entity: EntityType,
     attributeName: EntityAttributeName<EntityType>,

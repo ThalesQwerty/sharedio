@@ -115,6 +115,7 @@ export abstract class Rules {
     private static readonly _default: EntityAttributeRules = {
         entityType: "Entity",
         attributeName: "",
+        valueType: "any",
         finished: {
             read: false,
             write: false

@@ -17,6 +17,7 @@ import {
     If,
     Unless,
     EntityConfig,
+    String, Number, Boolean
 } from "../../lib";
 import { EntityVariantBooleanExpression, EntityVariantName } from "../../lib/types";
 class Player extends Entity {
@@ -30,19 +31,19 @@ class Player extends Entity {
 
     @Internal serverSide = 0;
 
-    @Public name = "Thales";
-    @Public power = 9001;
+    @String name = "Thales";
+    @Number power = 9001;
 
-    @Writable superPublic = "wooow";
+    @Writable @String superPublic = "wooow";
 
-    @Private secret = "Shh...";
+    @Private @String secret = "Shh...";
 
-    @Readonly immutable = "Hello World!";
+    @Readonly @String immutable = "Hello World!";
 
-    @Private @Readonly immutableSecret = "Hello Person!";
+    @Private @Readonly @String immutableSecret = "Hello Person!";
 
     @If("ally", "host")
-    health = 100;
+    @Number health = 100;
 
     @Unless("ally", "owner")
     damage(hp: number) {

@@ -13,12 +13,19 @@ import {
     Unless,
     EntityConfig,
     Rules,
+    Number,
+    Boolean,
+    String
 } from "../../lib";
 import { EntityVariantBooleanExpression, EntityVariantName } from "../../lib/types";
 
 class GetSetTest extends Entity {
 
     @Readonly watched = 0;
+
+    @Public @Number number = 0;
+    @Public @String string = "string";
+    @Public @Boolean boolean = false;
 
     @Internal _random = 0;
     @Get random() {

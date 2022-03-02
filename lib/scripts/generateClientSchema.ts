@@ -289,8 +289,8 @@ export function generateClientSchema(
             attributeName,
             false
         );
-        const { isCallable } = attributeRules;
-        const type = isCallable ? "() => void" : "any";
+        const { isCallable, valueType } = attributeRules;
+        const type = isCallable ? `() => void` : `${valueType}`;
 
         return `${
             writable ? "" : "readonly"

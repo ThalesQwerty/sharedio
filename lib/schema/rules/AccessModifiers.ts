@@ -1,11 +1,6 @@
-import { UsePolicy } from ".";
+import { EntityDecorator, UsePolicy } from ".";
 import { Entity } from "..";
 import { EntityAttributeName, EntityUserAccessPolicy, KeyValue } from "../../types";
-
-export type EntityDecorator = <EntityType extends Entity>(
-    entity: EntityType,
-    attributeName: EntityAttributeName<EntityType>,
-) => void;
 
 const defaultUserAccessPolicy: EntityUserAccessPolicy = {
     read: "all",
