@@ -1,6 +1,6 @@
 import {
     Entity,
-} from ".";
+} from "..";
 import {
     EntityAttributeRules,
     EntityRuleSchema,
@@ -11,12 +11,11 @@ import {
     EntityClassName,
     EntityVariantName,
     EntityUserAccessPolicy,
-    EntityUserAccessPolicyClause,
     EntityVariantBooleanExpression,
-} from "../types";
-import { User } from "./User";
+} from "../../types";
+import { User } from "../User";
 import _ from "lodash";
-import { ObjectTransform } from "../utils";
+import { ObjectTransform } from "../../utils";
 
 /**
  * You know the rules, and so do I
