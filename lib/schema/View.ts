@@ -85,7 +85,7 @@ export class View {
             });
         }
 
-        this._current = _.cloneDeep(this._next);
+        this._current = ObjectTransform.clone(this._next);
     }
 
     /**
@@ -153,7 +153,7 @@ export class View {
                         attributeName,
                     ) >= 0;
 
-                let type: "attribute" | "method" | undefined =
+                let attributeBehavior: "attribute" | "method" | undefined =
                     undefined;
                 let serializedValue = undefined;
 
@@ -166,26 +166,26 @@ export class View {
                     )
                 ) {
                     if (typeof rawValue === "function") {
-                        if (rules.hasGetAccessor) {
-                            type = "attribute";
+                        if (rules.get) {
+                            attributeBehavior = "attribute";
                             serializedValue = isCached
                                 ? cached
-                                : (rawValue as Function).call(
+                                : rules.get.call(
                                       entity,
                                       this.user,
                                   );
                         } else {
-                            type = "method";
+                            attributeBehavior = "method";
                         }
                     } else {
-                        type = "attribute";
+                        attributeBehavior = "attribute";
                         serializedValue = serialized.state[
                             attributeName
                         ] = isCached ? cached : rawValue;
                     }
                 }
 
-                switch (type) {
+                switch (attributeBehavior) {
                     case "attribute":
                         if (rules.cacheDuration > 0 && !isCached)
                             Cache.add(

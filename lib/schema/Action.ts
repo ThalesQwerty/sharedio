@@ -28,11 +28,11 @@ export class Action {
     public write<EntityType extends Entity>(
         entity: EntityType,
         values: KeyValue<any, EntityAttributeName<EntityType>>,
-        debug: boolean = false
+        debug: boolean = true
     ) {
         const viewed = this._user.view.current[entity.id];
 
-        debug && console.log("write", entity, values);
+        debug && console.log("write", Entity.printable(entity), values);
 
         for (const _attributeName in values) {
             const attributeName =
@@ -40,30 +40,29 @@ export class Action {
             const newValue = (values as any)[attributeName];
 
             if (newValue !== undefined) {
-                const rulesVerification = Rules.verify(
+                const { set, get } = Rules.get(entity, attributeName);
+
+                if (!(get && !set) && Rules.verify(
                     this._user,
                     "write",
                     entity,
                     attributeName,
-                );
-                if (rulesVerification) {
+                )) {
 
-                    const { hasSetAccessor } = Rules.get(entity, attributeName);
-
-                    if (hasSetAccessor) {
-                        const setAccessor = (entity as any)[`_${attributeName}`] as EntitySetAccessor;
-                        debug && console.log("set", setAccessor);
-                        setAccessor.call(entity, newValue, this._user);
+                    if (set) {
+                        set.call(entity, newValue, this._user);
+                        viewed.state[attributeName] = newValue;
                     } else {
                         entity[attributeName] = newValue;
+                        viewed.state[attributeName] = newValue;
                     }
-                    viewed.state[attributeName] = newValue;
-                    debug && console.log("-->", entity);
                 } else {
-                    debug && console.log("FAIL!");
+                    debug && console.log(`can't write into "${attributeName}"`);
                 }
             }
         }
+
+        debug && console.log("-->", Entity.printable(entity));
     }
 
     /**

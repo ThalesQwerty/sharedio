@@ -10,6 +10,7 @@ import {
     Get,
     Set,
     Cached,
+    Unless,
     EntityConfig,
     Rules,
 } from "../../lib";
@@ -18,6 +19,14 @@ import { EntityVariantBooleanExpression, EntityVariantName } from "../../lib/typ
 class GetSetTest extends Entity {
 
     @Readonly watched = 0;
+
+    @Internal _random = 0;
+    @Get random() {
+        return this._random + 1;
+    }
+    @Set setRandom(value: number) {
+        this._random = value;
+    }
 
     @Set _watched(value: number) {
         if (value > 0.5) value -= 1;
@@ -28,12 +37,10 @@ class GetSetTest extends Entity {
     constructor(config: EntityConfig) {
         super(config);
 
-        const interval = setInterval(() => {
-            // this.randomNumber = Math.floor(Math.random() * 10000);
-        }, 1000);
+        this._random = Math.random();
 
         this.on("delete", () => {
-            clearInterval(interval);
+            // clearInterval(interval);
         })
     }
 }
@@ -52,7 +59,7 @@ const server = new Server({
 });
 
 setTimeout(() => {
-    // console.dir(Rules.from(GetSetTest), { depth: null });
+    console.dir(Rules.from(GetSetTest), { depth: null });
 }, 100);
 
 

@@ -64,4 +64,8 @@ export class ObjectTransform {
 
         return delta as KeyValueDifference;
     }
+
+    static readonly clone = _.cloneDeep;
+    static readonly get = _.get;
+    static readonly set = _.set;
 }

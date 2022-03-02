@@ -16,6 +16,7 @@ import {
 } from "../types";
 import { User } from "./User";
 import _ from "lodash";
+import { ObjectTransform } from "../utils";
 
 /**
  * You know the rules, and so do I
@@ -96,7 +97,7 @@ export abstract class Rules {
                 (readability === "internal" && attributeRules.accessPolicy.read[0] === "!all")
             ))
                 variants[attributeName as EntityVariantName] =
-                    attributeRules.methodImplementation as EntityVariant;
+                    attributeRules.currentValue as EntityVariant;
         }
 
         return variants as KeyValue<
@@ -109,12 +110,13 @@ export abstract class Rules {
      * Default ruleset for entities.
      */
     public static get default() {
-        return _.cloneDeep(this._default);
+        return ObjectTransform.clone(this._default);
     }
+
     private static readonly _default: EntityAttributeRules = {
         entityType: "Entity",
         attributeName: "",
-        loaded: {
+        finished: {
             read: false,
             write: false
         },
@@ -123,9 +125,10 @@ export abstract class Rules {
             write: "",
         },
         isVariant: false,
-        isMethod: false,
-        hasSetAccessor: false,
-        hasGetAccessor: false,
+        isCallable: false,
+        set: undefined,
+        get: undefined,
+        currentValue: undefined,
         cacheDuration: 0,
     };
 
@@ -146,8 +149,8 @@ export abstract class Rules {
         return this.schema[entityType][attributeName];
     }
 
-    public static modifyAccessPolicy<EntityType extends Entity>(
-        { accessPolicy, entityType, loaded, isMethod, isVariant }: EntityAttributeRules<EntityType>,
+    public static change<EntityType extends Entity>(
+        { accessPolicy }: EntityAttributeRules<EntityType>,
         changes: Partial<EntityUserAccessPolicy<EntityType>>,
     ) {
         for (const _action in accessPolicy) {
@@ -155,10 +158,20 @@ export abstract class Rules {
                 _action as keyof EntityUserAccessPolicy<EntityType>;
 
             if (changes[action]) accessPolicy[action] += accessPolicy[action] ? `|(${changes[action]})` : changes[action];
+        }
 
-            process.nextTick(() => {
-                if (!loaded[action]) {
-                    loaded[action] = true;
+        return accessPolicy;
+    }
+
+    public static finish<EntityType extends Entity>(entityOrType: EntityClassName | EntityType, attributeName: string) {
+        const { accessPolicy, finished, isVariant } = Rules.get(Entity.getClassName(entityOrType), attributeName);
+
+        for (const _action in accessPolicy) {
+            const action =
+                _action as keyof EntityUserAccessPolicy<EntityType>;
+
+                if (!finished[action]) {
+                    finished[action] = true;
 
                     if (isVariant) {
                         // attributes with @Type decorator are always @Public @Readonly
@@ -184,10 +197,7 @@ export abstract class Rules {
                         }
                     }
                 }
-            });
         }
-
-        return accessPolicy;
     }
 
     /**

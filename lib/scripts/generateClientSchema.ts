@@ -9,6 +9,7 @@ import {
 } from "../types";
 import { exec } from "child_process";
 import { Rules } from "..";
+import { StringTransform } from "../utils";
 
 export function generateClientSchema(
     schema: EntityRuleSchema,
@@ -40,13 +41,13 @@ export function generateClientSchema(
 
         "all.host": "Host",
         "all.owner": "Owner",
-        "all.inside": "inside",
+        "all.inside": "Inside",
 
-        "all.host.inside": "HostInsider",
-        "all.inside.owner": "OwnerInsider",
+        "all.host.inside": "HostInside",
+        "all.inside.owner": "OwnerInside",
         "all.host.owner": "OwnerHost",
 
-        "all.host.inside.owner": "OwnerHostInsider",
+        "all.host.inside.owner": "OwnerHostInside",
     };
 
     function isVariantBuiltin(variantName: string) {
@@ -118,7 +119,7 @@ export function generateClientSchema(
         for (const variantName in variants) {
             for (const key in interfaceNamesWithVariants) {
                 const interfaceName = interfaceNamesWithVariants[key];
-                const capitalizedVariantName = variantName.substring(0, 1).toUpperCase() + variantName.substring(1);
+                const capitalizedVariantName = StringTransform.capitalize(variantName);
                 interfaceNamesWithVariants[`${key}.${variantName}`] =
                     interfaceName !== "Default"
                         ? `${interfaceName}${capitalizedVariantName}`
@@ -288,8 +289,8 @@ export function generateClientSchema(
             attributeName,
             false
         );
-        const { isMethod } = attributeRules;
-        const type = isMethod ? "() => void" : "any";
+        const { isCallable } = attributeRules;
+        const type = isCallable ? "() => void" : "any";
 
         return `${
             writable ? "" : "readonly"

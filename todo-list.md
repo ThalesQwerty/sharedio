@@ -5,6 +5,7 @@
 - [ ] Update tests
 - [X] Fix json difference calculator (it currently doesn't work properly with null/undefined values)
 - [ ] Add extra methods on server entity list
+- [ ] Create User events
 - [X] Implement @Set accessors
 - [ ] Implement entity deletion on client
 - [ ] Implement variant filtering on client entity list

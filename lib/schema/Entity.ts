@@ -6,16 +6,13 @@ import {
     EntityEmitterOverloads,
     KeyValue,
     EntityReservedAttributeName,
-    EntityAttributeName,
-    EntityAttribute,
-    SerializedEntity,
     PrintableEntity,
     EntityClassName,
     EntityCreateListener,
     EntityConfig,
     EntityFailedCreateListener,
 } from "../types";
-import { HasEvents, HasId, EventListener } from "../utils";
+import { HasEvents, HasId, ObjectTransform } from "../utils";
 
 import * as _ from "lodash";
 interface EntityReservedAttributes {
@@ -87,7 +84,7 @@ export class Entity
      * Clones an entity
      */
     public static clone(entity: Entity): Entity {
-        return _.cloneDeep(entity);
+        return ObjectTransform.clone(entity);
     }
 
     public static emit(
@@ -140,6 +137,12 @@ export class Entity
         //     : false;
     }
     private _exists?: boolean;
+
+    public static log<EntityType extends Entity>(entity: EntityType) {
+        const printable = this.printable(entity);
+        console.log(printable);
+        return printable;
+    }
 
     /**
      * Generates a simplified key-value pair that represents the entity. Useful for printing things on the console.

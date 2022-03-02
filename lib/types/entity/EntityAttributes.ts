@@ -25,6 +25,8 @@ export type EntityAttributeName<EntityType extends Entity> = Exclude<
     EntityReservedAttributeName | number | symbol
 >;
 
+export type EntitySetAcessorName<EntityType extends Entity> = `_${EntityAttributeName<EntityType>}`|`set${Capitalize<EntityAttributeName<EntityType>>}`;
+
 export type EntityClassName = typeof Entity | string;
 
 type AttributePrimitives =
@@ -94,7 +96,6 @@ type PartialKeyOf<ObjectType, ValueType> = { [KeyName in keyof ObjectType]: Obje
 export type EntityCustomVariantName<
     EntityType extends Entity = Entity,
     > = EntityAttributeName<EntityType> & PartialKeyOf<EntityType, EntityVariant>
-//`is${Capitalize<Letter>}${string}`;
 
 export type EntityVariantName<EntityType extends Entity = Entity> =
     | EntityDefaultVariantName
@@ -103,11 +104,6 @@ export type EntityVariantName<EntityType extends Entity = Entity> =
 export type EntityIntersectionVariantCamelCaseName<EntityType extends Entity> =
     | `${EntityVariantName<EntityType>}${Capitalize<EntityVariantName<EntityType>>}`
     | `${EntityVariantName<EntityType>}${Capitalize<EntityVariantName<EntityType>>}${Capitalize<EntityVariantName<EntityType>>}`
-
-// export type EntityIntersectionVariantName<EntityType extends Entity> =
-//     | `${EntityVariantName<EntityType>}&${EntityVariantName<EntityType>}`
-//     | `${EntityVariantName<EntityType>}&${EntityVariantName<EntityType>}&${EntityVariantName<EntityType>}`
-//     | `${string}&${string}&${string}&${string}`
 
 type EntityVariantBooleanOperator = "&"|"|";
 type OP = EntityVariantBooleanOperator|` ${EntityVariantBooleanOperator} `;
@@ -145,7 +141,7 @@ export interface EntityAttributeRules<
     entityType: string;
     attributeName: string;
 
-    loaded: {
+    finished: {
         [action in keyof EntityUserAccessPolicy<EntityType>]: boolean
     };
 
@@ -155,20 +151,26 @@ export interface EntityAttributeRules<
     accessPolicy: EntityUserAccessPolicy<EntityType>;
 
     /**
-     * Determines whether or not this method will be treated as a computed property
+     * The return value of this function will be treated as this property's value when an user tries to read it
      */
-    hasGetAccessor: boolean;
+    get?: EntityGetAccessor,
 
     /**
-     * Determines whether or not this method will be treated as a watched property
+     * This function will be called when an user attempts to write values into this property
      */
-    hasSetAccessor: boolean;
+    set?: EntitySetAccessor;
 
+    /**
+     * Is this function a declaration of a variant?
+     */
     isVariant: boolean;
 
-    isMethod: boolean;
+    /**
+     * Is this a method that can be called by users?
+     */
+    isCallable: boolean;
 
-    methodImplementation?: Function;
+    currentValue?: any;
 
     /**
      * Determines for how long this property will be cached before being updated again for users

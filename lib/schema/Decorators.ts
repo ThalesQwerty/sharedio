@@ -15,7 +15,9 @@ import {
     EntityIntersectionVariantCamelCaseName,
     EntityVariantBooleanExpression,
     EntityDefaultVariantName,
+    EntitySetAcessorName,
 } from "../types";
+import { StringTransform } from "../utils";
 
 const defaultUserAccessPolicy: EntityUserAccessPolicy = {
     read: "all",
@@ -92,6 +94,18 @@ function verifyVariantOrFail(entity: Entity, variantName: EntityVariantName) {
     return true;
 }
 
+
+function saveExpression<EntityType extends Entity>(entity: EntityType, attributeName: EntityAttributeName<EntityType>, expressions: string[], action: "read"|"write", clause: "if"|"unless" = "if") {
+    setImmediate(() => expressions.forEach(variantName => verifyVariantOrFail(entity, variantName as EntityVariantName)));
+
+    const unifiedExpression = expressions.map(expression => `(${expression})`).join("|");
+
+    return UsePolicy<EntityType>({
+        [action]: [clause === "if" ? unifiedExpression : `!(${unifiedExpression})`] as EntityVariantBooleanExpression[],
+    })(entity, attributeName);
+}
+
+
 /**
  * @SharedIO Rule Decorator
  *
@@ -105,11 +119,14 @@ export function UsePolicy<EntityType extends Entity>(
         attributeName: EntityAttributeName<EntityType>,
     ) {
         const rules = prepareRuleSchema(entity, attributeName);
-        Rules.modifyAccessPolicy(rules, accessPolicyChanges as EntityUserAccessPolicy);
+        Rules.change(rules, accessPolicyChanges as EntityUserAccessPolicy);
+        process.nextTick(() => {
+            Rules.finish(entity, attributeName);
+        });
 
         if (typeof entity[attributeName] === "function") {
-            if (!rules.hasGetAccessor && !rules.hasSetAccessor && !rules.isVariant)
-                rules.isMethod = true;
+            if (!rules.get && !rules.set && !rules.isVariant)
+                rules.isCallable = true;
         }
     };
 }
@@ -228,9 +245,12 @@ export function Get<EntityType extends Entity>(
     descriptor: TypedPropertyDescriptor<EntityGetAccessor>,
 ) {
     const rules = prepareRuleSchema(entity, attributeName);
-    rules.hasGetAccessor = true;
-    rules.isMethod = false;
-    rules.methodImplementation = (entity as any)[attributeName];
+    rules.get = (entity as any)[attributeName];
+    rules.isCallable = false;
+
+    process.nextTick(() => {
+        Rules.finish(entity, attributeName);
+    });
 }
 
 /**
@@ -246,13 +266,13 @@ export function Get<EntityType extends Entity>(
  */
 export function Set<EntityType extends Entity>(
     entity: EntityType,
-    attributeName: `_${EntityAttributeName<EntityType>}`,
+    attributeName: EntitySetAcessorName<EntityType>,
     descriptor: TypedPropertyDescriptor<EntitySetAccessor>
 ) {
-    const originalAttributeName = attributeName.substring(1);
+    const originalAttributeName = StringTransform.undo("setAccessor", attributeName);
 
     const originalRules = prepareRuleSchema(entity, originalAttributeName as EntityAttributeName<EntityType>);
-    originalRules.hasSetAccessor = true;
+    originalRules.set = (entity as any)[attributeName];
 
     const { write } = originalRules.accessPolicy;
 
@@ -263,8 +283,6 @@ export function Set<EntityType extends Entity>(
         originalRules.accessPolicy.write = write ? `(${write as string}) | (${newWritePolicies as string})` as EntityVariantBooleanExpression|"" : newWritePolicies;
 
         Rules.remove(entity, attributeName);
-
-        console.dir(Rules.schema, { depth: null });
     });
 }
 
@@ -285,6 +303,9 @@ export function Cached(duration: number = 1000) {
         const rules = prepareRuleSchema(entity, attributeName);
 
         rules.cacheDuration = duration;
+        process.nextTick(() => {
+            Rules.finish(entity, attributeName);
+        });
     };
 }
 
@@ -304,19 +325,8 @@ export function Type<EntityType extends Entity>(
     );
 
     rules.isVariant = true;
-    rules.hasGetAccessor = true;
-    rules.isMethod = false;
-    rules.methodImplementation = (entity as any)[attributeName];
-}
-
-function saveExpression<EntityType extends Entity>(entity: EntityType, attributeName: EntityAttributeName<EntityType>, expressions: string[], action: "read"|"write", clause: "if"|"unless" = "if") {
-    setImmediate(() => expressions.forEach(variantName => verifyVariantOrFail(entity, variantName as EntityVariantName)));
-
-    const unifiedExpression = expressions.map(expression => `(${expression})`).join("|");
-
-    return UsePolicy<EntityType>({
-        [action]: [clause === "if" ? unifiedExpression : `!(${unifiedExpression})`] as EntityVariantBooleanExpression[],
-    })(entity, attributeName);
+    rules.get = (entity as any)[attributeName];
+    rules.isCallable = false;
 }
 
 /**
@@ -359,7 +369,7 @@ export function If<Expression extends string[] = string[]>(
 /**
  * @SharedIO Rule Decorator
  *
- * This property will not be readable if this entity is of certain variants
+ * This property will NOT be readable if this entity is of certain variants
  */
 export function Unless<
 Expression extends string[] = string[],
@@ -377,7 +387,7 @@ Expression extends string[] = string[],
 /**
  * @SharedIO Rule Decorator
  *
- * This property will not be readable if this entity is of certain variants
+ * This property will NOT be writable if this entity is of certain variants
  */
  export function WritableUnless<
  Expression extends string[] = string[],
