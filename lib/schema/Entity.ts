@@ -105,9 +105,8 @@ export class Entity
      * Entity class name
      */
     public get type() {
-        return this._type;
+        return this.constructor.name;
     }
-    private _type: string;
 
     public readonly owned: undefined;
 
@@ -187,7 +186,6 @@ export class Entity
     constructor({ server, initialState, owner }: EntityConfig) {
         super("Entity");
         this._server = server;
-        this._type = this.constructor.name;
         this._owner = owner ?? null;
 
         this.on("delete", () => {

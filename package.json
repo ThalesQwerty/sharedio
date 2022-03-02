@@ -7,7 +7,7 @@
     "scripts": {
         "build": "tsc",
         "test": "jest --detectOpenHandles",
-        "dev": "npx nodemon test/manual/index.ts",
+        "dev": "npx nodemon test/manual/accessors.ts",
         "lint": "eslint --ignore-path .gitignore --ext .js,.jsx,.ts,.tsx .",
         "lint:fix": "eslint --fix --ignore-path .gitignore --ext .js,.jsx,.ts,.tsx .",
         "format": "prettier --write ."

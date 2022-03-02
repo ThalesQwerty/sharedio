@@ -1,6 +1,6 @@
 import { User, Entity } from ".";
 import { Rules } from ".";
-import { EntityAttributeName, KeyValue } from "../types";
+import { EntityAttributeName, EntitySetAccessor, KeyValue } from "../types";
 
 /**
  * Class specialized in executing users' actions in the server
@@ -28,8 +28,11 @@ export class Action {
     public write<EntityType extends Entity>(
         entity: EntityType,
         values: KeyValue<any, EntityAttributeName<EntityType>>,
+        debug: boolean = false
     ) {
         const viewed = this._user.view.current[entity.id];
+
+        debug && console.log("write", entity, values);
 
         for (const _attributeName in values) {
             const attributeName =
@@ -44,8 +47,20 @@ export class Action {
                     attributeName,
                 );
                 if (rulesVerification) {
-                    entity[attributeName] = newValue;
+
+                    const { hasSetAccessor } = Rules.get(entity, attributeName);
+
+                    if (hasSetAccessor) {
+                        const setAccessor = (entity as any)[`_${attributeName}`] as EntitySetAccessor;
+                        debug && console.log("set", setAccessor);
+                        setAccessor.call(entity, newValue, this._user);
+                    } else {
+                        entity[attributeName] = newValue;
+                    }
                     viewed.state[attributeName] = newValue;
+                    debug && console.log("-->", entity);
+                } else {
+                    debug && console.log("FAIL!");
                 }
             }
         }

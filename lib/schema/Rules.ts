@@ -65,6 +65,16 @@ export abstract class Rules {
         );
     }
 
+    public static remove<EntityType extends Entity>(entityType: EntityClassName | EntityType, attributeName?: string) {
+        const entityTypeName = Entity.getClassName(entityType);
+        if (this._schema[entityTypeName]) {
+            if (attributeName) delete this._schema[entityTypeName][attributeName];
+            else delete this._schema[entityTypeName];
+        }
+
+        console.log(entityTypeName);
+    }
+
     public static variants<EntityType extends Entity>(
         entityOrType: EntityClassName | EntityType,
         readability?: "public"|"internal"
@@ -162,6 +172,17 @@ export abstract class Rules {
                                 break;
                         }
                     }
+
+                    if (accessPolicy[action] === "") {
+                        switch (action) {
+                            case "read":
+                                accessPolicy[action] = "all";
+                                break;
+                            case "write":
+                                accessPolicy[action] = "owner";
+                                break;
+                        }
+                    }
                 }
             });
         }
@@ -237,9 +258,7 @@ export abstract class Rules {
         return this.test(currentVariants, entityTypeName, accessPolicy[action]);
     }
 
-    public static test(currentVariants: string[], entityType: EntityClassName, expression: EntityVariantBooleanExpression|"", possibleVariants?: string[]) {
-        console.log(currentVariants, expression);
-
+    public static test(currentVariants: string[], entityType: EntityClassName, expression: EntityVariantBooleanExpression|"", possibleVariants?: string[], debug:boolean = false) {
         if (!expression) return false;
 
         const entityTypeName = Entity.getClassName(entityType);
@@ -263,6 +282,8 @@ export abstract class Rules {
         }
 
         const passed = !!eval(booleanExpression);
+
+        if (debug) console.log(currentVariants, expression, "   --> ", booleanExpression, "=", passed);
 
         return passed;
     }

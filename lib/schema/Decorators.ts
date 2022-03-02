@@ -247,9 +247,25 @@ export function Get<EntityType extends Entity>(
 export function Set<EntityType extends Entity>(
     entity: EntityType,
     attributeName: `_${EntityAttributeName<EntityType>}`,
-    descriptor: TypedPropertyDescriptor<EntitySetAccessor>,
+    descriptor: TypedPropertyDescriptor<EntitySetAccessor>
 ) {
-    // to-do
+    const originalAttributeName = attributeName.substring(1);
+
+    const originalRules = prepareRuleSchema(entity, originalAttributeName as EntityAttributeName<EntityType>);
+    originalRules.hasSetAccessor = true;
+
+    const { write } = originalRules.accessPolicy;
+
+    const rules = prepareRuleSchema(entity, attributeName as EntityAttributeName<EntityType>);
+
+    process.nextTick(() => {
+        const newWritePolicies = rules.accessPolicy.read || "owner";
+        originalRules.accessPolicy.write = write ? `(${write as string}) | (${newWritePolicies as string})` as EntityVariantBooleanExpression|"" : newWritePolicies;
+
+        Rules.remove(entity, attributeName);
+
+        console.dir(Rules.schema, { depth: null });
+    });
 }
 
 /**

@@ -54,7 +54,7 @@ export type EntityGetAccessor = (
     user?: User,
 ) => any;
 
-export type EntitySetAccessor = <ValueType = any>(
+export type EntitySetAccessor<ValueType = any> = (
     /**
      * The value that is being written into this attribute
      */
