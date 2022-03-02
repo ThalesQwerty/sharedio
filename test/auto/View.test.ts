@@ -16,29 +16,10 @@ import {
     EntityUserAccessPolicy,
     EntityVariantName,
 } from "../../lib/types";
+import { StringTransform } from "../../lib/utils";
+import { AccessPoliciesTestEntity, server, SERVER_URL } from "./common";
 
 jest.setTimeout(10000);
-
-const server = new Server({
-    port: 8080,
-    debug: false,
-});
-
-const SERVER_URL = `ws://localhost:${server.config.port}`;
-
-class TestEntity extends Entity {
-    @Public publicAttr = "public";
-    @Private privateAttr = "private";
-    @Protected protectedAttr = "protected";
-    @Internal internalAttr = "internal";
-    @Readonly readonlyAttr = "readonly";
-
-    @Private @Readonly privateReadonlyAttr = "private readonly";
-    @Private @Protected privateProtectedAttr = "private protected";
-    @Protected @Readonly protectedReadonlyAttr = "protected readonly";
-    @Private @Protected @Readonly privateProtectedReadonlyAttr =
-        "private protected readonly";
-}
 
 describe("View", () => {
     beforeEach(() => {
@@ -49,21 +30,21 @@ describe("View", () => {
         server.stop();
     });
 
-    it.only("Creates rules schema correctly", (done) => {
+    it("Creates rules schema correctly", (done) => {
         const { schema } = Rules;
-        expect(schema).toHaveProperty("TestEntity");
+        expect(schema).toHaveProperty("AccessPoliciesTestEntity");
 
-        const rules = schema.TestEntity;
+        const rules = schema.AccessPoliciesTestEntity;
 
-        function checkIf(attributeName: EntityAttributeName<TestEntity>, expectedOutcome: `is ${"INVISIBLE"|"READONLY"|"WRITABLE"} for`, ...variants: EntityVariantName<TestEntity>[]) {
+        function checkIf(attributeName: EntityAttributeName<AccessPoliciesTestEntity>, expectedOutcome: `is ${"INVISIBLE"|"READONLY"|"WRITABLE"} for`, ...variants: EntityVariantName<AccessPoliciesTestEntity>[]) {
             // console.log(`Checking if ${attributeName} ${expectedOutcome} ${variants.join(", ")}`)
             expect(rules).toHaveProperty(attributeName);
             variants.push("all");
 
             const { read, write } = rules[attributeName].accessPolicy;
 
-            expect(Rules.test(variants, TestEntity, read)).toBe(expectedOutcome === "is INVISIBLE for" ? false : true);
-            expect(Rules.test(variants, TestEntity, write)).toBe(expectedOutcome === "is WRITABLE for" ? true : false);
+            expect(Rules.test(variants, AccessPoliciesTestEntity, read)).toBe(expectedOutcome === "is INVISIBLE for" ? false : true);
+            expect(Rules.test(variants, AccessPoliciesTestEntity, write)).toBe(expectedOutcome === "is WRITABLE for" ? true : false);
         }
 
         setImmediate(() => {
@@ -98,13 +79,13 @@ describe("View", () => {
 
         server.on("connection", ({ user }) => {
             const owned = server.createEntity(
-                TestEntity,
+                AccessPoliciesTestEntity,
                 {},
                 user,
-            ) as TestEntity;
+            ) as AccessPoliciesTestEntity;
             const notOwned = server.createEntity(
-                TestEntity,
-            ) as TestEntity;
+                AccessPoliciesTestEntity,
+            ) as AccessPoliciesTestEntity;
 
             server.on("nextTick", () => {
                 const { view } = user;
@@ -112,7 +93,7 @@ describe("View", () => {
                 const _owned = view.find(owned);
                 const _notOwned = view.find(notOwned);
 
-                type Attrs = EntityAttributeName<TestEntity>[];
+                type Attrs = EntityAttributeName<AccessPoliciesTestEntity>[];
 
                 const publicAttrs: Attrs = [
                     "publicAttr",
