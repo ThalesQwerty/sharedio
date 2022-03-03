@@ -25,7 +25,7 @@ export type EntityAttributeName<EntityType extends Entity> = Exclude<
     EntityReservedAttributeName | number | symbol
 >;
 
-export type EntityAttributeType = "number"|"string"|"boolean"|"any";
+export type EntityAttributeType = "any"|"number"|"string"|"boolean"|"array"|"object"|"function";
 
 export type EntitySetAcessorName<EntityType extends Entity> = `_${EntityAttributeName<EntityType>}`|`set${Capitalize<EntityAttributeName<EntityType>>}`;
 

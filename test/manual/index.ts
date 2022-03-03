@@ -31,19 +31,19 @@ class Player extends Entity {
 
     @Internal serverSide = 0;
 
-    @String name = "Thales";
-    @Number power = 9001;
+    @String() name = "Thales";
+    @Number() power = 9001;
 
-    @Writable @String superPublic = "wooow";
+    @Writable @String() superPublic = "wooow";
 
-    @Private @String secret = "Shh...";
+    @Private @String() secret = "Shh...";
 
-    @Readonly @String immutable = "Hello World!";
+    @Readonly @String() immutable = "Hello World!";
 
-    @Private @Readonly @String immutableSecret = "Hello Person!";
+    @Private @Readonly @String() immutableSecret = "Hello Person!";
 
     @If("ally", "host")
-    @Number health = 100;
+    @Number() health = 100;
 
     @Unless("ally", "owner")
     damage(hp: number) {
