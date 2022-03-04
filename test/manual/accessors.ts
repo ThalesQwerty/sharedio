@@ -22,11 +22,23 @@ import { EntityVariantBooleanExpression, EntityVariantName } from "../../lib/typ
 
 class GetSetTest extends Entity {
 
+    @Internal objectTest: any = {
+        a: 1,
+        b: 2,
+        deep: {
+            down: {
+                there: {
+                    hello: "world"
+                }
+            }
+        }
+    }
+
     @Readonly watched = 0;
 
-    @Public number:number = 0;
-    @Public string:string = "string";
-    @Public boolean:boolean = false;
+    @Public number: number = 0;
+    @Public string: string = "string";
+    @Public boolean: boolean = false;
 
     @Internal _random = 0;
     @Get random() {
@@ -57,19 +69,26 @@ const server = new Server({
     port: 8080,
     debug: true,
     tickRate: 64,
-    clientSchema: {
-        path: "../client/src/sharedio",
-        fileName: "accessorSchema.ts",
-        interfaceName: "Entities",
-    },
+    // clientSchema: {
+    //     path: "../client/src/sharedio",
+    //     fileName: "accessorSchema.ts",
+    //     interfaceName: "Entities",
+    // },
 }).start(() => {
+    const a = new GetSetTest({ server }).then((e) => {
+        setInterval(() => {
+            a.number = Math.random();
+            a.objectTest.b = 4;
+            a.objectTest.deep.down.there.hello = "oxe????";
+            a.objectTest.new = {
+                whatIsIt: "idk"
+            };
+        }, 1000);
 
+    }).on("change", e => {
+        console.log(e.changes);
+    })
 });
-
-setTimeout(() => {
-    console.dir(Rules.from(GetSetTest), { depth: null });
-}, 100);
-
 
 server.on("connection", ({ user }) => {
     const test = new GetSetTest({ server, owner: user });

@@ -33,6 +33,18 @@ export class ObjectTransform {
         return flatten;
     }
 
+    static unflatten<T extends KeyValue = KeyValue>(
+        flatObject: T
+    ) {
+        const unflatten = {};
+
+        for (const key in flatObject) {
+            _.set(unflatten, key, flatObject[key]);
+        }
+
+        return unflatten;
+    }
+
     static delta(
         previousState: KeyValue,
         currentState: KeyValue

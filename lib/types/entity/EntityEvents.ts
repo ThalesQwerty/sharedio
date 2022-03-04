@@ -1,5 +1,5 @@
 import { ListenerOverloads, EmitterOverloads } from "../../utils";
-import { Entity, User } from "../../schema";
+import { Entity, EntityState, User } from "../../schema";
 
 interface EntityCreateEvent<EntityType extends Entity = Entity> {
     user: User;
@@ -20,7 +20,10 @@ interface EntityDeleteEvent<EntityType extends Entity = Entity> {
 
 interface EntityRenderEvent<EntityType extends Entity = Entity> {}
 
-interface EntityUpdateEvent<EntityType extends Entity = Entity> {}
+interface EntityChangeEvent<EntityType extends Entity = Entity> {
+    entity: EntityType;
+    changes: EntityState<EntityType>["changes"]
+}
 
 interface EntityBeforeDeleteEvent<
     EntityType extends Entity = Entity,
@@ -42,40 +45,40 @@ type EntityDeleteListener<EntityType extends Entity = Entity> = (
 type EntityRenderListener<EntityType extends Entity = Entity> = (
     event: EntityRenderEvent<EntityType>,
 ) => void;
-type EntityUpdateListener<EntityType extends Entity = Entity> = (
-    event: EntityUpdateEvent<EntityType>,
+type EntityChangeListener<EntityType extends Entity = Entity> = (
+    event: EntityChangeEvent<EntityType>
 ) => void;
 type EntityTickListener = () => void;
 
-export interface EntityEvents {
-    beforeDelete?: EntityBeforeDeleteListener[];
-    delete?: EntityDeleteListener[];
-    render?: EntityRenderListener[];
-    update?: EntityUpdateListener[];
+export interface EntityEvents<EntityType extends Entity = Entity> {
+    beforeDelete?: EntityBeforeDeleteListener<EntityType>[];
+    delete?: EntityDeleteListener<EntityType>[];
+    render?: EntityRenderListener<EntityType>[];
+    change?: EntityChangeListener<EntityType>[];
     tick?: EntityTickListener[];
-    create?: EntityCreateListener[];
-    afterCreate?: EntityCreateListener[];
-    failedCreate?: EntityFailedCreateListener[];
+    create?: EntityCreateListener<EntityType>[];
+    afterCreate?: EntityCreateListener<EntityType>[];
+    failedCreate?: EntityFailedCreateListener<EntityType>[];
 }
 
 type RemoveInterfaces<T> = Exclude<
     T,
     EntityListenerOverloads | EntityEmitterOverloads
 >;
-type ForceEntity<T> = RemoveInterfaces<T> extends Entity
+type ForceEntity<T, EntityType extends Entity = Entity> = RemoveInterfaces<T> extends EntityType
     ? RemoveInterfaces<T>
-    : Entity;
+    : EntityType;
 
-export interface EntityListenerOverloads
-    extends ListenerOverloads<EntityEvents> {
+export interface EntityListenerOverloads<EntityType extends Entity = Entity>
+    extends ListenerOverloads<EntityEvents<EntityType>> {
     /**
      * Called before an user attempts to delete this entity.
      * The return value (true or false) will determine whether or not the user will be able to delete this entity.
      */
     (
         event: "beforeDelete",
-        callback: EntityBeforeDeleteListener,
-    ): ForceEntity<this>;
+        callback: EntityBeforeDeleteListener<EntityType>,
+    ): ForceEntity<this, EntityType>;
 
     /**
      * Called right after this entity gets deleted.
@@ -83,29 +86,29 @@ export interface EntityListenerOverloads
      */
     (
         event: "delete",
-        callback: EntityDeleteListener,
-    ): ForceEntity<this>;
+        callback: EntityDeleteListener<EntityType>,
+    ): ForceEntity<this, EntityType>;
 
     /**
      * This function will be called every server tick.
      */
-    (event: "tick", callback: EntityTickListener): ForceEntity<this>;
+    (event: "tick", callback: EntityTickListener): EntityType;
 
     /**
      * Called before an user reads this entity's properties.
      */
     (
         event: "render",
-        callback: EntityRenderListener,
-    ): ForceEntity<this>;
+        callback: EntityRenderListener<EntityType>,
+    ): ForceEntity<this, EntityType>;
 
     /**
-     * Called before an user reads this entity's properties.
+     * Called whenever some property changes in this entity
      */
     (
-        event: "update",
-        callback: EntityUpdateListener,
-    ): ForceEntity<this>;
+        event: "change",
+        callback: EntityChangeListener<EntityType>,
+    ): ForceEntity<this, EntityType>;
 
     /**
      * Called after the entity is successfully created.
@@ -115,7 +118,7 @@ export interface EntityListenerOverloads
     (
         event: "create",
         callback: EntityCreateListener,
-    ): ForceEntity<this>;
+    ): ForceEntity<this, EntityType>;
 
     /**
      * Called after the entity is successfully created and all "create" event listeners have been called.
@@ -125,7 +128,7 @@ export interface EntityListenerOverloads
     (
         event: "afterCreate",
         callback: EntityCreateListener,
-    ): ForceEntity<this>;
+    ): ForceEntity<this, EntityType>;
 
     /**
      * If the entity fails to be created (_Constructor() returned false), this event will be emitted.
@@ -133,33 +136,33 @@ export interface EntityListenerOverloads
     (
         event: "failedCreate",
         callback: EntityCreateListener,
-    ): ForceEntity<this>;
+    ): ForceEntity<this, EntityType>;
 }
 
-export interface EntityEmitterOverloads
-    extends EmitterOverloads<EntityEvents> {
+export interface EntityEmitterOverloads<EntityType extends Entity = Entity>
+    extends EmitterOverloads<EntityEvents<EntityType>> {
     (
         event: "beforeDelete",
-        props: EntityBeforeDeleteEvent<ForceEntity<this>>,
+        props: EntityBeforeDeleteEvent<EntityType>,
     ): boolean;
     (
         event: "delete",
-        props: EntityDeleteEvent<ForceEntity<this>>,
+        props: EntityDeleteEvent<EntityType>,
     ): void;
     (
         event: "render",
-        props: EntityRenderEvent<ForceEntity<this>>,
+        props: EntityRenderEvent<EntityType>,
     ): void;
     (
-        event: "update",
-        props: EntityUpdateEvent<ForceEntity<this>>,
+        event: "change",
+        props: EntityChangeEvent<EntityType>,
     ): void;
     (
         event: "create",
-        props: EntityCreateEvent<ForceEntity<this>>,
+        props: EntityCreateEvent<EntityType>,
     ): void;
     (
         event: "failedCreate",
-        props: EntityFailedCreateEvent<ForceEntity<this>>,
+        props: EntityFailedCreateEvent<EntityType>,
     ): void;
 }

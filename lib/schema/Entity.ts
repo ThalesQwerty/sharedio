@@ -1,4 +1,4 @@
-import { User } from ".";
+import { Rules, User } from ".";
 import { Server } from "../connection/Server";
 import {
     EntityEvents,
@@ -11,6 +11,7 @@ import {
     EntityCreateListener,
     EntityConfig,
     EntityFailedCreateListener,
+    EntityAttributeName,
 } from "../types";
 import { HasEvents, HasId, ObjectTransform } from "../utils";
 
@@ -21,14 +22,19 @@ interface EntityReservedAttributes {
     server: Server | null;
     constructor?: Function;
 }
+
+export interface EntityState<EntityType extends Entity> {
+    data: Partial<KeyValue<any, EntityAttributeName<EntityType>>>,
+    changes: Partial<KeyValue<any, EntityAttributeName<EntityType>>>,
+    broadcaster?: NodeJS.Immediate
+}
 export class Entity
     extends HasEvents<
-        EntityEvents,
-        EntityListenerOverloads,
-        EntityEmitterOverloads
+    EntityEvents,
+    EntityListenerOverloads,
+    EntityEmitterOverloads
     >
-    implements EntityReservedAttributes
-{
+    implements EntityReservedAttributes {
     /**
      * Lists the names of the reserved entity attributes. Those names cannot be used to create custom attributes.
      */
@@ -47,10 +53,10 @@ export class Entity
                 attributeName === reservedAttributeName ||
                 (attributeName[0] === "_" &&
                     attributeName.substring(1) ===
-                        reservedAttributeName) ||
+                    reservedAttributeName) ||
                 (reservedAttributeName[0] === "_" &&
                     reservedAttributeName.substring(1) ===
-                        attributeName)
+                    attributeName)
             )
                 return true;
         }
@@ -64,7 +70,7 @@ export class Entity
     public static getClassName<
         EntityType extends Entity,
         T extends EntityClassName | EntityType,
-    >(entityOrType: T) {
+        >(entityOrType: T) {
         if (typeof entityOrType === "string") return entityOrType;
         else if (entityOrType instanceof Entity)
             return (entityOrType as Entity).type;
@@ -92,51 +98,11 @@ export class Entity
     ):
         | EntityEmitterOverloads
         | ((
-              event: keyof EntityEvents,
-              props?: KeyValue<any, string | number | symbol>,
-          ) => void) {
+            event: keyof EntityEvents,
+            props?: KeyValue<any, string | number | symbol>,
+        ) => void) {
         return entity.emit;
     }
-
-    /**
-     * Entity class name
-     */
-    public get type() {
-        return this.constructor.name;
-    }
-
-    public readonly owned: undefined;
-
-    /**
-     * Returns the user who created this entity
-     *
-     * Returns null if it has been created by the server
-     */
-    public get owner() {
-        return this._owner;
-    }
-    private _owner: User | null = null;
-
-    /**
-     * In which server is this entity in?
-     */
-    public get server() {
-        return this._server;
-    }
-    private _server: Server;
-
-    /**
-     * Does this entity exist or has it been deleted?
-     */
-    public get exists() {
-        return this._exists;
-        // return this.server.entities.find((currentEntity) =>
-        //     currentEntity.is(this),
-        // )
-        //     ? true
-        //     : false;
-    }
-    private _exists?: boolean;
 
     public static log<EntityType extends Entity>(entity: EntityType) {
         const printable = this.printable(entity);
@@ -186,6 +152,51 @@ export class Entity
         return simplified as PrintableEntity<EntityType>;
     }
 
+    /**
+     * Entity class name
+     */
+    public get type() {
+        return this.constructor.name;
+    }
+
+    public readonly owned: undefined;
+
+    /**
+     * Returns the user who created this entity
+     *
+     * Returns null if it has been created by the server
+     */
+    public get owner() {
+        return this._owner;
+    }
+    private _owner: User | null = null;
+
+    /**
+     * In which server is this entity in?
+     */
+    public get server() {
+        return this._server;
+    }
+    private _server: Server;
+
+    /**
+     * Does this entity exist or has it been deleted?
+     */
+    public get exists() {
+        return this._exists;
+        // return this.server.entities.find((currentEntity) =>
+        //     currentEntity.is(this),
+        // )
+        //     ? true
+        //     : false;
+    }
+    private _exists?: boolean;
+
+    public readonly state: EntityState<this> = {
+        data: {},
+        changes: {}
+    };
+
     constructor({ server, initialState, owner }: EntityConfig) {
         super("Entity");
         this._server = server;
@@ -200,6 +211,93 @@ export class Entity
 
             if (created) {
                 this._server.entities.push(this);
+
+                const rules = Rules.from(this);
+
+                for (const _attributeName in rules) {
+                    const attributeName = _attributeName as EntityAttributeName<this>;
+                    const entity = this as any;
+                    const currentValue = entity[attributeName] != null && typeof entity[attributeName] !== "object" ? entity[attributeName] : ObjectTransform.clone(entity[attributeName]);
+
+                    this.state.data[attributeName] = currentValue;
+
+                    const prepareBroadcast = () => {
+                        if (this.state.broadcaster) clearImmediate(this.state.broadcaster);
+
+                        this.state.broadcaster = setImmediate(() => {
+                            this.emit("change", {
+                                entity: this,
+                                changes: ObjectTransform.clone(this.state.changes)
+                            });
+                            this.state.changes = {};
+                        })
+                    }
+
+                    if (typeof currentValue !== "function") {
+
+                        const configWatchedState = (parent: any, path: string, data: any, changes: any) => {
+                            const key = path.split(".")[path.split(".").length - 1];
+
+                            if (!(parent[key] instanceof Object)) {
+
+                                delete parent[key];
+
+                                Object.defineProperty(parent, key, {
+                                    get() {
+                                        return data[key]
+                                    },
+                                    set(newValue: any) {
+                                        const oldValue = data[key];
+
+                                        data[key] = newValue;
+
+                                        if (newValue !== oldValue || typeof newValue !== typeof oldValue) {
+                                            changes[path] = newValue;
+                                            prepareBroadcast();
+                                        }
+                                    }
+                                });
+                            } else {
+                                const copy = ObjectTransform.clone(parent[key]);
+                                data[key] ??= {};
+
+                                // watch new keys
+                                parent[key] = new Proxy(copy, {
+                                    set(object, property: string, newValue) {
+
+                                        if (object[property] === undefined) {
+                                            copy[property] = newValue;
+                                            data[key][property] = newValue;
+
+                                            if (newValue instanceof Object) {
+                                                const flat = ObjectTransform.flatten(newValue);
+
+                                                for (const subpath in flat) {
+                                                    changes[`${path}.${property}.${subpath}`] = flat[subpath];
+                                                    prepareBroadcast();
+                                                }
+                                            } else {
+                                                changes[`${path}.${property}`] = newValue;
+                                                prepareBroadcast();
+                                            }
+
+                                            configWatchedState(parent[key], `${path}.${property}`, data[key], changes);
+                                        }
+
+                                        return true;
+                                    }
+                                })
+
+                                // watch existing keys
+                                for (const subkey of Object.keys(parent[key])) {
+                                    configWatchedState(parent[key], `${path}.${subkey}`, data[key], changes);
+                                }
+                            }
+                        }
+
+                        configWatchedState(entity, attributeName, this.state.data, this.state.changes);
+                    }
+                }
 
                 if (initialState) {
                     for (const attributeName in initialState) {
@@ -221,6 +319,8 @@ export class Entity
         });
     }
 
+    public readonly on: EntityListenerOverloads<this> = this.on;
+
     /**
      * Deletes this entity
      *
@@ -240,12 +340,12 @@ export class Entity
     /**
      * This function will be called right after this entity is successfully created
      */
-    public readonly then = (listener: EntityCreateListener) =>
-        this.on("create", listener);
+    public readonly then = (listener: EntityCreateListener<this>): this =>
+        this.on("create", listener) as any as this;
 
     /**
      * This function will be called if the entity fails to be created
      */
-    public readonly catch = (listener: EntityFailedCreateListener) =>
-        this.on("failedCreate", listener);
+    public readonly catch = (listener: EntityFailedCreateListener<this>): this =>
+        this.on("failedCreate", listener) as any as this;
 }
