@@ -25,13 +25,15 @@ class GetSetTest extends Entity {
     @Internal objectTest: any = {
         a: 1,
         b: 2,
+        c: 5,
         deep: {
             down: {
                 there: {
                     hello: "world"
                 }
             }
-        }
+        },
+        sudoNew: undefined
     }
 
     @Readonly watched = 0;
@@ -78,15 +80,15 @@ const server = new Server({
     const a = new GetSetTest({ server }).then((e) => {
         setInterval(() => {
             a.number = Math.random();
-            a.objectTest.b = 4;
-            a.objectTest.deep.down.there.hello = "oxe????";
-            a.objectTest.new = {
-                whatIsIt: "idk"
-            };
-        }, 1000);
+            a.objectTest.b = Math.random();
+            a.objectTest.deep.down.there.hello = Math.random();
+            a.objectTest.new = "hello";
+            a.objectTest.sudoNew = "world";
+        }, 5000);
 
     }).on("change", e => {
         console.log(e.changes);
+        console.log("");
     })
 });
 

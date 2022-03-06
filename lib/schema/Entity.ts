@@ -13,7 +13,7 @@ import {
     EntityFailedCreateListener,
     EntityAttributeName,
 } from "../types";
-import { HasEvents, HasId, ObjectTransform } from "../utils";
+import { HasEvents, HasId, ObjectTransform, EventListener, EventEmitter, WatchObject } from "../utils";
 
 import * as _ from "lodash";
 interface EntityReservedAttributes {
@@ -26,13 +26,13 @@ interface EntityReservedAttributes {
 export interface EntityState<EntityType extends Entity> {
     data: Partial<KeyValue<any, EntityAttributeName<EntityType>>>,
     changes: Partial<KeyValue<any, EntityAttributeName<EntityType>>>,
-    broadcaster?: NodeJS.Immediate
+    hasChanges: boolean
 }
 export class Entity
     extends HasEvents<
-    EntityEvents,
-    EntityListenerOverloads,
-    EntityEmitterOverloads
+    EntityEvents<any>,
+    EntityListenerOverloads<any>,
+    EntityEmitterOverloads<any>
     >
     implements EntityReservedAttributes {
     /**
@@ -194,7 +194,8 @@ export class Entity
 
     public readonly state: EntityState<this> = {
         data: {},
-        changes: {}
+        changes: {},
+        hasChanges: false
     };
 
     constructor({ server, initialState, owner }: EntityConfig) {
@@ -213,113 +214,56 @@ export class Entity
                 this._server.entities.push(this);
 
                 const rules = Rules.from(this);
+                const attributeList = Object.keys(rules);
 
-                for (const _attributeName in rules) {
-                    const attributeName = _attributeName as EntityAttributeName<this>;
-                    const entity = this as any;
-                    const currentValue = entity[attributeName] != null && typeof entity[attributeName] !== "object" ? entity[attributeName] : ObjectTransform.clone(entity[attributeName]);
+                if (rules) {
+                    WatchObject(
+                        this,
+                        this.state,
+                        "data",
+                        ({path, newValue}) => {
+                            (this.state.changes as any)[path] = newValue;
 
-                    this.state.data[attributeName] = currentValue;
+                            if (!this.state.hasChanges) {
+                                this.state.hasChanges = true;
 
-                    const prepareBroadcast = () => {
-                        if (this.state.broadcaster) clearImmediate(this.state.broadcaster);
+                                process.nextTick(() => {
+                                    this.emit("change", {
+                                        entity: this,
+                                        changes: ObjectTransform.clone(this.state.changes)
+                                    });
 
-                        this.state.broadcaster = setImmediate(() => {
-                            this.emit("change", {
-                                entity: this,
-                                changes: ObjectTransform.clone(this.state.changes)
-                            });
-                            this.state.changes = {};
-                        })
-                    }
-
-                    if (typeof currentValue !== "function") {
-
-                        const configWatchedState = (parent: any, path: string, data: any, changes: any) => {
-                            const key = path.split(".")[path.split(".").length - 1];
-
-                            if (!(parent[key] instanceof Object)) {
-
-                                delete parent[key];
-
-                                Object.defineProperty(parent, key, {
-                                    get() {
-                                        return data[key]
-                                    },
-                                    set(newValue: any) {
-                                        const oldValue = data[key];
-
-                                        data[key] = newValue;
-
-                                        if (newValue !== oldValue || typeof newValue !== typeof oldValue) {
-                                            changes[path] = newValue;
-                                            prepareBroadcast();
-                                        }
-                                    }
-                                });
-                            } else {
-                                const copy = ObjectTransform.clone(parent[key]);
-                                data[key] ??= {};
-
-                                // watch new keys
-                                parent[key] = new Proxy(copy, {
-                                    set(object, property: string, newValue) {
-
-                                        if (object[property] === undefined) {
-                                            copy[property] = newValue;
-                                            data[key][property] = newValue;
-
-                                            if (newValue instanceof Object) {
-                                                const flat = ObjectTransform.flatten(newValue);
-
-                                                for (const subpath in flat) {
-                                                    changes[`${path}.${property}.${subpath}`] = flat[subpath];
-                                                    prepareBroadcast();
-                                                }
-                                            } else {
-                                                changes[`${path}.${property}`] = newValue;
-                                                prepareBroadcast();
-                                            }
-
-                                            configWatchedState(parent[key], `${path}.${property}`, data[key], changes);
-                                        }
-
-                                        return true;
-                                    }
+                                    this.state.changes = {};
+                                    this.state.hasChanges = false;
                                 })
+                            }
+                        },
+                        attributeList
+                    );
 
-                                // watch existing keys
-                                for (const subkey of Object.keys(parent[key])) {
-                                    configWatchedState(parent[key], `${path}.${subkey}`, data[key], changes);
-                                }
+                    if (initialState) {
+                        for (const attributeName in attributeList) {
+                            if (attributeName in this) {
+                                const value = (initialState as any)[
+                                    attributeName
+                                ];
+                                if (value !== undefined)
+                                    (this as any)[attributeName] = value;
                             }
                         }
-
-                        configWatchedState(entity, attributeName, this.state.data, this.state.changes);
                     }
-                }
 
-                if (initialState) {
-                    for (const attributeName in initialState) {
-                        if (attributeName in this) {
-                            const value = (initialState as any)[
-                                attributeName
-                            ];
-                            if (value !== undefined)
-                                (this as any)[attributeName] = value;
-                        }
-                    }
+                    this.emit("create", {
+                        entity: this,
+                        user: owner,
+                    });
                 }
-
-                this.emit("create", {
-                    entity: this,
-                    user: owner,
-                });
             }
         });
     }
 
-    public readonly on: EntityListenerOverloads<this> = this.on;
+    public readonly on: EventListener<EntityEvents<this>, EntityListenerOverloads<this>, this> = this.on;
+    protected readonly emit: EventEmitter<EntityEvents<this>, EntityEmitterOverloads<this>> = this.emit;
 
     /**
      * Deletes this entity

@@ -95,7 +95,7 @@ const server = new Server({
 }).start();
 
 setImmediate(() => {
-    console.dir(Rules.from(Player), { depth: null} );
+    // console.dir(Rules.from(Player), { depth: null} );
 });
 
 server.on("connection", ({ user }) => {

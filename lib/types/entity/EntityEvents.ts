@@ -117,7 +117,7 @@ export interface EntityListenerOverloads<EntityType extends Entity = Entity>
      */
     (
         event: "create",
-        callback: EntityCreateListener,
+        callback: EntityCreateListener<EntityType>,
     ): ForceEntity<this, EntityType>;
 
     /**
@@ -127,7 +127,7 @@ export interface EntityListenerOverloads<EntityType extends Entity = Entity>
      */
     (
         event: "afterCreate",
-        callback: EntityCreateListener,
+        callback: EntityCreateListener<EntityType>,
     ): ForceEntity<this, EntityType>;
 
     /**
@@ -135,7 +135,7 @@ export interface EntityListenerOverloads<EntityType extends Entity = Entity>
      */
     (
         event: "failedCreate",
-        callback: EntityCreateListener,
+        callback: EntityFailedCreateListener<EntityType>,
     ): ForceEntity<this, EntityType>;
 }
 
