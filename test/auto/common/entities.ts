@@ -12,6 +12,10 @@ export class AccessPoliciesTestEntity extends Entity {
     @Protected @Readonly protectedReadonlyAttr = "protected readonly";
     @Private @Protected @Readonly privateProtectedReadonlyAttr =
         "private protected readonly";
+
+    constructor(config: EntityConfig) {
+        super(config);
+    }
 }
 
 export class UncreatableEntity extends Entity {

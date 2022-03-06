@@ -61,14 +61,6 @@ export interface EntityEvents<EntityType extends Entity = Entity> {
     failedCreate?: EntityFailedCreateListener<EntityType>[];
 }
 
-type RemoveInterfaces<T> = Exclude<
-    T,
-    EntityListenerOverloads | EntityEmitterOverloads
->;
-type ForceEntity<T, EntityType extends Entity = Entity> = RemoveInterfaces<T> extends EntityType
-    ? RemoveInterfaces<T>
-    : EntityType;
-
 export interface EntityListenerOverloads<EntityType extends Entity = Entity>
     extends ListenerOverloads<EntityEvents<EntityType>> {
     /**
@@ -78,7 +70,7 @@ export interface EntityListenerOverloads<EntityType extends Entity = Entity>
     (
         event: "beforeDelete",
         callback: EntityBeforeDeleteListener<EntityType>,
-    ): ForceEntity<this, EntityType>;
+    ): EntityType;
 
     /**
      * Called right after this entity gets deleted.
@@ -87,7 +79,7 @@ export interface EntityListenerOverloads<EntityType extends Entity = Entity>
     (
         event: "delete",
         callback: EntityDeleteListener<EntityType>,
-    ): ForceEntity<this, EntityType>;
+    ): EntityType;
 
     /**
      * This function will be called every server tick.
@@ -100,7 +92,7 @@ export interface EntityListenerOverloads<EntityType extends Entity = Entity>
     (
         event: "render",
         callback: EntityRenderListener<EntityType>,
-    ): ForceEntity<this, EntityType>;
+    ): EntityType;
 
     /**
      * Called whenever some property changes in this entity
@@ -108,7 +100,7 @@ export interface EntityListenerOverloads<EntityType extends Entity = Entity>
     (
         event: "change",
         callback: EntityChangeListener<EntityType>,
-    ): ForceEntity<this, EntityType>;
+    ): EntityType;
 
     /**
      * Called after the entity is successfully created.
@@ -118,7 +110,7 @@ export interface EntityListenerOverloads<EntityType extends Entity = Entity>
     (
         event: "create",
         callback: EntityCreateListener<EntityType>,
-    ): ForceEntity<this, EntityType>;
+    ): EntityType;
 
     /**
      * Called after the entity is successfully created and all "create" event listeners have been called.
@@ -128,7 +120,7 @@ export interface EntityListenerOverloads<EntityType extends Entity = Entity>
     (
         event: "afterCreate",
         callback: EntityCreateListener<EntityType>,
-    ): ForceEntity<this, EntityType>;
+    ): EntityType;
 
     /**
      * If the entity fails to be created (_Constructor() returned false), this event will be emitted.
@@ -136,7 +128,7 @@ export interface EntityListenerOverloads<EntityType extends Entity = Entity>
     (
         event: "failedCreate",
         callback: EntityFailedCreateListener<EntityType>,
-    ): ForceEntity<this, EntityType>;
+    ): EntityType;
 }
 
 export interface EntityEmitterOverloads<EntityType extends Entity = Entity>

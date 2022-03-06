@@ -24,15 +24,15 @@ interface EntityReservedAttributes {
 }
 
 export interface EntityState<EntityType extends Entity> {
-    data: Partial<KeyValue<any, EntityAttributeName<EntityType>>>,
-    changes: Partial<KeyValue<any, EntityAttributeName<EntityType>>>,
+    data: Partial<KeyValue<unknown, EntityAttributeName<EntityType>>>,
+    changes: Partial<KeyValue<unknown, EntityAttributeName<EntityType>|`${EntityAttributeName<EntityType>}.${string}`>>,
     hasChanges: boolean
 }
 export class Entity
     extends HasEvents<
-    EntityEvents<any>,
-    EntityListenerOverloads<any>,
-    EntityEmitterOverloads<any>
+    EntityEvents<Entity>,
+    EntityListenerOverloads<Entity>,
+    EntityEmitterOverloads<Entity>
     >
     implements EntityReservedAttributes {
     /**
@@ -214,15 +214,16 @@ export class Entity
                 this._server.entities.push(this);
 
                 const rules = Rules.from(this);
-                const attributeList = Object.keys(rules);
 
                 if (rules) {
+                    const attributeList = Object.keys(rules);
+
                     WatchObject(
                         this,
                         this.state,
                         "data",
                         ({path, newValue}) => {
-                            (this.state.changes as any)[path] = newValue;
+                            _.set(this.state.changes, path, newValue);
 
                             if (!this.state.hasChanges) {
                                 this.state.hasChanges = true;
@@ -252,12 +253,12 @@ export class Entity
                             }
                         }
                     }
-
-                    this.emit("create", {
-                        entity: this,
-                        user: owner,
-                    });
                 }
+
+                this.emit("create", {
+                    entity: this,
+                    user: owner,
+                });
             }
         });
     }
