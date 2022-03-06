@@ -5,186 +5,204 @@ import {
 import { server } from "./common";
 
 class WatchTestEntity extends Entity {
-
-    @Internal objectTest = {
-        number: 0,
-        string: "",
-        boolean: false,
-        unchangedNumber: 0,
-        unchangedString: "unchanged",
-        unchangedBoolean: false,
-        object: {
-            a: 1,
-            b: 2,
-            constant: "constant",
-            deep: {
-                hello: "world"
-            },
-            deleted: 0
+    @Internal number = 0;
+    @Internal string = "";
+    @Internal boolean = false;
+    @Internal unchangedNumber = 0;
+    @Internal unchangedString = "unchanged";
+    @Internal unchangedBoolean = false;
+    @Internal object = {
+        a: 1,
+        b: 2,
+        constant: "constant",
+        deep: {
+            hello: "world"
         },
-        array: [0, 1, 2],
         pseudoNew: undefined
+    };
+    @Internal array = [0, 1, 2];
+    @Internal pseudoNew = undefined;
+    @Internal deletable: any = {
+        deleteThis: 1,
+        keepThis: 0
     }
-
 }
 
-jest.setTimeout(5000);
+jest.setTimeout(1000);
 
 describe("Watched entity", () => {
-    it("Detects changes of simple values", (done) => {
+    it("Simple values, update", (done) => {
         const watched = new WatchTestEntity({ server }).then(() => {
-            const { objectTest } = watched;
+            watched.number = 1;
+            watched.string = "changed";
+            watched.boolean = true;
 
-            objectTest.number = 1;
-            objectTest.string = "changed";
-            objectTest.boolean = true;
-
-            objectTest.unchangedNumber = 0;
-            objectTest.unchangedString = "unchanged";
-            objectTest.unchangedBoolean = false;
+            watched.unchangedNumber = 0;
+            watched.unchangedString = "unchanged";
+            watched.unchangedBoolean = false;
         });
 
         watched.on("change", ({ changes }) => {
-            const { objectTest } = changes;
-
-            expect(objectTest).toHaveProperty("number");
-            expect(objectTest).toHaveProperty("string");
-            expect(objectTest).toHaveProperty("boolean");
-
-            expect(objectTest).not.toHaveProperty("unchangedNumber");
-            expect(objectTest).not.toHaveProperty("unchangedString");
-            expect(objectTest).not.toHaveProperty("unchangedBoolean");
-
-            expect((objectTest as any).number).toBe(1);
-            expect((objectTest as any).string).toBe("changed");
-            expect((objectTest as any).boolean).toBe(true);
+            expect(changes).toEqual({
+                number: 1,
+                string: "changed",
+                boolean: true
+            });
 
             watched.off();
             done();
         });
     });
 
-    it("Detects changes in objects", (done) => {
+    it("Objects, update", (done) => {
         const watched = new WatchTestEntity({ server }).then(() => {
-            const { objectTest } = watched;
-
-            objectTest.object.a = 50;
-            objectTest.object.b = 100;
-            objectTest.object.deep.hello = "bye";
+            watched.deletable = {
+                new: "object",
+                hello: "world"
+            }
         });
 
         watched.on("change", ({ changes }) => {
-            const { object } = changes.objectTest as any;
-
-            expect(object).toHaveProperty("a");
-            expect(object).toHaveProperty("b");
-            expect(object).toHaveProperty("deep.hello");
-
-            expect(object).not.toHaveProperty("constant");
-
-            expect((object as any).a).toBe(50);
-            expect((object as any).b).toBe(100);
-            expect((object as any).deep.hello).toBe("bye");
+            expect(changes).toEqual({
+                deletable: {
+                    new: "object",
+                    hello: "world"
+                }
+            });
 
             watched.off();
             done();
         });
     });
 
-    it("Detects new properties in objects", (done) => {
+    it("Arrays, update", (done) => {
         const watched = new WatchTestEntity({ server }).then(() => {
-            const { objectTest } = watched;
+            watched.array = [0]
+        });
 
-            (objectTest as any).newValue = "surprise";
-            (objectTest as any).newObject = {
+        watched.on("change", ({ changes }) => {
+            expect(changes).toEqual({
+                array: [0]
+            });
+
+            watched.off();
+            done();
+        });
+    });
+
+    it("Object properties, update", (done) => {
+        const watched = new WatchTestEntity({ server }).then(() => {
+            watched.object.a = 50;
+            watched.object.b = 100;
+            watched.object.deep.hello = "bye";
+        });
+
+        watched.on("change", ({ changes }) => {
+            expect(changes).toEqual({
+                object: {
+                    a: 50,
+                    b: 100,
+                    deep: {
+                        hello: "bye"
+                    }
+                }
+            });
+
+            watched.off();
+            done();
+        });
+    });
+
+    it("Object properties, insertion", (done) => {
+        const watched = new WatchTestEntity({ server }).then(() => {
+            (watched.object as any).newValue = "surprise";
+            (watched.object as any).newObject = {
                 surprise: true
             };
 
-            (objectTest as any).newUndefined = undefined;
-            objectTest.pseudoNew = undefined;
+            (watched.object as any).newUndefined = undefined;
+            watched.object.pseudoNew = undefined;
         });
 
         watched.on("change", ({ changes }) => {
-            const { objectTest } = changes as any;
-
-            expect(objectTest).toHaveProperty("newValue");
-            expect(objectTest).toHaveProperty("newObject.surprise");
-            expect(objectTest).toHaveProperty("newUndefined");
-
-            expect(objectTest).not.toHaveProperty("pseudoNew");
-
-            expect((objectTest as any).newValue).toBe("surprise");
-            expect((objectTest as any).newObject.surprise).toBe(true);
-            expect((objectTest as any).newUndefined).toBe(undefined);
+            expect(changes).toEqual({
+                object: {
+                    newValue: "surprise",
+                    newObject: {
+                        surprise: true
+                    },
+                    newUndefined: undefined
+                }
+            });
 
             watched.off();
             done();
         });
     });
 
-    it("Detects changes in arrays", (done) => {
+    it("Object properties, deletion", (done) => {
         const watched = new WatchTestEntity({ server }).then(() => {
-            const { objectTest } = watched;
-
-            objectTest.array[0] = 2;
-            objectTest.array[1] = 1;
-            objectTest.array[2] = 0;
+            delete watched.deletable.deleteThis;
         });
 
         watched.on("change", ({ changes }) => {
-            const { array } = changes.objectTest as any;
-
-            expect(array).toHaveProperty("0");
-            expect(array).not.toHaveProperty("1");
-            expect(array).toHaveProperty("2");
-            expect(array).not.toHaveProperty("3");
-
-            expect((array as any[])[0]).toBe(2);
-            expect((array as any[])[2]).toBe(0);
+            expect(changes).toEqual({
+                deletable: {
+                    deleteThis: undefined
+                }
+            });
 
             watched.off();
             done();
         });
     });
 
-    it("Detects new items in arrays", (done) => {
-        const watched = new WatchTestEntity({ server }).then(() => {
-            const { objectTest } = watched;
 
-            objectTest.array.push(3);
+    it("Array items, update", (done) => {
+        const watched = new WatchTestEntity({ server }).then(() => {
+            watched.array[0] = 2;
+            watched.array[1] = 1;
+            watched.array[2] = 0;
         });
 
         watched.on("change", ({ changes }) => {
-            const { array } = changes.objectTest as any;
+            const { array } = changes;
 
-            expect(array).not.toHaveProperty("0");
-            expect(array).not.toHaveProperty("1");
-            expect(array).not.toHaveProperty("2");
-
-            expect(array).toHaveProperty("3");
-            expect((array as any[])[3]).toBe(3);
+            expect(changes).toEqual({
+                array: [2, 1, 0]
+            });
 
             watched.off();
             done();
         });
     });
 
-    it("Detects deleted items in arrays", (done) => {
+    it("Array items, insertion", (done) => {
         const watched = new WatchTestEntity({ server }).then(() => {
-            const { objectTest } = watched;
-
-            objectTest.array.pop();
+            watched.array.push(3, 4);
+            watched.array.unshift(-2, -1);
         });
 
         watched.on("change", ({ changes }) => {
-            const { array } = changes.objectTest as any;
+            expect(changes).toEqual({
+                array: [-2, -1, 0, 1, 2, 3, 4]
+            });
 
-            expect(array).not.toHaveProperty("0");
-            expect(array).not.toHaveProperty("1");
-            expect(array).not.toHaveProperty("3");
+            watched.off();
+            done();
+        });
+    });
 
-            expect(array).toHaveProperty("2");
-            expect((array as any[])[2]).toBe(undefined);
+    it("Array items, deletion", (done) => {
+        const watched = new WatchTestEntity({ server }).then(() => {
+            watched.array.pop();
+            watched.array.shift();
+        });
+
+        watched.on("change", ({ changes }) => {
+            expect(changes).toEqual({
+                array: [1]
+            });
 
             watched.off();
             done();

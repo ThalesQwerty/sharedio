@@ -12,6 +12,7 @@ import {
     EntityConfig,
     EntityFailedCreateListener,
     EntityAttributeName,
+    EntityInterface,
 } from "../types";
 import { HasEvents, HasId, ObjectTransform, EventListener, EventEmitter, WatchObject } from "../utils";
 
@@ -24,8 +25,8 @@ interface EntityReservedAttributes {
 }
 
 export interface EntityState<EntityType extends Entity> {
-    data: Partial<KeyValue<unknown, EntityAttributeName<EntityType>>>,
-    changes: Partial<KeyValue<unknown, EntityAttributeName<EntityType>|`${EntityAttributeName<EntityType>}.${string}`>>,
+    data: Partial<EntityInterface<EntityType>>,
+    changes: Partial<EntityInterface<EntityType>>,
     hasChanges: boolean
 }
 export class Entity

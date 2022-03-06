@@ -20,6 +20,10 @@ export interface EntityConfig<EntityType extends Entity = Entity> {
     owner?: User | null;
 }
 
+export type EntityInterface<EntityType extends Entity = Entity> = {
+    [key in keyof EntityType]: EntityType[key]
+}
+
 export type EntityAttributeName<EntityType extends Entity> = Exclude<
     keyof EntityType,
     EntityReservedAttributeName | number | symbol
