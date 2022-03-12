@@ -26,12 +26,10 @@ class WatchTestEntity extends Entity {
     }
 }
 
-
 const watched = new WatchTestEntity({ server }).then(() => {
     delete watched.deletable.deleteThis;
 });
 
 watched.on("change", ({ changes }) => {
     watched.off();
-    console.log(changes)
 });

@@ -1,4 +1,4 @@
-import { Rules, User } from ".";
+import { User } from ".";
 import { Server } from "../connection/Server";
 import {
     EntityEvents,
@@ -62,6 +62,13 @@ export class Entity
                 return true;
         }
         return false;
+    }
+
+    /**
+     * Lists all custom attributes from an entity
+     */
+    public static attributes<EntityType extends Entity>(entity: EntityType) {
+        return Object.getOwnPropertyNames(entity).filter(name => !Entity.isDefaultAttribute(name));
     }
 
     public static get className() {
@@ -214,44 +221,40 @@ export class Entity
             if (created) {
                 this._server.entities.push(this);
 
-                const rules = Rules.from(this);
+                const attributeList = Entity.attributes(this);
 
-                if (rules) {
-                    const attributeList = Object.keys(rules);
+                WatchObject(
+                    this,
+                    this.state,
+                    "data",
+                    ({path, newValue}) => {
+                        _.set(this.state.changes, path, newValue);
 
-                    WatchObject(
-                        this,
-                        this.state,
-                        "data",
-                        ({path, newValue}) => {
-                            _.set(this.state.changes, path, newValue);
+                        if (!this.state.hasChanges) {
+                            this.state.hasChanges = true;
 
-                            if (!this.state.hasChanges) {
-                                this.state.hasChanges = true;
+                            process.nextTick(() => {
+                                this.emit("change", {
+                                    entity: this,
+                                    changes: ObjectTransform.clone(this.state.changes)
+                                });
 
-                                process.nextTick(() => {
-                                    this.emit("change", {
-                                        entity: this,
-                                        changes: ObjectTransform.clone(this.state.changes)
-                                    });
+                                this.state.changes = {};
+                                this.state.hasChanges = false;
+                            })
+                        }
+                    },
+                    attributeList
+                );
 
-                                    this.state.changes = {};
-                                    this.state.hasChanges = false;
-                                })
-                            }
-                        },
-                        attributeList
-                    );
-
-                    if (initialState) {
-                        for (const attributeName in attributeList) {
-                            if (attributeName in this) {
-                                const value = (initialState as any)[
-                                    attributeName
-                                ];
-                                if (value !== undefined)
-                                    (this as any)[attributeName] = value;
-                            }
+                if (initialState) {
+                    for (const attributeName in attributeList) {
+                        if (attributeName in this) {
+                            const value = (initialState as any)[
+                                attributeName
+                            ];
+                            if (value !== undefined)
+                                (this as any)[attributeName] = value;
                         }
                     }
                 }
