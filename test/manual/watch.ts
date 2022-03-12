@@ -3,13 +3,13 @@ import { Entity, Internal, Server } from "../../lib";
 const server = new Server();
 
 class WatchTestEntity extends Entity {
-    @Internal number = 0;
-    @Internal string = "";
-    @Internal boolean = false;
-    @Internal unchangedNumber = 0;
-    @Internal unchangedString = "unchanged";
-    @Internal unchangedBoolean = false;
-    @Internal object = {
+    number = 0;
+    string = "";
+    boolean = false;
+    unchangedNumber = 0;
+    unchangedString = "unchanged";
+    unchangedBoolean = false;
+    object = {
         a: 1,
         b: 2,
         constant: "constant",
@@ -18,9 +18,9 @@ class WatchTestEntity extends Entity {
         },
         pseudoNew: undefined
     };
-    @Internal array = [0, 1, 2];
-    @Internal pseudoNew = undefined;
-    @Internal deletable: any = {
+    array = [0, 1, 2];
+    pseudoNew = undefined;
+    deletable: any = {
         deleteThis: 1,
         keepThis: 0
     }

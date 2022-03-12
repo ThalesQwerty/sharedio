@@ -71,6 +71,20 @@ export class Entity
         return Object.getOwnPropertyNames(entity).filter(name => !Entity.isDefaultAttribute(name));
     }
 
+    /**
+     * Lists all custom shared attributes from an entity
+     */
+    public static sharedAttributes<EntityType extends Entity>(entity: EntityType) {
+        return Object.getOwnPropertyNames(entity).filter(name => !Entity.isDefaultAttribute(name) && name[0] !== "_");
+    }
+
+    /**
+     * Lists all custom server-side attributes from an entity
+     */
+     public static hiddenAttributes<EntityType extends Entity>(entity: EntityType) {
+        return Object.getOwnPropertyNames(entity).filter(name => !Entity.isDefaultAttribute(name) && name[0] === "_");
+    }
+
     public static get className() {
         return this.prototype.constructor.name;
     }
