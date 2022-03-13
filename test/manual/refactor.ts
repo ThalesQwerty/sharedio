@@ -9,10 +9,6 @@ class TestEntity extends Entity {
     _blah = 3;
 }
 
-const watched = new TestEntity({ server }).then(() => {
+// const test = new TestEntity({ server });
 
-});
-
-watched.on("change", ({ changes }) => {
-    watched.off();
-});
+console.log(TestEntity.schema);

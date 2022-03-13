@@ -1,4 +1,4 @@
-import { Entity, Internal, Server } from "../../lib";
+import { Entity, Server } from "../../lib";
 
 const server = new Server();
 

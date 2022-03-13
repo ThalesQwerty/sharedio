@@ -29,6 +29,15 @@ export interface EntityState<EntityType extends Entity> {
     changes: Partial<EntityInterface<EntityType>>,
     hasChanges: boolean
 }
+
+export interface EntitySchema<EntityType extends Entity = Entity> {
+    className: string,
+    attributes: {
+        name: string,
+        initialValue: any,
+        type: string
+    }[]
+}
 export class Entity
     extends HasEvents<
     EntityEvents<Entity>,
@@ -206,11 +215,6 @@ export class Entity
      */
     public get exists() {
         return this._exists;
-        // return this.server.entities.find((currentEntity) =>
-        //     currentEntity.is(this),
-        // )
-        //     ? true
-        //     : false;
     }
     private _exists?: boolean;
 
@@ -219,6 +223,30 @@ export class Entity
         changes: {},
         hasChanges: false
     };
+
+    public static get schema() {
+        if (!this._schema) {
+            const dummy = new this({ server: new Server() });
+            const attributeList = Entity.attributes(dummy);
+
+            this._schema = {
+                className: dummy.type,
+                attributes: []
+            };
+
+            for (const attributeName of attributeList) {
+                const initialValue = (dummy as any)[attributeName];
+                this._schema?.attributes.push({
+                    name: attributeName,
+                    type: typeof initialValue,
+                    initialValue
+                });
+            }
+        }
+
+        return this._schema;
+    }
+    private static _schema?: EntitySchema;
 
     constructor({ server, initialState, owner }: EntityConfig) {
         super("Entity");
@@ -232,10 +260,10 @@ export class Entity
         process.nextTick(() => {
             const created = this.exists !== false;
 
+            const attributeList = Entity.attributes(this);
+
             if (created) {
                 this._server.entities.push(this);
-
-                const attributeList = Entity.attributes(this);
 
                 WatchObject(
                     this,
