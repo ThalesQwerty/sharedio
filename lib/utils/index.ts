@@ -4,3 +4,4 @@ export * from "./StringTransform";
 export * from "./HasId";
 export * from "./HasEvents";
 export * from "./WatchedObject";
+export * from "./DependencyExtractor";

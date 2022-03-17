@@ -21,6 +21,16 @@ export class Server extends HasEvents<
 > {
     static current: Server;
 
+    /**
+     * Returns a dummy server for testing/mocking purposes
+     */
+    static get dummy() {
+        if (!this._dummy) this._dummy = new Server();
+
+        return this._dummy;
+    }
+    private static _dummy?: Server;
+
     private wss?: WS.Server;
     private tickIntervalRef: any = undefined;
 

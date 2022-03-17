@@ -77,6 +77,17 @@ export class ObjectTransform {
         return delta as KeyValueDifference;
     }
 
+    static isEqual(a: any, b: any) {
+        if (a instanceof Object && b instanceof Object) {
+            for (const key of Object.keys(a)) {
+                if (!this.isEqual(a[key], b[key])) return false;
+            }
+            return true;
+        } else {
+            return a === b;
+        }
+    }
+
     static readonly clone = _.cloneDeep;
     static readonly get = _.get;
     static readonly set = _.set;

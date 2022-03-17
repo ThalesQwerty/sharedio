@@ -9,6 +9,7 @@ export type EntityReservedAttributeName =
     | "resetId"
     | "_listeners"
     | "emit"
+    | "bind"
     | "constructor"
     | "removeAllListeners";
 

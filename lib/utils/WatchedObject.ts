@@ -10,7 +10,7 @@ export type WatchedObjectChangeHandler = (params: {
 }) => void
 
 export function WatchObject<T extends Object>(object: T, dataStorage: KeyValue, key: string, onChange: WatchedObjectChangeHandler, watchedKeys?: string[]) {
-    dataStorage[key] = ObjectTransform.clone(object);
+    dataStorage[key] = {};
     watchedKeys ??= Object.keys(object);
 
     if (object instanceof Array) {

@@ -38,7 +38,9 @@
         "ts-node": "^10.2.1"
     },
     "dependencies": {
+        "@types/esprima": "^4.0.3",
         "difference-json": "^1.0.6",
+        "esprima": "^4.0.1",
         "lodash": "^4.17.21",
         "reflect-metadata": "^0.1.13",
         "typescript": "^4.4.3",
