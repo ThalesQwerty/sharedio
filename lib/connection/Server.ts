@@ -8,29 +8,27 @@ import {
 } from "../types";
 import { User, Entity, Rules } from "../schema";
 import { Queue } from "../schema/Queue";
+import { Mixin } from "../utils/Mixin";
 import { generateClientSchema } from "../scripts";
-import { HasEvents } from "../utils";
+import { HasEvents, HasId } from "../utils";
 import { SharedIORequest, Client } from ".";
 import WS from "ws";
 
 const DEFAULT_PORT = 3000;
 const DEFAULT_TICK_RATE = 64;
-export class Server extends HasEvents<
-    ServerEvents,
-    ServerListenerOverloads,
-    ServerEmitterOverloads
-> {
-    static current: Server;
+
+class RawServer extends HasId {
+    static current: RawServer;
 
     /**
      * Returns a dummy server for testing/mocking purposes
      */
     static get dummy() {
-        if (!this._dummy) this._dummy = new Server();
+        if (!this._dummy) this._dummy = new RawServer();
 
         return this._dummy;
     }
-    private static _dummy?: Server;
+    private static _dummy?: RawServer;
 
     private wss?: WS.Server;
     private tickIntervalRef: any = undefined;
@@ -136,9 +134,9 @@ export class Server extends HasEvents<
     private _serverStartTimestamp: number = 0;
 
     constructor(config: ServerConfig = {}) {
-        super("Server");
+        super("RawServer");
 
-        Server.current = this;
+        RawServer.current = this;
 
         config.port ??= DEFAULT_PORT;
         config.tickRate ??= DEFAULT_TICK_RATE;
@@ -155,7 +153,7 @@ export class Server extends HasEvents<
     /**
      * Initializes the server
      */
-    start(onStart?: ServerStartListener): Server {
+    start(onStart?: ServerStartListener): RawServer {
         this.stop();
 
         const wss = new WS.Server({
@@ -206,7 +204,7 @@ export class Server extends HasEvents<
     /**
      * Closes the server and disconnects all users
      */
-    stop(): Server {
+    stop(): RawServer {
         this._isOnline = false;
         this.wss?.close();
         clearInterval(this.tickIntervalRef);
@@ -301,15 +299,22 @@ export class Server extends HasEvents<
         entity: Entity,
         user: User | null = null,
     ): Entity {
-        if (entity.exists) {
-            this._entities = this._entities.filter(
-                (currentEntity) => !currentEntity.is(entity),
-            );
-            if (Entity.emit(entity)("beforeDelete")) {
-                Entity.emit(entity)("delete");
+        if (entity.exists !== false) {
+            if (entity.emit("canDelete?", ({entity, user})) !== false) {
+                this._entities = this._entities.filter(
+                    (currentEntity) => !currentEntity.is(entity),
+                );
+
+                entity.emit("delete");
             }
-            Entity.emit(entity)("delete");
         }
         return entity;
     }
 }
+
+interface RawServer extends HasEvents {
+    emit: ServerEmitterOverloads,
+    on: ServerListenerOverloads
+}
+
+export class Server extends Mixin(RawServer, [HasEvents]) {};

@@ -1,21 +1,21 @@
 import { ListenerOverloads, EmitterOverloads } from "../../utils";
-import { Entity, User } from "../../schema";
+import { Channel, Entity, User } from "../../schema";
 import { EntityState } from "..";
 
 interface EntityCreateEvent<EntityType extends Entity = Entity> {
-    user: User;
+    user: User|null;
     entity: EntityType;
 }
 
 interface EntityFailedCreateEvent<
     EntityType extends Entity = Entity,
 > {
-    user: User;
+    user: User|null;
     entity: EntityType;
 }
 
 interface EntityDeleteEvent<EntityType extends Entity = Entity> {
-    user: User;
+    user: User|null;
     entity: EntityType;
 }
 
@@ -28,10 +28,10 @@ interface EntityChangeEvent<EntityType extends Entity = Entity> {
     changes: EntityState<EntityType>["changes"]
 }
 
-interface EntityBeforeDeleteEvent<
+interface EntityCanDeleteEvent<
     EntityType extends Entity = Entity,
 > {
-    user: User;
+    user: User|null;
     entity: EntityType;
 }
 
@@ -40,8 +40,8 @@ export type EntityCreateListener<EntityType extends Entity = Entity> =
 export type EntityFailedCreateListener<
     EntityType extends Entity = Entity,
 > = (event: EntityFailedCreateEvent<EntityType>) => void;
-type EntityBeforeDeleteListener<EntityType extends Entity = Entity> =
-    (event: EntityBeforeDeleteEvent<EntityType>) => boolean;
+type EntityCanDeleteListener<EntityType extends Entity = Entity> =
+    (event: EntityCanDeleteEvent<EntityType>) => boolean;
 type EntityDeleteListener<EntityType extends Entity = Entity> = (
     event: EntityDeleteEvent<EntityType>,
 ) => void;
@@ -53,17 +53,35 @@ type EntityChangeListener<EntityType extends Entity = Entity> = (
 ) => void;
 type EntityTickListener = () => void;
 
+type Trap<T extends (...args: any[]) => any> = (...args: Parameters<T>) => boolean;
+
 export interface EntityEvents<EntityType extends Entity = Entity> {
-    beforeDelete?: EntityBeforeDeleteListener<EntityType>[];
+    "canDelete?"?: EntityCanDeleteListener<EntityType>[];
     delete?: EntityDeleteListener<EntityType>[];
     render?: EntityRenderListener<EntityType>[];
     change?: EntityChangeListener<EntityType>[];
     tick?: EntityTickListener[];
     create?: EntityCreateListener<EntityType>[];
-    afterCreate?: EntityCreateListener<EntityType>[];
     failedCreate?: EntityFailedCreateListener<EntityType>[];
 }
 
+// export interface ChannelEvents<ChannelType extends Channel = Channel> {
+//     join?: EntityFailedCreateListener<ChannelType>[];
+// }
+export interface EntityTraps<EntityType extends Entity = Entity> {
+    delete?: Trap<EntityDeleteListener<EntityType>>[];
+    create?: Trap<EntityCreateListener<EntityType>>[];
+}
+// export interface ChannelListenerOverlaods<ChannelType extends Channel = Channel> {
+//         /**
+//     * Called before an user attempts to delete this entity.
+//     * The return value (true or false) will determine whether or not the user will be able to delete this entity.
+//     */
+//          (
+//             event: "join",
+//             callback: EntityFailedCreateListener<ChannelType>,
+//         ): ChannelType;
+// }
 export interface EntityListenerOverloads<EntityType extends Entity = Entity>
     extends ListenerOverloads<EntityEvents<EntityType>> {
     /**
@@ -71,8 +89,8 @@ export interface EntityListenerOverloads<EntityType extends Entity = Entity>
      * The return value (true or false) will determine whether or not the user will be able to delete this entity.
      */
     (
-        event: "beforeDelete",
-        callback: EntityBeforeDeleteListener<EntityType>,
+        event: "canDelete?",
+        callback: EntityCanDeleteListener<EntityType>,
     ): EntityType;
 
     /**
@@ -116,16 +134,6 @@ export interface EntityListenerOverloads<EntityType extends Entity = Entity>
     ): EntityType;
 
     /**
-     * Called after the entity is successfully created and all "create" event listeners have been called.
-     *
-     * Note: this function will not be called if the entity's _Constructor() method returns false, since this implies the entity won't be created.
-     */
-    (
-        event: "afterCreate",
-        callback: EntityCreateListener<EntityType>,
-    ): EntityType;
-
-    /**
      * If the entity fails to be created (_Constructor() returned false), this event will be emitted.
      */
     (
@@ -137,8 +145,8 @@ export interface EntityListenerOverloads<EntityType extends Entity = Entity>
 export interface EntityEmitterOverloads<EntityType extends Entity = Entity>
     extends EmitterOverloads<EntityEvents<EntityType>> {
     (
-        event: "beforeDelete",
-        props: EntityBeforeDeleteEvent<EntityType>,
+        event: "canDelete?",
+        props: EntityCanDeleteEvent<EntityType>,
     ): boolean;
     (
         event: "delete",

@@ -1,4 +1,5 @@
 import { RandomHex } from "../utils/RandomHex";
+import { Mixin } from "./Mixin";
 
 const ID_CHAR_LENGTH = 32;
 

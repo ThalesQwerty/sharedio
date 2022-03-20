@@ -1,4 +1,4 @@
-import { Entity, User } from "../../schema";
+import { Channel, Entity, User } from "../../schema";
 import { KeyValue, Letter } from "..";
 import { HasEvents, HasId } from "../../utils";
 import { Server } from "../../connection";
@@ -7,11 +7,13 @@ export type EntityReservedAttributeName =
     | keyof Entity
     | keyof HasId
     | "resetId"
-    | "_listeners"
+    // | "_listeners"
     | "emit"
     | "bind"
     | "constructor"
-    | "removeAllListeners";
+    // | "removeAllListeners";
+
+export type ChannelReservedAttributeName = keyof Channel|EntityReservedAttributeName;
 
 export interface EntityConfig<EntityType extends Entity = Entity> {
     server: Server;

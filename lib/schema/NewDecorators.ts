@@ -16,7 +16,7 @@ export function _public <EntityType extends Entity>(
 /**
  * Only users inside this channel will be able to read this property or call this method.
  */
- export function _protected <ChannelType extends Channel>(
+ export function _protected <ChannelType extends Entity>(
     entity: ChannelType,
     attributeName: EntityAttributeName<ChannelType>
 ) {

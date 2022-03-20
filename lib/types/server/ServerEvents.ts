@@ -1,6 +1,6 @@
 import { User } from "../../schema";
 import { ListenerOverloads, EmitterOverloads } from "../../utils";
-import { SharedIORequest } from "../../connection";
+import { Server, SharedIORequest } from "../../connection";
 
 interface ServerStartEvent {}
 interface ServerConnectionEvent {
@@ -42,12 +42,12 @@ export interface ServerListenerOverloads
     /**
      * This function will be called right after the server starts
      */
-    (event: "start", callback: ServerStartListener): void;
+    (event: "start", callback: ServerStartListener): Server;
 
     /**
      * This function will be called whenever an user connects
      */
-    (event: "connection", callback: ServerConnectionListener): void;
+    (event: "connection", callback: ServerConnectionListener): Server;
 
     /**
      * This function will be called whenever an user disconnects
@@ -55,29 +55,29 @@ export interface ServerListenerOverloads
     (
         event: "disconnection",
         callback: ServerDisconnectionListener,
-    ): void;
+    ): Server;
 
     /**
      * This function will be called whenever a message is recieved from an user's websocket client
      */
-    (event: "message", callback: ServerMessageListener): void;
+    (event: "message", callback: ServerMessageListener): Server;
 
     /**
      * This function will be called every server tick
      */
-    (event: "tick", callback: ServerTickListener): void;
+    (event: "tick", callback: ServerTickListener): Server;
 
     /**
      * This function will be called in the next server tick
      */
-    (event: "nextTick", callback: ServerTickListener): void;
+    (event: "nextTick", callback: ServerTickListener): Server;
 }
 export interface ServerEmitterOverloads
     extends EmitterOverloads<ServerEvents> {
-    (event: "start"): void;
-    (event: "connection", props: ServerConnectionEvent): void;
-    (event: "disconnection", props: ServerDisconnectionEvent): void;
-    (event: "message", props: ServerMessageEvent): void;
-    (event: "tick"): void;
-    (event: "nextTick"): void;
+    (event: "start"): Server;
+    (event: "connection", props: ServerConnectionEvent): Server;
+    (event: "disconnection", props: ServerDisconnectionEvent): Server;
+    (event: "message", props: ServerMessageEvent): Server;
+    (event: "tick"): Server;
+    (event: "nextTick"): Server;
 }

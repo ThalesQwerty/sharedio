@@ -5,7 +5,8 @@ import {
     SharedIOResponse,
     PongRequest,
 } from "./";
-import { RandomHex } from "../utils";
+import { HasId, RandomHex } from "../utils";
+import { Mixin } from "../utils/Mixin";
 import {
     KeyValue,
     ClientEvents,
@@ -16,11 +17,8 @@ import { HasEvents } from "../utils";
 import { Entity, User } from "../schema";
 
 const PING_SAMPLE_TIME = 1;
-export class Client extends HasEvents<
-    ClientEvents,
-    ClientListenerOverloads,
-    ClientEmitterOverloads
-> {
+
+class RawClient extends HasId {
     public get user() {
         return this._user;
     }
@@ -87,7 +85,8 @@ export class Client extends HasEvents<
     private _debugMode = false;
 
     constructor(ws: WS.WebSocket, server: Server) {
-        super("Client");
+        super("RawClient");
+
         this._server = server;
         this._online = false;
         this._ws = ws;
@@ -224,3 +223,10 @@ export class Client extends HasEvents<
         }, PING_SAMPLE_TIME * 1000);
     }
 }
+
+interface RawClient extends HasEvents {
+    emit: ClientEmitterOverloads,
+    on: ClientListenerOverloads
+}
+
+export class Client extends Mixin(RawClient, [HasEvents]) {};

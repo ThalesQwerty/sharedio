@@ -1,4 +1,4 @@
-import { Entity, EntityConfig, Server, Cached, _internal, _private, _protected, _public, _readonly } from "../../lib";
+import { Entity, EntityConfig, Server, Cached, _internal, _private, _protected, _public, _readonly, User, Channel } from "../../lib";
 
 const server = new Server();
 class TestEntity extends Entity {
@@ -37,14 +37,19 @@ class TestEntity extends Entity {
     constructor(config: EntityConfig) {
         super(config);
 
-        this.on("tick", () => {
-            if (this.right) {
-                this.power += this.server.deltaTime * 10;
-            }
+        this.on("create", () => {
+            console.log("created");
         })
     }
 }
 
-const test = new TestEntity({ server });
+class TestChannel extends Channel {
+    constructor(config: EntityConfig) {
+        super(config);
+    }
+}
 
-console.dir(test.schema, { depth: null });
+const test = new TestEntity({ server }).then(() => {
+    test.delete();
+    console.log(test.exists);
+});
