@@ -1,5 +1,6 @@
 import { ListenerOverloads, EmitterOverloads } from "../../utils";
-import { Entity, EntityState, User } from "../../schema";
+import { Entity, User } from "../../schema";
+import { EntityState } from "..";
 
 interface EntityCreateEvent<EntityType extends Entity = Entity> {
     user: User;
@@ -19,6 +20,8 @@ interface EntityDeleteEvent<EntityType extends Entity = Entity> {
 }
 
 interface EntityRenderEvent<EntityType extends Entity = Entity> {}
+
+
 
 interface EntityChangeEvent<EntityType extends Entity = Entity> {
     entity: EntityType;

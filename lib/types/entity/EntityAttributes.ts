@@ -77,6 +77,27 @@ export type EntitySetAccessor<ValueType = any> = (
     user?: User,
 ) => void;
 
+export interface EntityState<EntityType extends Entity> {
+    data: Partial<EntityInterface<EntityType>>,
+    changes: Partial<EntityInterface<EntityType>>,
+    hasChanges: boolean,
+    readonly emitChanges: () => void
+}
+
+export interface EntitySchema<EntityType extends Entity = any> {
+    className: string,
+    attributes: {[name in EntityAttributeName<EntityType>]: {
+        name: EntityAttributeName<EntityType>,
+        type: string,
+        initialValue: any,
+        visibility: "public"|"protected"|"private"|"internal",
+        readonly: boolean,
+        get: boolean,
+        set: boolean,
+        dependencies: EntityAttributeName<EntityType>[],
+    }}
+}
+
 export type EntityVariant = (
     /**
      * Who is trying to interact with this entity?

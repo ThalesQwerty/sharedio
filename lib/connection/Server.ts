@@ -7,6 +7,7 @@ import {
     ServerStartListener,
 } from "../types";
 import { User, Entity, Rules } from "../schema";
+import { Queue } from "../schema/Queue";
 import { generateClientSchema } from "../scripts";
 import { HasEvents } from "../utils";
 import { SharedIORequest, Client } from ".";
@@ -75,6 +76,11 @@ export class Server extends HasEvents<
     }
     private _users: User[] = [];
 
+    public get queue() {
+        return this._queue;
+    }
+    private _queue: Queue;
+
     /**
      * Lists all online users on the server
      */
@@ -139,6 +145,7 @@ export class Server extends HasEvents<
         config.debug ??= false;
 
         this._config = config;
+        this._queue = new Queue(this);
     }
 
     private log(message: any) {
@@ -216,12 +223,11 @@ export class Server extends HasEvents<
             Entity.emit(entity)("tick");
         });
 
-        this.onlineUsers.forEach((user) => {
-            user.view.render();
-            user.view.update();
-        });
+        this.queue.broadcast();
 
         this.emit("nextTick");
+        this.off("nextTick");
+
         this.emit("tick");
 
         this._lastTickTimestamp = new Date().getTime();

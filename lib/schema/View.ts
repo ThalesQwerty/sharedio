@@ -61,15 +61,11 @@ export class View {
     }
 
     /**
-     * Serializes all visible entities and generates the next view
+     * Renders an entity into the view
      */
-    public render() {
+    public render(entity: Entity) {
         this._next = {};
-        this.user.server.entities.forEach((entity) => {
-            this._next[entity.id] = this.serialize(entity);
-        });
-
-        return this._next;
+        this._next[entity.id] = this.serialize(entity);
     }
 
     /**

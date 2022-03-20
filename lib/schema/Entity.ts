@@ -14,8 +14,12 @@ import {
     EntityAttributeName,
     EntityInterface,
     SharedIOError,
+    EntityState,
+    EntitySchema,
+    EntityAttributeType,
 } from "../types";
 import { HasEvents, HasId, ObjectTransform, EventListener, EventEmitter, WatchObject, ExtractDependencies } from "../utils";
+import "reflect-metadata";
 
 import * as _ from "lodash";
 interface EntityReservedAttributes {
@@ -23,23 +27,6 @@ interface EntityReservedAttributes {
     owner: User | null;
     server: Server | null;
     constructor?: Function;
-}
-
-export interface EntityState<EntityType extends Entity> {
-    data: Partial<EntityInterface<EntityType>>,
-    changes: Partial<EntityInterface<EntityType>>,
-    hasChanges: boolean,
-    readonly emitChanges: () => void
-}
-
-export interface EntitySchema<EntityType extends Entity = Entity> {
-    className: string,
-    attributes: {[name: string]: {
-        name: string,
-        initialValue: any,
-        type: string,
-        dependencies: string[]
-    }}
 }
 export class Entity
     extends HasEvents<
@@ -80,8 +67,37 @@ export class Entity
      * Lists all custom attributes from an entity
      */
     public static attributes<EntityType extends Entity>(entity: EntityType) {
-        // return Object.getOwnPropertyNames(entity).concat(Object.getOwnPropertyNames(entity.constructor.prototype)).filter(name => !Entity.isDefaultAttribute(name));
         return Object.getOwnPropertyNames(entity).filter(name => !Entity.isDefaultAttribute(name));
+    }
+
+    /**
+     * Lists all custom properties from an entity
+     */
+     public static properties<EntityType extends Entity>(entity: EntityType) {
+        const propertyDescriptors = Object.getOwnPropertyDescriptors(entity.constructor.prototype);
+        const propertyNames: string[] = [];
+
+        for (const propertyName in propertyDescriptors) {
+            let propertyDescriptor = propertyDescriptors[propertyName];
+
+            if ((!!propertyDescriptor.get || !!propertyDescriptor.set) && !Entity.isDefaultAttribute(propertyName)) propertyNames.push(propertyName);
+        }
+        return propertyNames;
+    }
+
+    /**
+     * Lists all custom methods from an entity
+     */
+     public static methods<EntityType extends Entity>(entity: EntityType) {
+        const methodDescriptors = Object.getOwnPropertyDescriptors(entity.constructor.prototype);
+        const methodNames: string[] = [];
+
+        for (const methodName in methodDescriptors) {
+            let methodDescriptor = methodDescriptors[methodName];
+
+            if ((!methodDescriptor.get && !methodDescriptor.set) && !Entity.isDefaultAttribute(methodName)) methodNames.push(methodName);
+        }
+        return methodNames;
     }
 
     public static get className() {
@@ -208,7 +224,7 @@ export class Entity
     }
     private _exists?: boolean;
 
-    public readonly state: EntityState<this> = {
+    private readonly state: EntityState<this> = {
         data: {},
         changes: {},
         hasChanges: false,
@@ -222,10 +238,12 @@ export class Entity
                         changes: ObjectTransform.clone(this.state.changes)
                     });
 
+                    this.server.queue.add(this);
+                    this.state.hasChanges = false;
+
                     process.nextTick(() => {
                         this.state.changes = {};
-                        this.state.hasChanges = false;
-                    })
+                    });
                 }
             })
         }
@@ -236,34 +254,59 @@ export class Entity
             const dummy = new this({ server: Server.dummy });
             const attributeList = Entity.attributes(dummy);
 
+            const getType = (object: any, attributeName: string) => {
+                const type = Reflect.getMetadata(
+                    "design:type",
+                    object,
+                    attributeName
+                )?.name.toLowerCase() as EntityAttributeType;
+
+                return type === "any" ? undefined : type;
+            }
+
             this._schema = {
                 className: dummy.type,
                 attributes: {}
             };
 
+            const defaultSchema:EntitySchema["attributes"][string] = {
+                name: "",
+                type: "any",
+                initialValue: undefined,
+                dependencies: [],
+                visibility: "internal",
+                readonly: false,
+                get: false,
+                set: false,
+            };
+
             for (const attributeName of attributeList) {
                 const initialValue = (dummy as any)[attributeName];
                 this._schema.attributes[attributeName] = {
+                    ...defaultSchema,
                     name: attributeName,
-                    type: typeof initialValue,
-                    initialValue,
-                    dependencies: []
-                };
+                    type: getType(dummy, attributeName) ?? typeof initialValue,
+                    initialValue
+                }
             }
 
             const computedAttributes = Object.getOwnPropertyDescriptors(this.prototype);
 
             for (const attributeName in computedAttributes) {
                 if (attributeName !== "constructor") {
+                    const propertyDescriptor = computedAttributes[attributeName];
                     const dependencies: string[] = ExtractDependencies(this, attributeName);
                     const initialValue = (dummy as any)[attributeName];
 
                     this._schema.attributes[attributeName] = {
+                        ...defaultSchema,
                         name: attributeName,
-                        type: typeof initialValue,
+                        type: getType(this.prototype, attributeName) ?? typeof initialValue,
                         initialValue,
+                        get: !!propertyDescriptor.get,
+                        set: !!propertyDescriptor.set,
                         dependencies
-                    };
+                    }
                 }
             }
         }
@@ -297,12 +340,12 @@ export class Entity
                     attributeList
                 )
 
-                const schema = (this.constructor as any).schema as EntitySchema;
+                const schema = (this.constructor as any).schema as EntitySchema<this>;
 
                 if (schema) {
                     for (const attributeName in schema.attributes) {
                         if (attributeName in this) {
-                            const rules = schema.attributes[attributeName];
+                            const rules = schema.attributes[attributeName as EntityAttributeName<this>];
 
                             if (rules.type !== "function") {
                                 this.state.data[attributeName as EntityAttributeName<this>] = rules.initialValue;
@@ -331,6 +374,10 @@ export class Entity
                 });
             }
         });
+    }
+
+    public get schema() {
+        return (this.constructor as typeof Entity).schema as EntitySchema<this>;
     }
 
     public readonly on: EventListener<EntityEvents<this>, EntityListenerOverloads<this>, this> = this.on;
@@ -393,22 +440,21 @@ export class Entity
             for (const dependencyName of dependencyArray) {
                 if (Object.keys(changes).indexOf(dependencyName) >= 0) {
                     hasDependenciesChanged = true;
+
+                    for (const propertyName of propertyArray) {
+                        const oldValue = this.state.data[propertyName];
+                        const newValue = this[propertyName];
+
+                        if (!ObjectTransform.isEqual(oldValue, newValue)) {
+                            this.state.changes[propertyName] = newValue;
+                            this.state.hasChanges = true;
+                        }
+                    }
+
+                    this.state.emitChanges();
+
                     break;
                 }
-            }
-
-            if (hasDependenciesChanged) {
-                for (const propertyName of propertyArray) {
-                    const oldValue = this.state.data[propertyName];
-                    const newValue = this[propertyName];
-
-                    if (!ObjectTransform.isEqual(oldValue, newValue)) {
-                        this.state.changes[propertyName] = newValue;
-                        this.state.hasChanges = true;
-                    }
-                }
-
-                this.state.emitChanges();
             }
         })
 
