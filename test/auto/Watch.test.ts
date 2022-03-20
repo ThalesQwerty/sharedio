@@ -2,6 +2,7 @@ import {
     Entity,
     Internal,
 } from "../..";
+import { EntitySchema } from "../../lib/types";
 import { server } from "./common";
 
 class WatchTestEntity extends Entity {
@@ -25,6 +26,18 @@ class WatchTestEntity extends Entity {
     deletable: any = {
         deleteThis: 1,
         keepThis: 0
+    }
+
+    get computedValue() {
+        return this.number + 1;
+    }
+
+    get computedValueWithConditional() {
+        if (this.owner) {
+            return this.string;
+        } else {
+            return this.number;
+        }
     }
 }
 
@@ -209,5 +222,12 @@ describe("Watched entity", () => {
         });
     });
 
+    it("Gets dependencies of computed values", (done) => {
+        const schema = WatchTestEntity.schema as EntitySchema<WatchTestEntity>;
 
+        expect(schema.attributes.computedValue.dependencies).toEqual(["number"])
+        expect(schema.attributes.computedValueWithConditional.dependencies).toEqual(["string", "number"]);
+
+        done();
+    })
 });
