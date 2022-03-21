@@ -275,24 +275,6 @@ class RawServer extends HasId {
     }
 
     /**
-     * Creates a new entity
-     */
-    public createEntity<T extends Entity>(
-        Type: typeof Entity,
-        initialState?: KeyValue,
-        owner: User | null = null,
-    ): T {
-        const newEntity = new Type({
-            server: this,
-            initialState,
-            owner,
-        }) as T;
-        this._entities.push(newEntity);
-
-        return newEntity;
-    }
-
-    /**
      * Removes an entity from list
      */
     public removeEntity(

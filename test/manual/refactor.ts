@@ -1,7 +1,8 @@
-import { Entity, EntityConfig, Server, Cached, _internal, _private, _protected, _public, _readonly, User, Channel } from "../../lib";
+import SharedIO, { _internal, _private, _protected, _public, _readonly, User, Channel, Entity, EntityConfig, Server } from "../../lib";
 
-const server = new Server();
-class TestEntity extends Entity {
+const server = new SharedIO.Server();
+
+class TestEntity extends SharedIO.Entity {
     @_readonly name = "Thales";
     @_readonly power = 9001;
 
@@ -43,9 +44,13 @@ class TestEntity extends Entity {
     }
 }
 
-class TestChannel extends Channel {
+class TestChannel extends SharedIO.Channel {
     constructor(config: EntityConfig) {
         super(config);
+
+        this.on("join", ({ user }) => {
+            console.log("new user joined!!!!");
+        })
     }
 }
 

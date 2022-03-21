@@ -8,7 +8,7 @@ import {
     KeyValue,
 } from "../types";
 import { exec } from "child_process";
-import { Rules } from "..";
+import { Rules } from "../schema";
 import { StringTransform } from "../utils";
 
 export function generateClientSchema(

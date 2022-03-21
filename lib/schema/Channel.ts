@@ -1,10 +1,10 @@
-import { Server } from "../connection";
-import { ChannelReservedAttributeName, EntityEmitterOverloads, EntityEvents, EntityListenerOverloads, EntityReservedAttributeName } from "../types";
-import { EventEmitter, EventListener } from "../utils";
+import { ChannelListenerOverloads, ChannelEmitterOverloads } from "../types";
+import { HasEvents } from "../utils";
+import { Mixin } from "../utils/Mixin";
 import { Entity } from "./Entity";
 import { User } from "./User";
 
-export class Channel extends Entity {
+class Channel extends Entity {
     public get users() {
         return this._users;
     }
@@ -25,3 +25,21 @@ export class Channel extends Entity {
         this.on("create", () => null);
     }
 }
+
+interface Channel extends HasEvents {}
+
+/**
+ * Channels are a special kind of entity that works as a subserver, being able to contain other entities (include other channels).
+ *
+ * Users must join a channel in order to be able to view or interact with the entities inside it.
+ *
+ * Every entity in the server must belong to one (and only one) channel, while users may be subscribed to multiple channels at the same time.
+ */
+class SharedChannel extends Mixin(Channel, [HasEvents]) {}
+
+interface SharedChannel extends HasEvents {
+    on: ChannelListenerOverloads<this>,
+    emit: ChannelEmitterOverloads<this>
+}
+
+export { Channel, SharedChannel };

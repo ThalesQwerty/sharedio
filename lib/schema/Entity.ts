@@ -2,7 +2,6 @@ import { Channel, User } from ".";
 import { Server } from "../connection/Server";
 import {
     EntityEvents,
-    EntityTraps,
     EntityListenerOverloads,
     EntityEmitterOverloads,
     KeyValue,
@@ -18,6 +17,7 @@ import {
     EntitySchema,
     EntityAttributeType,
     ChannelReservedAttributeName,
+    EntityChangeEvent,
     // ChannelEvents,
 } from "../types";
 import { HasEvents, HasId, ObjectTransform, EventListener, EventEmitter, WatchObject, ExtractDependencies } from "../utils";
@@ -33,7 +33,7 @@ interface EntityReservedAttributes {
     constructor?: Function;
 }
 
-class RawEntity
+class Entity
     extends HasId
     implements EntityReservedAttributes {
     /**
@@ -42,10 +42,10 @@ class RawEntity
     public static get reservedAttributes(): EntityReservedAttributeName[] {
         if (!this._reservedAttributes) this._reservedAttributes = [
             ...Object.getOwnPropertyNames(
-                new RawEntity({ server: Server.dummy }),
+                new Entity({ server: Server.dummy }),
             ),
             ...Object.getOwnPropertyNames(new HasEvents()),
-            ...Object.getOwnPropertyNames(RawEntity.prototype),
+            ...Object.getOwnPropertyNames(Entity.prototype),
             ...Object.getOwnPropertyNames(HasId.prototype),
             ...Object.getOwnPropertyNames(HasEvents.prototype),
         ] as EntityReservedAttributeName[];
@@ -73,21 +73,21 @@ class RawEntity
     /**
      * Lists all custom attributes from an entity
      */
-    public static attributes<EntityType extends RawEntity>(entity: EntityType) {
-        return Object.getOwnPropertyNames(entity).filter(name => !RawEntity.isDefaultAttribute(name));
+    public static attributes<EntityType extends Entity>(entity: EntityType) {
+        return Object.getOwnPropertyNames(entity).filter(name => !Entity.isDefaultAttribute(name));
     }
 
     /**
      * Lists all custom properties from an entity
      */
-     public static properties<EntityType extends RawEntity>(entity: EntityType) {
+     public static properties<EntityType extends Entity>(entity: EntityType) {
         const propertyDescriptors = Object.getOwnPropertyDescriptors(entity.constructor.prototype);
         const propertyNames: string[] = [];
 
         for (const propertyName in propertyDescriptors) {
             let propertyDescriptor = propertyDescriptors[propertyName];
 
-            if ((!!propertyDescriptor.get || !!propertyDescriptor.set) && !RawEntity.isDefaultAttribute(propertyName)) propertyNames.push(propertyName);
+            if ((!!propertyDescriptor.get || !!propertyDescriptor.set) && !Entity.isDefaultAttribute(propertyName)) propertyNames.push(propertyName);
         }
         return propertyNames;
     }
@@ -95,14 +95,14 @@ class RawEntity
     /**
      * Lists all custom methods from an entity
      */
-     public static methods<EntityType extends RawEntity>(entity: EntityType) {
+     public static methods<EntityType extends Entity>(entity: EntityType) {
         const methodDescriptors = Object.getOwnPropertyDescriptors(entity.constructor.prototype);
         const methodNames: string[] = [];
 
         for (const methodName in methodDescriptors) {
             let methodDescriptor = methodDescriptors[methodName];
 
-            if ((!methodDescriptor.get && !methodDescriptor.set) && !RawEntity.isDefaultAttribute(methodName)) methodNames.push(methodName);
+            if ((!methodDescriptor.get && !methodDescriptor.set) && !Entity.isDefaultAttribute(methodName)) methodNames.push(methodName);
         }
         return methodNames;
     }
@@ -112,13 +112,13 @@ class RawEntity
     }
 
     public static getClassName<
-        EntityType extends RawEntity,
+        EntityType extends Entity,
         T extends EntityClassName | EntityType,
         >(entityOrType: T) {
         if (typeof entityOrType === "string") return entityOrType;
-        else if (entityOrType instanceof RawEntity)
-            return (entityOrType as RawEntity).type;
-        else return (entityOrType as typeof RawEntity).className;
+        else if (entityOrType instanceof Entity)
+            return (entityOrType as Entity).type;
+        else return (entityOrType as typeof Entity).className;
     }
 
     /**
@@ -126,19 +126,19 @@ class RawEntity
      *
      * Returns null if it fails to find an entity.
      */
-    public static find(entityId: string): RawEntity | null {
-        return HasId.find(entityId) as RawEntity;
+    public static find(entityId: string): Entity | null {
+        return HasId.find(entityId) as Entity;
     }
 
     /**
      * Clones an entity
      */
-    public static clone(entity: RawEntity): RawEntity {
+    public static clone(entity: Entity): Entity {
         return ObjectTransform.clone(entity);
     }
 
     public static emit(
-        entity: RawEntity,
+        entity: Entity,
     ):
         | EntityEmitterOverloads
         | ((
@@ -148,7 +148,7 @@ class RawEntity
         return entity.emit;
     }
 
-    public static log<EntityType extends RawEntity>(entity: EntityType) {
+    public static log<EntityType extends Entity>(entity: EntityType) {
         const printable = this.printable(entity);
         console.log(printable);
         return printable;
@@ -157,13 +157,13 @@ class RawEntity
     /**
      * Generates a simplified key-value pair that represents the entity. Useful for printing things on the console.
      */
-    public static printable<EntityType extends RawEntity>(
+    public static printable<EntityType extends Entity>(
         entity: EntityType,
     ): PrintableEntity<EntityType> {
-        const clone = RawEntity.clone(entity);
+        const clone = Entity.clone(entity);
         const simplified: KeyValue = { ...clone };
 
-        for (const reservedAttribute of RawEntity.reservedAttributes) {
+        for (const reservedAttribute of Entity.reservedAttributes) {
             const value = (entity as any)[reservedAttribute];
 
             if (value instanceof HasId) {
@@ -173,7 +173,7 @@ class RawEntity
             }
         }
 
-        for (const reservedAttribute of RawEntity.reservedAttributes) {
+        for (const reservedAttribute of Entity.reservedAttributes) {
             const value = (entity as any)[reservedAttribute];
 
             switch (reservedAttribute) {
@@ -197,7 +197,7 @@ class RawEntity
     }
 
     /**
-     * RawEntity class name
+     * Entity class name
      */
     public get type() {
         return this.constructor.name;
@@ -245,7 +245,7 @@ class RawEntity
                         changes: ObjectTransform.clone(this.state.changes)
                     });
 
-                    this.server.queue.add(this);
+                    this.server.queue.add(this as Entity);
                     this.state.hasChanges = false;
 
                     process.nextTick(() => {
@@ -261,7 +261,7 @@ class RawEntity
             const dummy = new this({ server: Server.dummy });
             dummy.off();
 
-            const attributeList = RawEntity.attributes(dummy);
+            const attributeList = Entity.attributes(dummy);
             dummy.delete();
 
             const getType = (object: any, attributeName: string) => {
@@ -305,7 +305,7 @@ class RawEntity
             for (const attributeName in computedAttributes) {
                 if (attributeName !== "constructor") {
                     const propertyDescriptor = computedAttributes[attributeName];
-                    const dependencies: string[] = ExtractDependencies(this, attributeName);
+                    const dependencies: string[] = ExtractDependencies(this as typeof Entity, attributeName);
                     const initialValue = (dummy as any)[attributeName];
 
                     this._schema.attributes[attributeName] = {
@@ -326,7 +326,7 @@ class RawEntity
     private static _schema?: EntitySchema;
 
     constructor({ server, initialState, owner }: EntityConfig) {
-        super("RawEntity");
+        super("Entity");
 
         this._server = server;
         this._owner = owner ?? null;
@@ -340,7 +340,7 @@ class RawEntity
 
             this._exists = true;
 
-            const attributeList = RawEntity.attributes(this);
+            const attributeList = Entity.attributes(this);
             WatchObject(
                 this,
                 this.state,
@@ -379,7 +379,7 @@ class RawEntity
                 }
             }
 
-            this._server.entities.push(this);
+            this._server.entities.push(this as Entity);
 
             this.emit("create", {
                 entity: this,
@@ -389,7 +389,7 @@ class RawEntity
     }
 
     public get schema(): EntitySchema<this> {
-        return (this.constructor as typeof RawEntity).schema as EntitySchema<this>;
+        return (this.constructor as typeof Entity).schema as EntitySchema<this>;
     }
 
     /**
@@ -399,7 +399,7 @@ class RawEntity
      */
     public delete(user: User | null = null) {
         if (this.exists !== false && this.emit("canDelete?", ({entity: this, user})) !== false) {
-            this.server.removeEntity(this);
+            this.server.removeEntity(this as Entity);
             this._exists = false;
             process.nextTick(() => {
                 this.off();
@@ -458,7 +458,7 @@ class RawEntity
 
         if (notFound.length) throw new SharedIOError("entityAttributesNotFound", this.type, notFound);
 
-        this.on("change", ({ changes }) => {
+        this.on("change", ({ changes }: EntityChangeEvent ) => {
             let hasDependenciesChanged = false;
 
             for (const dependencyName of dependencyArray) {
@@ -486,9 +486,13 @@ class RawEntity
     }
 }
 
-interface RawEntity extends HasEvents {
+interface Entity extends HasEvents {}
+
+interface SharedEntity extends HasEvents {
     on: EntityListenerOverloads<this>,
     emit: EntityEmitterOverloads<this>,
 }
 
-export class Entity extends Mixin(RawEntity, [HasEvents]) {}
+class SharedEntity extends Mixin(Entity, [HasEvents]) {}
+
+export { Entity, SharedEntity };

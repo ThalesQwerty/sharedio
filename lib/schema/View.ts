@@ -185,7 +185,7 @@ export class View {
                     case "attribute":
                         if (rules.cacheDuration > 0 && !isCached)
                             Cache.add(
-                                entity,
+                                entity as Entity,
                                 attributeName,
                                 serializedValue,
                                 rules.cacheDuration,

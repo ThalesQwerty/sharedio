@@ -3,6 +3,7 @@ export * from "./Errors";
 export * from "./Letter";
 
 export * from "./client/ClientEvents";
+export * from "./entity/ChannelEvents";
 export * from "./entity/EntityEvents";
 export * from "./entity/EntityAttributes";
 export * from "./entity/SerializedEntity";

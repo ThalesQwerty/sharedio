@@ -2,33 +2,33 @@ import { ListenerOverloads, EmitterOverloads } from "../../utils";
 import { Channel, Entity, User } from "../../schema";
 import { EntityState } from "..";
 
-interface EntityCreateEvent<EntityType extends Entity = Entity> {
+export interface EntityCreateEvent<EntityType extends Entity = Entity> {
     user: User|null;
     entity: EntityType;
 }
 
-interface EntityFailedCreateEvent<
+export interface EntityFailedCreateEvent<
     EntityType extends Entity = Entity,
 > {
     user: User|null;
     entity: EntityType;
 }
 
-interface EntityDeleteEvent<EntityType extends Entity = Entity> {
+export interface EntityDeleteEvent<EntityType extends Entity = Entity> {
     user: User|null;
     entity: EntityType;
 }
 
-interface EntityRenderEvent<EntityType extends Entity = Entity> {}
+export interface EntityRenderEvent<EntityType extends Entity = Entity> {}
 
 
 
-interface EntityChangeEvent<EntityType extends Entity = Entity> {
+export interface EntityChangeEvent<EntityType extends Entity = Entity> {
     entity: EntityType;
-    changes: EntityState<EntityType>["changes"]
+    changes: EntityState<EntityType extends Entity ? EntityType : Entity>["changes"]
 }
 
-interface EntityCanDeleteEvent<
+export interface EntityCanDeleteEvent<
     EntityType extends Entity = Entity,
 > {
     user: User|null;
@@ -53,7 +53,7 @@ type EntityChangeListener<EntityType extends Entity = Entity> = (
 ) => void;
 type EntityTickListener = () => void;
 
-type Trap<T extends (...args: any[]) => any> = (...args: Parameters<T>) => boolean;
+// type Trap<T extends (...args: any[]) => any> = (...args: Parameters<T>) => boolean;
 
 export interface EntityEvents<EntityType extends Entity = Entity> {
     "canDelete?"?: EntityCanDeleteListener<EntityType>[];
@@ -65,23 +65,6 @@ export interface EntityEvents<EntityType extends Entity = Entity> {
     failedCreate?: EntityFailedCreateListener<EntityType>[];
 }
 
-// export interface ChannelEvents<ChannelType extends Channel = Channel> {
-//     join?: EntityFailedCreateListener<ChannelType>[];
-// }
-export interface EntityTraps<EntityType extends Entity = Entity> {
-    delete?: Trap<EntityDeleteListener<EntityType>>[];
-    create?: Trap<EntityCreateListener<EntityType>>[];
-}
-// export interface ChannelListenerOverlaods<ChannelType extends Channel = Channel> {
-//         /**
-//     * Called before an user attempts to delete this entity.
-//     * The return value (true or false) will determine whether or not the user will be able to delete this entity.
-//     */
-//          (
-//             event: "join",
-//             callback: EntityFailedCreateListener<ChannelType>,
-//         ): ChannelType;
-// }
 export interface EntityListenerOverloads<EntityType extends Entity = Entity>
     extends ListenerOverloads<EntityEvents<EntityType>> {
     /**

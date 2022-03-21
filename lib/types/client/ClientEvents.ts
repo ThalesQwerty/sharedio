@@ -1,4 +1,4 @@
-import { SharedIORequest, AuthRequest, PongRequest, Client } from "../..";
+import { SharedIORequest, AuthRequest, PongRequest, Client } from "../../connection";
 import { ListenerOverloads, EmitterOverloads } from "../../utils";
 import { WriteRequest, CallRequest } from "../../connection/Request";
 

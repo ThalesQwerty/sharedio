@@ -1,6 +1,6 @@
 import { KeyValue } from "..";
 import { id } from "../../utils";
-import { Entity } from "../..";
+import { Entity } from "../../schema";
 import { EntityReservedAttributeName } from "./EntityAttributes";
 
 export interface SerializedEntity {

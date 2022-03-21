@@ -19,7 +19,7 @@ function verifyVariantOrFail(entity: Entity, variantName: EntityVariantName) {
 }
 
 function saveExpression<EntityType extends Entity>(entity: EntityType, attributeName: EntityAttributeName<EntityType>, expressions: string[], action: "read"|"write", clause: "if"|"unless" = "if") {
-    setImmediate(() => expressions.forEach(variantName => verifyVariantOrFail(entity, variantName as EntityVariantName)));
+    setImmediate(() => expressions.forEach(variantName => verifyVariantOrFail(entity as EntityType extends Entity ? EntityType : Entity, variantName as EntityVariantName)));
 
     const unifiedExpression = expressions.map(expression => `(${expression})`).join("|");
 
