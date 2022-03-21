@@ -50,6 +50,7 @@ class TestChannel extends Channel {
 }
 
 const test = new TestEntity({ server }).then(() => {
+    test.on("delete", () => console.log("deleted!", test.exists));
     test.delete();
     console.log(test.exists);
 });

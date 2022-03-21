@@ -44,6 +44,7 @@ class RawEntity
             ...Object.getOwnPropertyNames(
                 new RawEntity({ server: Server.dummy }),
             ),
+            ...Object.getOwnPropertyNames(new HasEvents()),
             ...Object.getOwnPropertyNames(RawEntity.prototype),
             ...Object.getOwnPropertyNames(HasId.prototype),
             ...Object.getOwnPropertyNames(HasEvents.prototype),
@@ -163,7 +164,7 @@ class RawEntity
         const simplified: KeyValue = { ...clone };
 
         for (const reservedAttribute of RawEntity.reservedAttributes) {
-            const value = entity[reservedAttribute];
+            const value = (entity as any)[reservedAttribute];
 
             if (value instanceof HasId) {
                 simplified[reservedAttribute] = value.id;
@@ -173,7 +174,7 @@ class RawEntity
         }
 
         for (const reservedAttribute of RawEntity.reservedAttributes) {
-            const value = entity[reservedAttribute];
+            const value = (entity as any)[reservedAttribute];
 
             switch (reservedAttribute) {
                 case "id":
@@ -258,8 +259,9 @@ class RawEntity
     public static get schema() {
         if (!this._schema) {
             const dummy = new this({ server: Server.dummy });
-            const attributeList = RawEntity.attributes(dummy);
+            dummy.off();
 
+            const attributeList = RawEntity.attributes(dummy);
             dummy.delete();
 
             const getType = (object: any, attributeName: string) => {
@@ -329,11 +331,6 @@ class RawEntity
         this._server = server;
         this._owner = owner ?? null;
 
-        this.on("delete", () => {
-            this._exists = false;
-            process.nextTick(() => this.off(), 0);
-        });
-
         process.nextTick(() => {
             const created = this.exists !== false;
             if (!created) {
@@ -401,27 +398,45 @@ class RawEntity
      * @param user Who is trying to delete? (it's **null** if entity is being deleted by the server)
      */
     public delete(user: User | null = null) {
-        if (this._exists == null) {
-            this.emit("failedCreate", {
-                entity: this,
-                user: this.owner,
+        if (this.exists !== false && this.emit("canDelete?", ({entity: this, user})) !== false) {
+            this.server.removeEntity(this);
+            this._exists = false;
+            process.nextTick(() => {
+                this.off();
             });
-        }
 
-        this.server.deleteEntity(this, user);
+            if (this._exists == null) {
+                this.emit("failedCreate", {
+                    entity: this,
+                    user: this.owner,
+                });
+            }
+            else {
+                this.emit("delete", {
+                    entity: this,
+                    user: this.owner
+                });
+            }
+
+            return true;
+        }
     }
 
     /**
      * This function will be called right after this entity is successfully created
      */
-    public readonly then: (listener: EntityCreateListener<this>) => this = (listener: EntityCreateListener<this>): this =>
-        this.on("create", listener) as any as this;
+    public readonly then: (listener: EntityCreateListener<this>) => this = (listener: EntityCreateListener<this>): this => {
+        this.on("create", listener);
+        return this;
+    }
 
     /**
      * This function will be called if the entity fails to be created
      */
-    public readonly catch: (listener: EntityFailedCreateListener<this>) => this = (listener: EntityFailedCreateListener<this>): this =>
-        this.on("failedCreate", listener) as any as this;
+    public readonly catch: (listener: EntityFailedCreateListener<this>) => this = (listener: EntityFailedCreateListener<this>): this => {
+        this.on("failedCreate", listener);
+        return this;
+    }
 
     /**
      * Manually informs SharedIO that certain values of this entity are dependant on other values from this entity.

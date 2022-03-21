@@ -293,22 +293,14 @@ class RawServer extends HasId {
     }
 
     /**
-     * Deletes an entity
+     * Removes an entity from list
      */
-    public deleteEntity(
-        entity: Entity,
-        user: User | null = null,
-    ): Entity {
-        if (entity.exists !== false) {
-            if (entity.emit("canDelete?", ({entity, user})) !== false) {
-                this._entities = this._entities.filter(
-                    (currentEntity) => !currentEntity.is(entity),
-                );
-
-                entity.emit("delete");
-            }
-        }
-        return entity;
+    public removeEntity(
+        entity: Entity
+    ) {
+        this._entities = this._entities.filter(
+            (currentEntity) => !currentEntity.is(entity),
+        );
     }
 }
 

@@ -113,6 +113,4 @@ export class HasEvents {
             });
         }
     }
-
-    constructor(prefix: string) {}
 }

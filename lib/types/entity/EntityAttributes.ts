@@ -7,11 +7,11 @@ export type EntityReservedAttributeName =
     | keyof Entity
     | keyof HasId
     | "resetId"
-    // | "_listeners"
+    | "_listeners"
     | "emit"
     | "bind"
     | "constructor"
-    // | "removeAllListeners";
+    | "removeAllListeners";
 
 export type ChannelReservedAttributeName = keyof Channel|EntityReservedAttributeName;
 
