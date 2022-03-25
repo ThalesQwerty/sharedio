@@ -1,13 +1,14 @@
 import { Server } from "../connection";
 import { KeyValue } from "../types";
 import { Entity } from "./";
+import { Channel } from "./Channel";
 
 /**
  * This class is specialized in storing and sending the server updates to the users
  */
 export class Queue {
-    public get server() {
-        return this._server;
+    public get channel() {
+        return this._channel;
     }
 
     /**
@@ -22,7 +23,7 @@ export class Queue {
      * Sends the current changes to the users and clears the update queue
      */
     public broadcast() {
-        for (const user of this.server.onlineUsers) {
+        for (const user of this.channel.users) {
             for (const entityId in this._entities) {
                 const entity = this._entities[entityId];
 
@@ -42,7 +43,7 @@ export class Queue {
         console.log(`Added ${newEntity.id} to the update queue`);
     }
 
-    public constructor(private _server: Server) {
+    public constructor(private _channel: Channel) {
 
     }
 }

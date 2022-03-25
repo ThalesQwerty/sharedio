@@ -6,7 +6,7 @@ import {
     ServerListenerOverloads,
     ServerStartListener,
 } from "../types";
-import { User, Entity, Rules } from "../schema";
+import { User, Entity, Rules, SharedEntity, Channel, SharedChannel } from "../schema";
 import { Queue } from "../schema/Queue";
 import { Mixin } from "../utils/Mixin";
 import { generateClientSchema } from "../scripts";
@@ -18,17 +18,17 @@ const DEFAULT_PORT = 3000;
 const DEFAULT_TICK_RATE = 64;
 
 class RawServer extends HasId {
-    static current: RawServer;
+    static current: Server;
 
     /**
      * Returns a dummy server for testing/mocking purposes
      */
     static get dummy() {
-        if (!this._dummy) this._dummy = new RawServer();
+        if (!this._dummy) this._dummy = new Server();
 
         return this._dummy;
     }
-    private static _dummy?: RawServer;
+    private static _dummy?: Server;
 
     private wss?: WS.Server;
     private tickIntervalRef: any = undefined;
@@ -37,6 +37,14 @@ class RawServer extends HasId {
         return this._config;
     }
     private _config: ServerConfig;
+
+    /**
+     * The main channel of a server is the first channel every user joins automatically when they connect to the server. All entities on the server belong directly or indirectly to the main channel.
+     */
+    public get mainChannel() {
+        return this._mainChannel;
+    }
+    private _mainChannel: SharedChannel;
 
     public get port() {
         return this.wss?.options.port;
@@ -74,11 +82,6 @@ class RawServer extends HasId {
     }
     private _users: User[] = [];
 
-    public get queue() {
-        return this._queue;
-    }
-    private _queue: Queue;
-
     /**
      * Lists all online users on the server
      */
@@ -94,7 +97,7 @@ class RawServer extends HasId {
     }
 
     public get entities() {
-        return this._entities;
+        return this._entities as SharedEntity[];
     }
     private _entities: Entity[] = [];
 
@@ -136,14 +139,15 @@ class RawServer extends HasId {
     constructor(config: ServerConfig = {}) {
         super("RawServer");
 
-        RawServer.current = this;
+        Server.current = this;
 
         config.port ??= DEFAULT_PORT;
         config.tickRate ??= DEFAULT_TICK_RATE;
         config.debug ??= false;
+        config.mainChannel ??= SharedChannel;
 
+        this._mainChannel = new config.mainChannel({ server: this }) as SharedChannel;
         this._config = config;
-        this._queue = new Queue(this);
     }
 
     private log(message: any) {
@@ -217,11 +221,19 @@ class RawServer extends HasId {
     private tick() {
         this._ticks++;
 
+        const channels:SharedChannel[] = [];
+
         this.entities.forEach((entity) => {
             Entity.emit(entity)("tick");
+
+            if (entity instanceof Channel) {
+                channels.push(entity as SharedChannel);
+            }
         });
 
-        this.queue.broadcast();
+        channels.forEach((channel) => {
+            channel.queue.broadcast();
+        })
 
         this.emit("nextTick");
         this.off("nextTick");
@@ -247,6 +259,8 @@ class RawServer extends HasId {
             if (!this._users.filter((user) => user.is(newUser))[0]) {
                 this._users.push(newUser);
             }
+
+            this.mainChannel.join(newUser);
 
             this.emit("connection", {
                 user: newUser,

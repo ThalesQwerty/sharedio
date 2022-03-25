@@ -1,8 +1,8 @@
-import { ChannelListenerOverloads, ChannelEmitterOverloads } from "../types";
+import { ChannelListenerOverloads, ChannelEmitterOverloads, EntityConfig, KeyValue, EntityRolesInterface } from "../types";
 import { HasEvents } from "../utils";
 import { Mixin } from "../utils/Mixin";
 import { Entity } from "./Entity";
-import { User } from "./User";
+import { User, Queue } from ".";
 
 class Channel extends Entity {
     public get users() {
@@ -15,14 +15,24 @@ class Channel extends Entity {
     }
     private _entities: Entity[] = [];
 
+    public get queue() {
+        return this._queue;
+    }
+    private _queue: Queue;
+
     public join(user: User) {
         this._users.push(user);
     }
 
     public leave(user: User) {
         this._users = this._users.filter(currentUser => !currentUser.is(user));
-
         this.on("create", () => null);
+    }
+
+    constructor(config: EntityConfig) {
+        super(config);
+
+        this._queue = new Queue(this);
     }
 }
 
@@ -35,11 +45,12 @@ interface Channel extends HasEvents {}
  *
  * Every entity in the server must belong to one (and only one) channel, while users may be subscribed to multiple channels at the same time.
  */
-class SharedChannel extends Mixin(Channel, [HasEvents]) {}
+class SharedChannel<Roles extends string[] = []> extends Mixin(Channel, [HasEvents]) {}
 
-interface SharedChannel extends HasEvents {
+interface SharedChannel<Roles extends string[] = []> extends HasEvents {
     on: ChannelListenerOverloads<this>,
-    emit: ChannelEmitterOverloads<this>
+    emit: ChannelEmitterOverloads<this>,
+    roles: EntityRolesInterface<Roles>["roles"]
 }
 
 export { Channel, SharedChannel };

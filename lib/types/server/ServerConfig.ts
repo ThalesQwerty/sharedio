@@ -1,4 +1,5 @@
 import { KeyValue } from "..";
+import { Channel, SharedChannel } from "../../schema";
 
 export interface ClientSchemaConfig {
     /**
@@ -20,6 +21,11 @@ export interface ClientSchemaConfig {
 export interface ServerConfig {
     debug?: boolean;
     port?: number;
+
+    /**
+     * The main channel of a server is the first channel every user joins automatically when they connect to the server. All entities on the server belong directly or indirectly to the main channel.
+     */
+    mainChannel?: typeof Channel,
     wsOptions?: KeyValue;
 
     /**
