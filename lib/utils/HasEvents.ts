@@ -81,7 +81,7 @@ export class HasEvents {
         if (this) {
             props ??= {};
             this._listeners ??= {};
-            let returnedValue: unknown = undefined;
+            let returnedValue: unknown = true;
             for (const listener of this._listeners[event] ?? []) {
                 returnedValue = (listener as Function)(
                     props,
