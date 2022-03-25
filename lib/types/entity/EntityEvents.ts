@@ -40,18 +40,18 @@ export type EntityCreateListener<EntityType extends Entity = Entity> =
 export type EntityFailedCreateListener<
     EntityType extends Entity = Entity,
 > = (event: EntityFailedCreateEvent<EntityType>) => void;
-type EntityCanDeleteListener<EntityType extends Entity = Entity> =
+export type EntityCanDeleteListener<EntityType extends Entity = Entity> =
     (event: EntityCanDeleteEvent<EntityType>) => boolean;
-type EntityDeleteListener<EntityType extends Entity = Entity> = (
+    export type EntityDeleteListener<EntityType extends Entity = Entity> = (
     event: EntityDeleteEvent<EntityType>,
 ) => void;
-type EntityRenderListener<EntityType extends Entity = Entity> = (
+export type EntityRenderListener<EntityType extends Entity = Entity> = (
     event: EntityRenderEvent<EntityType>,
 ) => void;
-type EntityChangeListener<EntityType extends Entity = Entity> = (
+export type EntityChangeListener<EntityType extends Entity = Entity> = (
     event: EntityChangeEvent<EntityType>
 ) => void;
-type EntityTickListener = () => void;
+export type EntityTickListener = () => void;
 
 // type Trap<T extends (...args: any[]) => any> = (...args: Parameters<T>) => boolean;
 
@@ -124,7 +124,6 @@ export interface EntityListenerOverloads<EntityType extends Entity = Entity>
         callback: EntityFailedCreateListener<EntityType>,
     ): EntityType;
 }
-
 export interface EntityEmitterOverloads<EntityType extends Entity = Entity>
     extends EmitterOverloads<EntityEvents<EntityType>> {
     (
@@ -134,21 +133,21 @@ export interface EntityEmitterOverloads<EntityType extends Entity = Entity>
     (
         event: "delete",
         props: EntityDeleteEvent<EntityType>,
-    ): void;
+    ): true;
     (
         event: "render",
         props: EntityRenderEvent<EntityType>,
-    ): void;
+    ): true;
     (
         event: "change",
         props: EntityChangeEvent<EntityType>,
-    ): void;
+    ): true;
     (
         event: "create",
         props: EntityCreateEvent<EntityType>,
-    ): void;
+    ): true;
     (
         event: "failedCreate",
         props: EntityFailedCreateEvent<EntityType>,
-    ): void;
+    ): true;
 }
