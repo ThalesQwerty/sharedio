@@ -1,60 +1,97 @@
 import { Channel } from ".";
-import { EntityAttributeName } from "../types";
+import { EntityAttributeName, EntityRoleBooleanExpression } from "../types";
 import { Entity } from "./Entity";
 
 /**
- * Every user who can see this entity will be able to read this property or call this method.
+ * Determines which user roles can write values into this property or call this method
+ * @param expressions List of roles, or boolean expression involving roles
  */
-export function _public <EntityType extends Entity>(
+export function inputFor<Expression extends string[] = string[]>(
+    ...expressions: Expression
+) {
+    return function <EntityType extends Entity>(
+        entity: EntityType,
+        attributeName: Expression extends EntityRoleBooleanExpression<string[]>[]
+            ? EntityAttributeName<EntityType>
+            : never,
+    ) {
+        const schema = (entity.constructor as typeof Entity).schema.attributes[attributeName];
+        const expression = expressions.map(expression => `(${expression})`).join("|");
+        if (!schema.input) schema.input = expression;
+        else schema.input = `${schema.input} | (${expression})`;
+    };
+}
+
+/**
+ * Determines which user roles can read the value of this property or listen to calls of this method
+ * @param expressions List of roles, or boolean expression involving roles
+ */
+export function outputFor<Expression extends string[] = string[]>(
+    ...expressions: Expression
+) {
+    return function <EntityType extends Entity>(
+        entity: EntityType,
+        attributeName: Expression extends EntityRoleBooleanExpression<string[]>[]
+            ? EntityAttributeName<EntityType>
+            : never,
+    ) {
+        const schema = (entity.constructor as typeof Entity).schema.attributes[attributeName];
+        const expression = expressions.map(expression => `(${expression})`).join("|");
+        if (!schema.output) schema.output = expression;
+        else schema.output = `${schema.output} | (${expression})`;
+    };
+}
+
+/**
+ * Determines which user roles won't be able to view this property or this method
+ * @param expressions List of roles, or boolean expression involving roles
+ */
+export function hiddenFor<Expression extends string[] = string[]>(
+    ...expressions: Expression
+) {
+    return outputFor(...expressions.map(expression => `!(${expression})`));
+}
+
+/**
+ * Allows the owner of this entity to write values into this property or call this method
+ *
+ * Shorthand for: `@inputFor("owner")`
+ */
+export function input<EntityType extends Entity>(
     entity: EntityType,
     attributeName: EntityAttributeName<EntityType>
 ) {
-    const schema = (entity.constructor as typeof Entity).schema.attributes[attributeName];
-    schema.visibility = "public";
+    inputFor("owner")(entity, attributeName);
 };
 
 /**
- * Only users inside this channel will be able to read this property or call this method.
+ * Allows users to read the value of this property or listen to calls of this method.
+ *
+ * In case of channel entities, this only applies for users who are inside the channel.
+ *
+ * Shorthand for:
+ *
+ * `@outputFor("all")`, if normal entity
+ *
+ * `@outputFor("inside")`, if channel
  */
- export function _protected <ChannelType extends Entity>(
-    entity: ChannelType,
-    attributeName: EntityAttributeName<ChannelType>
-) {
-    const schema = (entity.constructor as typeof Entity).schema.attributes[attributeName];
-    schema.visibility = "protected";
-};
-
-/**
- * Only the owner of this entity will be able to read this property or call this method.
- */
- export function _private <EntityType extends Entity>(
+export function output<EntityType extends Entity>(
     entity: EntityType,
     attributeName: EntityAttributeName<EntityType>
 ) {
-    const schema = (entity.constructor as typeof Entity).schema.attributes[attributeName];
-    schema.visibility = "private";
+    (entity instanceof Channel ? outputFor("inside") : outputFor("all"))(entity, attributeName);
 };
 
 /**
- * No user will be able to read this property or call this method. This is equivalent to not using decorators at all.
+ * Prevents all users from viewing this property or method. It exists only in the server.
+ *
+ * This is Shorthand for using no decorator at all.
+ *
+ * `@hiddenFor("all")`
  */
- export function _internal <EntityType extends Entity>(
+export function hidden<EntityType extends Entity>(
     entity: EntityType,
     attributeName: EntityAttributeName<EntityType>
 ) {
-    const schema = (entity.constructor as typeof Entity).schema.attributes[attributeName];
-    schema.visibility = "internal";
-};
-
-/**
- * This property cannot have its value changed by the owner.
- */
- export function _readonly <EntityType extends Entity>(
-    entity: EntityType,
-    attributeName: EntityAttributeName<EntityType>
-) {
-    const schema = (entity.constructor as typeof Entity).schema.attributes[attributeName];
-    schema.readonly = true;
-
-    if (schema.visibility === "internal") schema.visibility = "public";
+    hiddenFor("all")(entity, attributeName);
 };

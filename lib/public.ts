@@ -1,4 +1,4 @@
 export { SharedEntity as Entity, SharedChannel as Channel, User } from "./schema";
-export { _public, _protected, _private, _internal, _readonly } from "./schema";
+export { input, output, hidden, inputFor, outputFor, hiddenFor } from "./schema";
 export { Server, Client } from "./connection";
 export { EntityConfig } from "./types";
