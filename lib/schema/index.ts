@@ -6,5 +6,6 @@ export * from "./Queue";
 export * from "./User";
 export * from "./View";
 export * from "./NewDecorators";
+export * from "./Roles";
 
 export * from "./rules";

@@ -39,26 +39,13 @@ export class Action {
                 _attributeName as EntityAttributeName<EntityType>;
             const newValue = (values as any)[attributeName];
 
+            const authorized = entity.roles.verify(this._user, entity.schema.attributes[attributeName].input);
+
             if (newValue !== undefined) {
-                const { set, get } = Rules.get(entity, attributeName);
-
-                if (!(get && !set) && Rules.verify(
-                    this._user,
-                    "write",
-                    entity,
-                    attributeName,
-                )) {
-
-                    if (set) {
-                        set.call(entity, newValue, this._user);
-                        viewed.state[attributeName] = newValue;
-                    } else {
-                        entity[attributeName] = newValue;
-                        viewed.state[attributeName] = newValue;
-                    }
-                } else {
-                    debug && console.log(`can't write into "${attributeName}"`);
-                }
+                entity[attributeName] = newValue;
+                viewed.state[attributeName] = newValue;
+            } else {
+                debug && console.log(`can't write into "${attributeName}"`);
             }
         }
 

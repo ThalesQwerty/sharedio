@@ -18,6 +18,10 @@ import {
     EntityAttributeType,
     ChannelReservedAttributeName,
     EntityChangeEvent,
+    EntityBuiltinRoleName,
+    EntityRoleBooleanExpression,
+    EntityRoleName,
+    EntityRolesInterface,
     // ChannelEvents,
 } from "../types";
 import { HasEvents, HasId, ObjectTransform, EventListener, EventEmitter, WatchObject, ExtractDependencies } from "../utils";
@@ -25,6 +29,8 @@ import { Mixin } from "../utils/Mixin";
 import "reflect-metadata";
 
 import * as _ from "lodash";
+import { SharedChannel } from "./Channel";
+import { UserRoles } from "./Roles";
 
 interface EntityReservedAttributes {
     type: string;
@@ -52,7 +58,7 @@ class Entity
 
         return this._reservedAttributes;
     }
-    private static _reservedAttributes?:EntityReservedAttributeName[] = undefined;
+    private static _reservedAttributes?: EntityReservedAttributeName[] = undefined;
 
     public static isDefaultAttribute(attributeName: string): boolean {
         for (const reservedAttributeName of this.reservedAttributes) {
@@ -80,7 +86,7 @@ class Entity
     /**
      * Lists all custom properties from an entity
      */
-     public static properties<EntityType extends Entity>(entity: EntityType) {
+    public static properties<EntityType extends Entity>(entity: EntityType) {
         const propertyDescriptors = Object.getOwnPropertyDescriptors(entity.constructor.prototype);
         const propertyNames: string[] = [];
 
@@ -95,7 +101,7 @@ class Entity
     /**
      * Lists all custom methods from an entity
      */
-     public static methods<EntityType extends Entity>(entity: EntityType) {
+    public static methods<EntityType extends Entity>(entity: EntityType) {
         const methodDescriptors = Object.getOwnPropertyDescriptors(entity.constructor.prototype);
         const methodNames: string[] = [];
 
@@ -224,6 +230,14 @@ class Entity
     private _server: Server;
 
     /**
+     * In which channel is this entity in?
+     */
+    public get channel(): SharedChannel {
+        return this._channel as SharedChannel;
+    }
+    private _channel: Channel;
+
+    /**
      * Does this entity exist or has it been deleted?
      */
     public get exists() {
@@ -245,7 +259,7 @@ class Entity
                         changes: ObjectTransform.clone(this.state.changes)
                     });
 
-                    this.server.queue.add(this as Entity);
+                    this.channel.queue.add(this as Entity);
                     this.state.hasChanges = false;
 
                     process.nextTick(() => {
@@ -258,7 +272,7 @@ class Entity
 
     public static get schema() {
         if (!this._schema) {
-            const dummy = new this({ server: Server.dummy });
+            const dummy = new this({ server: Server.dummy, channel: Server.dummy.mainChannel });
             dummy.off();
 
             const attributeList = Entity.attributes(dummy);
@@ -279,13 +293,13 @@ class Entity
                 attributes: {}
             };
 
-            const defaultSchema:EntitySchema["attributes"][string] = {
+            const defaultSchema: EntitySchema["attributes"][string] = {
                 name: "",
                 type: "any",
                 initialValue: undefined,
                 dependencies: [],
-                visibility: "internal",
-                readonly: false,
+                output: "",
+                input: "",
                 get: false,
                 set: false,
             };
@@ -325,10 +339,14 @@ class Entity
     }
     private static _schema?: EntitySchema;
 
-    constructor({ server, initialState, owner }: EntityConfig) {
+    constructor({ server, channel, initialState, owner }: EntityConfig) {
         super("Entity");
 
-        this._server = server;
+        channel ??= server?.mainChannel;
+        server ??= channel?.server;
+
+        this._channel = (channel ?? server?.mainChannel) as SharedChannel;
+        this._server = (server ?? channel?.server) as Server;
         this._owner = owner ?? null;
 
         process.nextTick(() => {
@@ -338,6 +356,11 @@ class Entity
                 return;
             }
 
+            this._channel ??= (this._server?.mainChannel) as SharedChannel;
+            this._server ??= (this._channel?.server) as Server;
+
+            if (!this._channel || !this._server) throw new Error();
+
             this._exists = true;
 
             const attributeList = Entity.attributes(this);
@@ -345,7 +368,7 @@ class Entity
                 this,
                 this.state,
                 "data",
-                ({path, newValue}) => {
+                ({ path, newValue }) => {
                     console.log("setting", this.type, path, newValue);
                     ObjectTransform.set(this.state.changes, path, newValue);
                     this.state.emitChanges();
@@ -379,7 +402,7 @@ class Entity
                 }
             }
 
-            this._server.entities.push(this as Entity);
+            this._server.entities.push(this as SharedEntity);
 
             this.emit("create", {
                 entity: this,
@@ -387,6 +410,9 @@ class Entity
             });
         });
     }
+
+    private _roles: KeyValue<User[], string> = {};
+    public readonly roles = UserRoles(this, this._roles);
 
     public get schema(): EntitySchema<this> {
         return (this.constructor as typeof Entity).schema as EntitySchema<this>;
@@ -398,7 +424,7 @@ class Entity
      * @param user Who is trying to delete? (it's **null** if entity is being deleted by the server)
      */
     public delete(user: User | null = null) {
-        if (this.exists !== false && this.emit("canDelete?", ({entity: this, user})) !== false) {
+        if (this.exists !== false && this.emit("canDelete?", ({ entity: this, user }))) {
             this.server.removeEntity(this as Entity);
             this._exists = false;
             process.nextTick(() => {
@@ -441,7 +467,7 @@ class Entity
     /**
      * Manually informs SharedIO that certain values of this entity are dependant on other values from this entity.
      */
-    protected readonly bind = (properties: string|string[], dependencies:string|string[]) => {
+    protected readonly bind = (properties: string | string[], dependencies: string | string[]) => {
         const propertyArray = (properties instanceof Array ? properties : [properties]) as EntityAttributeName<this>[];
         const dependencyArray = (dependencies instanceof Array ? dependencies : [dependencies]) as EntityAttributeName<this>[];
 
@@ -458,7 +484,7 @@ class Entity
 
         if (notFound.length) throw new SharedIOError("entityAttributesNotFound", this.type, notFound);
 
-        this.on("change", ({ changes }: EntityChangeEvent ) => {
+        this.on("change", ({ changes }: EntityChangeEvent) => {
             let hasDependenciesChanged = false;
 
             for (const dependencyName of dependencyArray) {
@@ -486,13 +512,14 @@ class Entity
     }
 }
 
-interface Entity extends HasEvents {}
+interface Entity extends HasEvents { }
 
-interface SharedEntity extends HasEvents {
+interface SharedEntity<Roles extends string[] = []> extends HasEvents {
     on: EntityListenerOverloads<this>,
     emit: EntityEmitterOverloads<this>,
+    roles: EntityRolesInterface<Roles>["roles"]
 }
 
-class SharedEntity extends Mixin(Entity, [HasEvents]) {}
+class SharedEntity<Roles extends string[] = []> extends Mixin(Entity, [HasEvents]) { }
 
 export { Entity, SharedEntity };
