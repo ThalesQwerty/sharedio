@@ -165,7 +165,7 @@ class Entity
     public get exists() {
         return this._exists;
     }
-    private _exists?: boolean;
+    private _exists: boolean|null = null;
 
     private readonly state: EntityState<this> = {
         data: {},

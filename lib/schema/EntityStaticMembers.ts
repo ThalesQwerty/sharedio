@@ -9,16 +9,25 @@ export abstract class EntityStaticMembers extends HasId {
      * Lists the names of the reserved entity attributes. Those names cannot be used to create custom attributes.
      */
     public static get reservedAttributes(): EntityReservedAttributeName[] {
-        if (!this._reservedAttributes) this._reservedAttributes = [
-            ...Object.getOwnPropertyNames(
-                new Entity({ server: Server.dummy }),
-            ),
-            ...Object.getOwnPropertyNames(new HasEvents()),
-            ...Object.getOwnPropertyNames(Entity.prototype),
-            ...Object.getOwnPropertyNames(Channel.prototype),
-            ...Object.getOwnPropertyNames(HasId.prototype),
-            ...Object.getOwnPropertyNames(HasEvents.prototype),
-        ] as EntityReservedAttributeName[];
+        if (!this._reservedAttributes) {
+            let array = [
+                ...Object.getOwnPropertyNames(
+                    new Entity({ server: Server.dummy }),
+                ),
+                ...Object.getOwnPropertyNames(
+                    new Channel({ server: Server.dummy }),
+                ),
+                ...Object.getOwnPropertyNames(new HasEvents()),
+                ...Object.getOwnPropertyNames(Entity.prototype),
+                ...Object.getOwnPropertyNames(Channel.prototype),
+                ...Object.getOwnPropertyNames(HasId.prototype),
+                ...Object.getOwnPropertyNames(HasEvents.prototype),
+            ] as EntityReservedAttributeName[];
+
+            array = array.filter((attributeName, index) => array.indexOf(attributeName) === index);
+
+            this._reservedAttributes = array;
+        }
 
         return this._reservedAttributes;
     }
@@ -26,15 +35,7 @@ export abstract class EntityStaticMembers extends HasId {
 
     public static isDefaultAttribute(attributeName: string): boolean {
         for (const reservedAttributeName of this.reservedAttributes) {
-            if (
-                attributeName === reservedAttributeName ||
-                (attributeName[0] === "_" &&
-                    attributeName.substring(1) ===
-                    reservedAttributeName) ||
-                (reservedAttributeName[0] === "_" &&
-                    reservedAttributeName.substring(1) ===
-                    attributeName)
-            )
+            if (attributeName === reservedAttributeName)
                 return true;
         }
         return false;

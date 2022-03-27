@@ -1,3 +1,4 @@
+import { Entity } from "../schema";
 import { KeyValue } from "../types";
 import { ObjectTransform } from "./ObjectTransform";
 
