@@ -5,9 +5,6 @@ import {
     EntityListenerOverloads,
     EntityEmitterOverloads,
     KeyValue,
-    EntityReservedAttributeName,
-    PrintableEntity,
-    EntityClassName,
     EntityCreateListener,
     EntityConfig,
     EntityFailedCreateListener,
@@ -15,22 +12,18 @@ import {
     SharedIOError,
     EntityState,
     EntitySchema,
-    EntityAttributeType,
-    ChannelReservedAttributeName,
     EntityChangeEvent,
-    EntityBuiltinRoleName,
-    EntityRoleBooleanExpression,
-    EntityRoleName,
     EntityRolesInterface,
-    // ChannelEvents,
 } from "../types";
-import { HasEvents, HasId, ObjectTransform, EventListener, EventEmitter, WatchObject, ExtractDependencies } from "../utils";
+import { HasEvents, ObjectTransform, WatchObject } from "../utils";
 import { Mixin } from "../utils/Mixin";
 import "reflect-metadata";
 
 import * as _ from "lodash";
 import { SharedChannel } from "./Channel";
 import { UserRoles } from "./Roles";
+import { Schema } from "./Schema";
+import { EntityStaticMembers } from "./EntityStaticMembers";
 
 interface EntityReservedAttributes {
     type: string;
@@ -40,108 +33,8 @@ interface EntityReservedAttributes {
 }
 
 class Entity
-    extends HasId
+    extends EntityStaticMembers
     implements EntityReservedAttributes {
-    /**
-     * Lists the names of the reserved entity attributes. Those names cannot be used to create custom attributes.
-     */
-    public static get reservedAttributes(): EntityReservedAttributeName[] {
-        if (!this._reservedAttributes) this._reservedAttributes = [
-            ...Object.getOwnPropertyNames(
-                new Entity({ server: Server.dummy }),
-            ),
-            ...Object.getOwnPropertyNames(new HasEvents()),
-            ...Object.getOwnPropertyNames(Entity.prototype),
-            ...Object.getOwnPropertyNames(HasId.prototype),
-            ...Object.getOwnPropertyNames(HasEvents.prototype),
-        ] as EntityReservedAttributeName[];
-
-        return this._reservedAttributes;
-    }
-    private static _reservedAttributes?: EntityReservedAttributeName[] = undefined;
-
-    public static isDefaultAttribute(attributeName: string): boolean {
-        for (const reservedAttributeName of this.reservedAttributes) {
-            if (
-                attributeName === reservedAttributeName ||
-                (attributeName[0] === "_" &&
-                    attributeName.substring(1) ===
-                    reservedAttributeName) ||
-                (reservedAttributeName[0] === "_" &&
-                    reservedAttributeName.substring(1) ===
-                    attributeName)
-            )
-                return true;
-        }
-        return false;
-    }
-
-    /**
-     * Lists all custom attributes from an entity
-     */
-    public static attributes<EntityType extends Entity>(entity: EntityType) {
-        return Object.getOwnPropertyNames(entity).filter(name => !Entity.isDefaultAttribute(name));
-    }
-
-    /**
-     * Lists all custom properties from an entity
-     */
-    public static properties<EntityType extends Entity>(entity: EntityType) {
-        const propertyDescriptors = Object.getOwnPropertyDescriptors(entity.constructor.prototype);
-        const propertyNames: string[] = [];
-
-        for (const propertyName in propertyDescriptors) {
-            let propertyDescriptor = propertyDescriptors[propertyName];
-
-            if ((!!propertyDescriptor.get || !!propertyDescriptor.set) && !Entity.isDefaultAttribute(propertyName)) propertyNames.push(propertyName);
-        }
-        return propertyNames;
-    }
-
-    /**
-     * Lists all custom methods from an entity
-     */
-    public static methods<EntityType extends Entity>(entity: EntityType) {
-        const methodDescriptors = Object.getOwnPropertyDescriptors(entity.constructor.prototype);
-        const methodNames: string[] = [];
-
-        for (const methodName in methodDescriptors) {
-            let methodDescriptor = methodDescriptors[methodName];
-
-            if ((!methodDescriptor.get && !methodDescriptor.set) && !Entity.isDefaultAttribute(methodName)) methodNames.push(methodName);
-        }
-        return methodNames;
-    }
-
-    public static get className() {
-        return this.prototype.constructor.name;
-    }
-
-    public static getClassName<
-        EntityType extends Entity,
-        T extends EntityClassName | EntityType,
-        >(entityOrType: T) {
-        if (typeof entityOrType === "string") return entityOrType;
-        else if (entityOrType instanceof Entity)
-            return (entityOrType as Entity).type;
-        else return (entityOrType as typeof Entity).className;
-    }
-
-    /**
-     * Finds an entity by its ID.
-     *
-     * Returns null if it fails to find an entity.
-     */
-    public static find(entityId: string): Entity | null {
-        return HasId.find(entityId) as Entity;
-    }
-
-    /**
-     * Clones an entity
-     */
-    public static clone(entity: Entity): Entity {
-        return ObjectTransform.clone(entity);
-    }
 
     public static emit(
         entity: Entity,
@@ -154,188 +47,8 @@ class Entity
         return entity.emit;
     }
 
-    public static log<EntityType extends Entity>(entity: EntityType) {
-        const printable = this.printable(entity);
-        console.log(printable);
-        return printable;
-    }
-
-    /**
-     * Generates a simplified key-value pair that represents the entity. Useful for printing things on the console.
-     */
-    public static printable<EntityType extends Entity>(
-        entity: EntityType,
-    ): PrintableEntity<EntityType> {
-        const clone = Entity.clone(entity);
-        const simplified: KeyValue = { ...clone };
-
-        for (const reservedAttribute of Entity.reservedAttributes) {
-            const value = (entity as any)[reservedAttribute];
-
-            if (value instanceof HasId) {
-                simplified[reservedAttribute] = value.id;
-            } else {
-                simplified[reservedAttribute] = value;
-            }
-        }
-
-        for (const reservedAttribute of Entity.reservedAttributes) {
-            const value = (entity as any)[reservedAttribute];
-
-            switch (reservedAttribute) {
-                case "id":
-                case "type":
-                    simplified[reservedAttribute] = value;
-                    break;
-                default:
-                    if (value instanceof HasId) {
-                        simplified[reservedAttribute] = value.id;
-                    } else {
-                        delete simplified[reservedAttribute];
-                    }
-                    break;
-            }
-
-            delete simplified["_" + reservedAttribute];
-        }
-
-        return simplified as PrintableEntity<EntityType>;
-    }
-
-    /**
-     * Entity class name
-     */
-    public get type() {
-        return this.constructor.name;
-    }
-
-    public readonly owned: undefined;
-
-    /**
-     * Returns the user who created this entity
-     *
-     * Returns null if it has been created by the server
-     */
-    public get owner() {
-        return this._owner;
-    }
-    private _owner: User | null = null;
-
-    /**
-     * In which server is this entity in?
-     */
-    public get server() {
-        return this._server;
-    }
-    private _server: Server;
-
-    /**
-     * In which channel is this entity in?
-     */
-    public get channel(): SharedChannel {
-        return this._channel as SharedChannel;
-    }
-    private _channel: Channel;
-
-    /**
-     * Does this entity exist or has it been deleted?
-     */
-    public get exists() {
-        return this._exists;
-    }
-    private _exists?: boolean;
-
-    private readonly state: EntityState<this> = {
-        data: {},
-        changes: {},
-        hasChanges: false,
-        emitChanges: () => {
-            this.state.hasChanges = true;
-
-            process.nextTick(() => {
-                if (this.state.hasChanges) {
-                    this.emit("change", {
-                        entity: this,
-                        changes: ObjectTransform.clone(this.state.changes)
-                    });
-
-                    this.channel.queue.add(this as Entity);
-                    this.state.hasChanges = false;
-
-                    process.nextTick(() => {
-                        this.state.changes = {};
-                    });
-                }
-            })
-        }
-    };
-
     public static get schema() {
-        if (!this._schema) {
-            const dummy = new this({ server: Server.dummy, channel: Server.dummy.mainChannel });
-            dummy.off();
-
-            const attributeList = Entity.attributes(dummy);
-            dummy.delete();
-
-            const getType = (object: any, attributeName: string) => {
-                const type = Reflect.getMetadata(
-                    "design:type",
-                    object,
-                    attributeName
-                )?.name.toLowerCase() as EntityAttributeType;
-
-                return type === "any" ? undefined : type;
-            }
-
-            this._schema = {
-                className: dummy.type,
-                attributes: {}
-            };
-
-            const defaultSchema: EntitySchema["attributes"][string] = {
-                name: "",
-                type: "any",
-                initialValue: undefined,
-                dependencies: [],
-                output: "",
-                input: "",
-                get: false,
-                set: false,
-            };
-
-            for (const attributeName of attributeList) {
-                const initialValue = (dummy as any)[attributeName];
-                this._schema.attributes[attributeName] = {
-                    ...defaultSchema,
-                    name: attributeName,
-                    type: getType(dummy, attributeName) ?? typeof initialValue,
-                    initialValue
-                }
-            }
-
-            const computedAttributes = Object.getOwnPropertyDescriptors(this.prototype);
-
-            for (const attributeName in computedAttributes) {
-                if (attributeName !== "constructor") {
-                    const propertyDescriptor = computedAttributes[attributeName];
-                    const dependencies: string[] = ExtractDependencies(this as typeof Entity, attributeName);
-                    const initialValue = (dummy as any)[attributeName];
-
-                    this._schema.attributes[attributeName] = {
-                        ...defaultSchema,
-                        name: attributeName,
-                        type: getType(this.prototype, attributeName) ?? typeof initialValue,
-                        initialValue,
-                        get: !!propertyDescriptor.get,
-                        set: !!propertyDescriptor.set,
-                        dependencies
-                    }
-                }
-            }
-        }
-
-        return this._schema;
+        return Schema<Entity>(this, this._schema);
     }
     private static _schema?: EntitySchema;
 
@@ -410,6 +123,74 @@ class Entity
             });
         });
     }
+
+    /**
+     * Entity class name
+     */
+    public get type() {
+        return this.constructor.name;
+    }
+
+    public readonly owned: undefined;
+
+    /**
+     * Returns the user who created this entity
+     *
+     * Returns null if it has been created by the server
+     */
+    public get owner() {
+        return this._owner;
+    }
+    private _owner: User | null = null;
+
+    /**
+     * In which server is this entity in?
+     */
+    public get server() {
+        return this._server;
+    }
+    private _server: Server;
+
+    /**
+     * In which channel is this entity in?
+     */
+    public get channel(): SharedChannel {
+        return this._channel as SharedChannel;
+    }
+    private _channel: Channel;
+
+    /**
+     * Does this entity exist or has it been deleted?
+     */
+    public get exists() {
+        return this._exists;
+    }
+    private _exists?: boolean;
+
+    private readonly state: EntityState<this> = {
+        data: {},
+        changes: {},
+        hasChanges: false,
+        emitChanges: () => {
+            this.state.hasChanges = true;
+
+            process.nextTick(() => {
+                if (this.state.hasChanges) {
+                    this.emit("change", {
+                        entity: this,
+                        changes: ObjectTransform.clone(this.state.changes)
+                    });
+
+                    this.channel.queue.add(this as Entity);
+                    this.state.hasChanges = false;
+
+                    process.nextTick(() => {
+                        this.state.changes = {};
+                    });
+                }
+            })
+        }
+    };
 
     private _roles: KeyValue<User[], string> = {};
     public readonly roles = UserRoles(this, this._roles);
