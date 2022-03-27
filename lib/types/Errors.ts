@@ -25,6 +25,10 @@ const errors: KeyValue<(...args: any[]) => string, string> = {
 
     circularPropertyDepedency(propertyName: string) {
         return `Property "${propertyName}" cannot have itself as a dependency!`;
+    },
+
+    serverAndChannelUndefined() {
+        return `"server" and "channel" attributes cannot be both undefined on EntityConfig`
     }
 }
 
@@ -35,6 +39,7 @@ export class SharedIOError extends Error {
     constructor(type: "minGreaterThanMax", min: number, max: number);
     constructor(type: "circularPropertyDepedency", propertyName: string);
     constructor(type: "entityAttributesNotFound", entityName: string, attributeNames: string|string[])
+    constructor(type: "serverAndChannelUndefined")
 
     constructor(type?: string, ...args: any[]) {
         if (!type) super();

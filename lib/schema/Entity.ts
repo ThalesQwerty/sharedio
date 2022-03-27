@@ -47,8 +47,8 @@ class Entity
         return entity.emit;
     }
 
-    public static get schema() {
-        return Schema<Entity>(this, this._schema);
+    public static get schema(): EntitySchema {
+        return Schema.generate(this, this._schema);
     }
     private static _schema?: EntitySchema;
 
@@ -81,7 +81,7 @@ class Entity
             this._channel ??= (this._server?.mainChannel) as SharedChannel;
             this._server ??= (this._channel?.server) as Server;
 
-            if (!this._channel || !this._server) throw new Error();
+            if (!this._channel || !this._server) throw new SharedIOError("serverAndChannelUndefined");
 
             this._exists = true;
 
@@ -202,7 +202,7 @@ class Entity
     };
 
     private _roles: KeyValue<User[], string> = {};
-    public readonly roles = UserRoles(this, this._roles);
+    public readonly roles = UserRoles.apply(this, this._roles);
 
     public get schema(): EntitySchema<this> {
         return (this.constructor as typeof Entity).schema as EntitySchema<this>;
@@ -307,7 +307,15 @@ interface Entity extends HasEvents { }
 interface SharedEntity<Roles extends string[] = []> extends HasEvents {
     on: EntityListenerOverloads<this>,
     emit: EntityEmitterOverloads<this>,
-    roles: EntityRolesInterface<Roles>["roles"]
+
+    /**
+     * User roles are used to determine how each user will be able to view and interact with entities.
+     *
+     * Depending on the roles a given user has, they may have full access (input), readonly access (output) or no access at all (hidden) to certain properties and methods.
+     *
+     * Be aware that user roles are NOT global. Each entitiy/channel has their own possible roles for users.
+     */
+    roles: EntityRolesInterface<Roles>
 }
 
 class SharedEntity<Roles extends string[] = []> extends Mixin(Entity, [HasEvents]) { }

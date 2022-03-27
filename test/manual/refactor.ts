@@ -57,17 +57,22 @@ class TestChannel extends SharedIO.Channel {
 const server = new SharedIO.Server({
     mainChannel: TestChannel,
     port: 8080,
-    debug: true
+    debug: true,
+    clientSchema: {
+        path: "../client/src/sharedio",
+        fileName: "refactoredSchema.ts"
+    }
 });
 
 const test = new TestEntity({ server }).then(() => {
     test.delete();
-    console.log(test.exists);
+    // console.log(test.exists);
 });
 
 // console.log(test.schema);
+Error.stackTraceLimit = 100;
 
-// console.log(SharedIO.Entity.reservedAttributes);
+console.log(test.schema.userRoles);
 server.start();
 
 

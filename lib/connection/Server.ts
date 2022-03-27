@@ -6,13 +6,14 @@ import {
     ServerListenerOverloads,
     ServerStartListener,
 } from "../types";
-import { User, Entity, Rules, SharedEntity, Channel, SharedChannel } from "../schema";
+import { User, Entity, SharedEntity, Channel, SharedChannel } from "../schema";
 import { Queue } from "../schema/Queue";
 import { Mixin } from "../utils/Mixin";
 import { generateClientSchema } from "../scripts";
 import { HasEvents, HasId, ObjectTransform } from "../utils";
 import { SharedIORequest, Client } from ".";
 import WS from "ws";
+import { Schema } from "../schema/Schema";
 
 const DEFAULT_PORT = 3000;
 const DEFAULT_TICK_RATE = 64;
@@ -184,8 +185,8 @@ class RawServer extends HasId {
 
         this.on("start", () => {
             if (this.config.clientSchema) {
-                generateClientSchema(
-                    Rules.schema,
+                Schema.export(
+                    Schema.all,
                     this.config.clientSchema,
                 );
             } else {

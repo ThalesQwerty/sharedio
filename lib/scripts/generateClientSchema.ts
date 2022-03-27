@@ -3,16 +3,17 @@ import path from "path";
 import {
     ClientSchemaConfig,
     EntityAttributeRules,
+    EntityRoleName,
     EntityRuleSchema,
+    EntitySchema,
     EntityVariantName,
     KeyValue,
 } from "../types";
 import { exec } from "child_process";
-import { Rules } from "../schema";
 import { StringTransform } from "../utils";
 
 export function generateClientSchema(
-    schema: EntityRuleSchema,
+    schema: KeyValue<EntitySchema<any>, string>,
     config: ClientSchemaConfig,
 ) {
     const newPath = path.join(
@@ -101,26 +102,19 @@ export function generateClientSchema(
     for (const entityType in schema) {
         const entitySchema = schema[entityType];
 
-        const variants = { ...Rules.variants(entityType, "public") };
+        const { userRoles } = schema;
 
-        // @ts-expect-error
-        delete variants.all;
-        // @ts-expect-error
-        delete variants.host;
-        // @ts-expect-error
-        delete variants.owner;
-        // @ts-expect-error
-        delete variants.inside;
-
-        const interfaceNamesWithVariants: KeyValue = {
+        const interfaceNamesWithRoles: KeyValue = {
             ...interfaceNames,
         };
 
-        for (const variantName in variants) {
-            for (const key in interfaceNamesWithVariants) {
-                const interfaceName = interfaceNamesWithVariants[key];
-                const capitalizedVariantName = StringTransform.capitalize(variantName);
-                interfaceNamesWithVariants[`${key}.${variantName}`] =
+        for (const role in userRoles) {
+            for (const key in interfaceNamesWithRoles) {
+                const interfaceName = interfaceNamesWithRoles[key];
+
+                const capitalizedVariantName = StringTransform.capitalize(role);
+
+                interfaceNamesWithRoles[`${key}.${role}`] =
                     interfaceName !== "Default"
                         ? `${interfaceName}${capitalizedVariantName}`
                         : capitalizedVariantName;
@@ -129,7 +123,7 @@ export function generateClientSchema(
 
         fileContent += createEntityNamespace(
             entityType,
-            Object.keys(interfaceNamesWithVariants).map((key) =>
+            Object.keys(interfaceNamesWithRoles).map((key) =>
                 createEntityInterface(
                     entityType,
                     entitySchema,
@@ -143,13 +137,13 @@ export function generateClientSchema(
                                 isVariantBuiltin(key),
                             ) as EntityVariantName[],
                         custom: Object.keys(
-                            variants,
+                            userRoles,
                         ) as EntityVariantName[],
                     },
-                    interfaceNamesWithVariants,
+                    interfaceNamesWithRoles,
                 ),
             ),
-            interfaceNamesWithVariants,
+            interfaceNamesWithRoles,
         );
     }
 
@@ -212,7 +206,7 @@ export function generateClientSchema(
 
     function createEntityInterface(
         entityType: string,
-        entityRules: KeyValue<EntityAttributeRules>,
+        entityRules: EntitySchema,
         variants: {
             current: EntityVariantName[];
             currentBuiltin: EntityVariantName[];
@@ -269,17 +263,9 @@ export function generateClientSchema(
         entityType: string,
         attributeName: string,
         attributeRules: EntityAttributeRules,
-        entityVariants: EntityVariantName[],
+        userRoles: EntityRoleName[],
     ) {
         const readable =
-            !attributeRules.isVariant &&
-            Rules.verify(
-                entityVariants,
-                "read",
-                entityType,
-                attributeName,
-                false
-            );
         if (!readable) return "";
 
         const writable = Rules.verify(
