@@ -1,4 +1,4 @@
-import { Entity, View, Action, Rules, Channel } from ".";
+import { Entity, View, Action, Channel } from ".";
 import { Server, Client } from "../connection";
 import { RandomHex, HasId } from "../utils";
 import * as _ from "lodash";
@@ -89,29 +89,11 @@ export class User extends HasId {
     }
 
     /**
-     * Gets the variants of an entity in realtion to this user
+     * Gets the roles of this user in a given entity
      */
-    public variants<EntityType extends Entity>(
+    public roles<EntityType extends Entity>(
         entity: EntityType,
-    ): EntityVariantName<EntityType>[] {
-        const variantNames: EntityVariantName<EntityType>[] = ["all"];
-
-        if (this.owns(entity)) variantNames.push("owner");
-
-        // to-do: host and inside
-
-        const entityVariants = Rules.variants(entity);
-
-        for (const _variantName in entityVariants) {
-            const variantName =
-                _variantName as EntityVariantName<EntityType>;
-            const variant = entityVariants[variantName];
-
-            if (variant.call(entity, this)) {
-                variantNames.push(variantName);
-            }
-        }
-
-        return variantNames;
+    ): string[] {
+        return entity.roles.list(this);
     }
 }

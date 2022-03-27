@@ -18,7 +18,7 @@ type PartialKeyOf<ObjectType, ValueType> = { [KeyName in keyof ObjectType]: Obje
 
 export type EntityCustomRoleName<Roles extends string[]> = Roles[number];
 
-export type EntityRoleName<Roles extends string[]> = EntityCustomRoleName<Roles>|EntityBuiltinRoleName;
+export type EntityRoleName<Roles extends string[] = []> = EntityCustomRoleName<Roles>|EntityBuiltinRoleName;
 
 type EntityRoleBooleanOperator = "&"|"|";
 type OP = EntityRoleBooleanOperator|` ${EntityRoleBooleanOperator} `;
@@ -31,47 +31,44 @@ export type EntityRoleBooleanExpression<Roles extends string[] = []> = SingleExp
 
 export interface EntityRolesInterface<Roles extends string[] = []> {
     /**
-     * User roles are used to determine how each user will be able to view and interact with entities.
-     *
-     * Depending on the roles a given user has, they may have full access (input), readonly access (output) or no access at all (hidden) to certain properties and methods.
-     *
-     * Be aware that user roles are NOT global. Each entitiy/channel has their own possible roles for users.
+     * Assigns one or more roles to an user
      */
-    roles: {
-        /**
-         * Assigns one or more roles to an user
-         */
-        assign: (user: User, ...roles: EntityRoleName<Roles>[]) => void,
+    assign: (user: User, ...roles: EntityRoleName<Roles>[]) => void,
 
-        /**
-         * Revokes one or more roles from an user
-         */
-        revoke: (user: User, ...roles: EntityRoleName<Roles>[]) => void,
+    /**
+     * Revokes one or more roles from an user
+     */
+    revoke: (user: User, ...roles: EntityRoleName<Roles>[]) => void,
 
-        /**
-         * Verifies if an user has a given role
-         */
-        verify: (user: User, role: EntityRoleName<Roles>) => boolean,
+    /**
+     * Verifies if an user has a given role
+     */
+    verify: {
+        (user: User, role: EntityRoleName<Roles>): boolean,
+        (userRoles: string[], role: EntityRoleName<Roles>): boolean,
+    },
 
-        /**
-         * Verifies if the roles of an user satisfy a boolean expression
-         *
-         * Examples:
-         *
-         * - If the user has role A and role B, they satisfy the expression `"A & B"`
-         * - If the user has role A or role B, they satisfy the expression  `"A | B"`
-         * - If the user doesn't have the role A, they satisfy the expression `"!A"`
-         */
-        verifyExpression: (user: User, expression: string) => boolean,
-
-        /**
-         * Lists all roles an user has on this entity
-         */
-        list: (user: User) => Roles,
-
-        /**
-         * Lists all users that have a given role
-         */
-        users: (role: EntityRoleName<Roles>) => User[]
+    /**
+     * Verifies if the roles of an user satisfy a boolean expression
+     *
+     * Examples:
+     *
+     * - If the user has role A and role B, they satisfy the expression `"A & B"`
+     * - If the user has role A or role B, they satisfy the expression  `"A | B"`
+     * - If the user doesn't have the role A, they satisfy the expression `"!A"`
+     */
+    verifyExpression: {
+        (user: User, expression: EntityRoleBooleanExpression): boolean,
+        (userRoles: string[], expression: EntityRoleBooleanExpression): boolean,
     }
+
+    /**
+     * Lists all roles an user has on this entity
+     */
+    list: (user: User) => Roles,
+
+    /**
+     * Lists all users that have a given role
+     */
+    users: (role: EntityRoleName<Roles>) => User[]
 }

@@ -14,5 +14,7 @@ export type EntitySchemaAttribute<EntityType extends Entity> = {
 }
 export interface EntitySchema<EntityType extends Entity = any> {
     className: string,
+    userRoles: string[],
+    isChannel: boolean,
     attributes: {[name in EntityAttributeName<EntityType>]: EntitySchemaAttribute<EntityType>}
 }

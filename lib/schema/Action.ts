@@ -1,6 +1,5 @@
 import { User, Entity } from ".";
-import { Rules } from ".";
-import { EntityAttributeName, EntitySetAccessor, KeyValue } from "../types";
+import { EntityAttributeName, KeyValue } from "../types";
 
 /**
  * Class specialized in executing users' actions in the server
@@ -58,21 +57,16 @@ export class Action {
     public call<EntityType extends Entity>(
         entity: EntityType,
         methodName: EntityAttributeName<EntityType>,
-        params?: unknown,
+        params?: unknown[],
     ) {
-        const rulesVerification = Rules.verify(
-            this._user,
-            "read",
-            entity,
-            methodName,
-        );
+        const authorized = entity.roles.verify(this._user, entity.schema.attributes[methodName].input);
 
         if (
-            rulesVerification &&
+            authorized &&
             typeof entity[methodName] === "function"
         ) {
             const method = entity[methodName] as unknown as Function;
-            method(params, this._user);
+            params ? method(...params) : method();  //, this._user);
         }
     }
 }

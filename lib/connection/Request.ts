@@ -27,7 +27,7 @@ export interface WriteRequest extends SharedIOBaseAction {
 export interface CallRequest extends SharedIOBaseAction {
     action: "call";
     methodName: string;
-    params: unknown;
+    params: unknown[];
 }
 
 export type SharedIORequest =

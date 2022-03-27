@@ -1,4 +1,4 @@
-import { User, Entity, Rules } from ".";
+import { User, Entity } from ".";
 import {
     KeyValue,
     SerializedEntity,
@@ -141,7 +141,8 @@ export class View {
                     _attributeName as EntityAttributeName<EntityType>;
 
                 const rawValue = (clone as any)[attributeName];
-                const rules = Rules.get(entity, attributeName);
+                const rules = entity.schema.attributes[attributeName];
+                const authorized = entity.roles.verify(this.user, rules.output);
 
                 const cached = currentEntityCache[attributeName];
                 const isCached =
@@ -153,26 +154,9 @@ export class View {
                     undefined;
                 let serializedValue = undefined;
 
-                if (
-                    Rules.verify(
-                        this.user,
-                        "read",
-                        entity as any,
-                        attributeName,
-                    )
-                ) {
+                if (authorized) {
                     if (typeof rawValue === "function") {
-                        if (rules.get) {
-                            attributeBehavior = "attribute";
-                            serializedValue = isCached
-                                ? cached
-                                : rules.get.call(
-                                      entity,
-                                      this.user,
-                                  );
-                        } else {
-                            attributeBehavior = "method";
-                        }
+                        attributeBehavior = "method";
                     } else {
                         attributeBehavior = "attribute";
                         serializedValue = serialized.state[
@@ -183,13 +167,6 @@ export class View {
 
                 switch (attributeBehavior) {
                     case "attribute":
-                        if (rules.cacheDuration > 0 && !isCached)
-                            Cache.add(
-                                entity as Entity,
-                                attributeName,
-                                serializedValue,
-                                rules.cacheDuration,
-                            );
                         serialized.state[attributeName] =
                             serializedValue;
                         break;

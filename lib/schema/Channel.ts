@@ -1,4 +1,4 @@
-import { ChannelListenerOverloads, ChannelEmitterOverloads, EntityConfig, KeyValue, EntityRolesInterface } from "../types";
+import { ChannelListenerOverloads, ChannelEmitterOverloads, EntityConfig, KeyValue, EntityRolesInterface, EntityBuiltinRoleName } from "../types";
 import { HasEvents } from "../utils";
 import { Mixin } from "../utils/Mixin";
 import { Entity } from "./Entity";
@@ -55,7 +55,7 @@ class SharedChannel<Roles extends string[] = []> extends Mixin(Channel, [HasEven
 interface SharedChannel<Roles extends string[] = []> extends HasEvents {
     on: ChannelListenerOverloads<this>,
     emit: ChannelEmitterOverloads<this>,
-    roles: EntityRolesInterface<Roles>["roles"]
+    roles: EntityRolesInterface<Roles>
 }
 
 export { Channel, SharedChannel };
