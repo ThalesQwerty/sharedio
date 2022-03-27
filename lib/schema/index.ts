@@ -5,7 +5,5 @@ export * from "./Entity";
 export * from "./Queue";
 export * from "./User";
 export * from "./View";
-export * from "./NewDecorators";
+export * from "./Decorators";
 export * from "./Roles";
-
-export * from "./rules";

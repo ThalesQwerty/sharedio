@@ -1,9 +1,19 @@
 import { Channel } from ".";
-import { EntityAttributeName, EntityRoleBooleanExpression, EntitySchemaAttribute, KeyValue } from "../types";
+import { EntityAttributeName, EntityRoleBooleanExpression, EntitySchema, EntitySchemaAttribute, KeyValue } from "../types";
 import { Entity } from "./Entity";
 
 function getSchema<EntityType extends Entity>(entity: EntityType) {
-    return ((entity.constructor as typeof Entity).schema.attributes as KeyValue<EntitySchemaAttribute<EntityType>, EntityAttributeName<EntityType>>);
+    return (entity.constructor as typeof Entity).schema;
+}
+
+function addUserRoles<EntityType extends Entity>(expression: string, schema: EntitySchema<EntityType>) {
+    const roles = expression.replace(/\W+/g, " ").replace(/\s+/g, " ").trim().split(" ");
+
+    roles.forEach(role => {
+        if (!schema.userRoles.includes(role)) {
+            schema.userRoles.push(role);
+        }
+    })
 }
 
 /**
@@ -19,10 +29,14 @@ export function inputFor<Expression extends string[] = string[]>(
             ? EntityAttributeName<EntityType>
             : never,
     ) {
-        const schema = getSchema(entity)[attributeName];
+        const schema = getSchema(entity);
+        const attributeSchema = schema.attributes[attributeName];
+
         const expression = expressions.map(expression => `(${expression})`).join("|");
-        if (!schema.input) schema.input = expression;
-        else schema.input = `${schema.input} | (${expression})`;
+        addUserRoles(expression, schema);
+
+        if (!attributeSchema.input) attributeSchema.input = expression;
+        else attributeSchema.input = `${attributeSchema.input} | (${expression})`;
     };
 }
 
@@ -39,10 +53,14 @@ export function outputFor<Expression extends string[] = string[]>(
             ? EntityAttributeName<EntityType>
             : never,
     ) {
-        const schema = getSchema(entity)[attributeName];
+        const schema = getSchema(entity);
+        const attributeSchema = schema.attributes[attributeName];
+
         const expression = expressions.map(expression => `(${expression})`).join("|");
-        if (!schema.output) schema.output = expression;
-        else schema.output = `${schema.output} | (${expression})`;
+        addUserRoles(expression, schema);
+
+        if (!attributeSchema.output) attributeSchema.output = expression;
+        else attributeSchema.output = `${attributeSchema.output} | (${expression})`;
     };
 }
 
