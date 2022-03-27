@@ -1,4 +1,4 @@
-import { Channel, SharedChannel, SharedEntity, User } from "../../schema";
+import { Channel, Entity, SharedChannel, SharedEntity, User } from "../../schema";
 import { EntityEvents, EntityListenerOverloads, EntityEmitterOverloads, EntityCreateListener, EntityDeleteListener, EntityCreateEvent, EntityDeleteEvent } from "./EntityEvents";
 
 export interface ChannelJoinEvent<ChannelType extends Channel = Channel> {
@@ -58,7 +58,7 @@ export interface ChannelListenerOverloads<ChannelType extends Channel = Channel>
     /**
     * Called right after an user joins a subchannel inside this channel.
     */
-    <SubChannel extends SharedChannel = SharedChannel>(
+    <SubChannel extends Channel = SharedChannel>(
         event: "joinInside",
         callback: ChannelJoinListener<SubChannel>,
     ): ChannelType;
@@ -66,7 +66,7 @@ export interface ChannelListenerOverloads<ChannelType extends Channel = Channel>
     /**
     * Called right after an user creates a new entity inside this channel.
     */
-    <SubEntity extends SharedEntity = SharedEntity>(
+    <SubEntity extends Entity = SharedEntity>(
         event: "createInside",
         callback: EntityCreateListener<SubEntity>,
     ): ChannelType;
@@ -74,7 +74,7 @@ export interface ChannelListenerOverloads<ChannelType extends Channel = Channel>
     /**
     * Called right after an user deletes an entity inside this channel.
     */
-     <SubEntity extends SharedEntity = SharedEntity>(
+     <SubEntity extends Entity = SharedEntity>(
         event: "deleteInside",
         callback: EntityDeleteListener<SubEntity>,
     ): ChannelType;
@@ -93,15 +93,15 @@ export interface ChannelEmitterOverloads<ChannelType extends Channel = Channel> 
         event: "leave",
         callback: ChannelLeaveEvent<ChannelType>,
     ): true;
-    <SubChannel extends SharedChannel = SharedChannel>(
+    <SubChannel extends Channel = SharedChannel>(
         event: "joinInside",
         callback: ChannelJoinEvent<SubChannel>,
     ): true;
-    <SubEntity extends SharedEntity = SharedEntity>(
+    <SubEntity extends Entity = SharedEntity>(
         event: "createInside",
         callback: EntityCreateEvent<SubEntity>,
     ): true;
-    <SubEntity extends SharedEntity = SharedEntity>(
+    <SubEntity extends Entity = SharedEntity>(
         event: "deleteInside",
         callback: EntityDeleteEvent<SubEntity>,
     ): true;

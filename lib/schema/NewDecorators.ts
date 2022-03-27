@@ -1,6 +1,10 @@
 import { Channel } from ".";
-import { EntityAttributeName, EntityRoleBooleanExpression } from "../types";
+import { EntityAttributeName, EntityRoleBooleanExpression, EntitySchemaAttribute, KeyValue } from "../types";
 import { Entity } from "./Entity";
+
+function getSchema<EntityType extends Entity>(entity: EntityType) {
+    return ((entity.constructor as typeof Entity).schema.attributes as KeyValue<EntitySchemaAttribute<EntityType>, EntityAttributeName<EntityType>>);
+}
 
 /**
  * Determines which user roles can write values into this property or call this method
@@ -15,7 +19,7 @@ export function inputFor<Expression extends string[] = string[]>(
             ? EntityAttributeName<EntityType>
             : never,
     ) {
-        const schema = (entity.constructor as typeof Entity).schema.attributes[attributeName];
+        const schema = getSchema(entity)[attributeName];
         const expression = expressions.map(expression => `(${expression})`).join("|");
         if (!schema.input) schema.input = expression;
         else schema.input = `${schema.input} | (${expression})`;
@@ -35,7 +39,7 @@ export function outputFor<Expression extends string[] = string[]>(
             ? EntityAttributeName<EntityType>
             : never,
     ) {
-        const schema = (entity.constructor as typeof Entity).schema.attributes[attributeName];
+        const schema = getSchema(entity)[attributeName];
         const expression = expressions.map(expression => `(${expression})`).join("|");
         if (!schema.output) schema.output = expression;
         else schema.output = `${schema.output} | (${expression})`;

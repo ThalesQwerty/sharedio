@@ -6,3 +6,5 @@ export * from "./EntitySchema";
 export * from "./EntityRoles";
 export * from "./EntityAttributes";
 export * from "./SerializedEntity";
+
+export * from "./old";

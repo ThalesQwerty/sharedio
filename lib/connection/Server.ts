@@ -10,7 +10,7 @@ import { User, Entity, Rules, SharedEntity, Channel, SharedChannel } from "../sc
 import { Queue } from "../schema/Queue";
 import { Mixin } from "../utils/Mixin";
 import { generateClientSchema } from "../scripts";
-import { HasEvents, HasId } from "../utils";
+import { HasEvents, HasId, ObjectTransform } from "../utils";
 import { SharedIORequest, Client } from ".";
 import WS from "ws";
 
@@ -147,7 +147,7 @@ class RawServer extends HasId {
         config.mainChannel ??= SharedChannel;
 
         this._mainChannel = new config.mainChannel({ server: this }) as SharedChannel;
-        this._config = config;
+        this._config = ObjectTransform.clone(config);
     }
 
     private log(message: any) {
@@ -224,10 +224,12 @@ class RawServer extends HasId {
         const channels:SharedChannel[] = [];
 
         this.entities.forEach((entity) => {
-            Entity.emit(entity)("tick");
+            if (entity.exists) {
+                // Entity.emit(entity)("tick");
 
-            if (entity instanceof Channel) {
-                channels.push(entity as SharedChannel);
+                if (entity instanceof Channel) {
+                    channels.push(entity as SharedChannel);
+                }
             }
         });
 

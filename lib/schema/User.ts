@@ -1,4 +1,4 @@
-import { Entity, View, Action, Rules } from ".";
+import { Entity, View, Action, Rules, Channel } from ".";
 import { Server, Client } from "../connection";
 import { RandomHex, HasId } from "../utils";
 import * as _ from "lodash";
@@ -79,6 +79,13 @@ export class User extends HasId {
      */
     public owns(entity: Entity) {
         return entity.owner && this.is(entity.owner) ? true : false;
+    }
+
+    /**
+     * Verifies if this user is inside a channel
+     */
+    public in(channel: Channel) {
+        return !!channel.users.find(user => user.is(this));
     }
 
     /**

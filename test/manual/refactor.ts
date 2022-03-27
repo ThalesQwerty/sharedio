@@ -45,14 +45,19 @@ class TestChannel extends SharedIO.Channel {
     constructor(config: SharedIO.EntityConfig) {
         super(config);
 
-        this.on("join", ({ user }) => {
-            console.log("new user joined!!!!");
-        })
+        const countUsers = () => {
+            console.log(`${this.users.length} users in the channel`);
+        }
+
+        this.on("join", countUsers);
+        this.on("leave", countUsers);
     }
 }
 
 const server = new SharedIO.Server({
-    mainChannel: TestChannel
+    mainChannel: TestChannel,
+    port: 8080,
+    debug: true
 });
 
 const test = new TestEntity({ server }).then(() => {
@@ -60,6 +65,9 @@ const test = new TestEntity({ server }).then(() => {
     console.log(test.exists);
 });
 
-console.log(test.schema);
+// console.log(test.schema);
+
+// console.log(SharedIO.Entity.reservedAttributes);
+server.start();
 
 

@@ -21,12 +21,17 @@ class Channel extends Entity {
     private _queue: Queue;
 
     public join(user: User) {
-        this._users.push(user);
+        if (!user.in(this)) {
+            this._users.push(user);
+            this.emit("join", {user});
+        }
     }
 
     public leave(user: User) {
-        this._users = this._users.filter(currentUser => !currentUser.is(user));
-        this.on("create", () => null);
+        if (user.in(this)) {
+            this._users = this._users.filter(currentUser => !currentUser.is(user));
+            this.emit("leave", {user});
+        }
     }
 
     constructor(config: EntityConfig) {
