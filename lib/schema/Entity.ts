@@ -52,8 +52,17 @@ class Entity
     }
     private static _schema?: EntitySchema;
 
-    constructor({ server, channel, initialState, owner }: EntityConfig) {
+    constructor({ server, channel, initialState, owner, dummy = false }: EntityConfig) {
         super("Entity");
+
+        if (dummy) {
+            server = Server.dummy;
+            channel = Server.dummy.mainChannel;
+
+            // Disables event listeners for dummy entities
+            this.on = (event: any, callback: any) => undefined;
+            this.off();
+        }
 
         channel ??= server?.mainChannel;
         server ??= channel?.server;
@@ -202,7 +211,7 @@ class Entity
     /**
      * Deletes this entity
      *
-     * @param user Who is trying to delete? (it's **null** if entity is being deleted by the server)
+     * @param user Who is trying to delete? (`null`, if entity is being deleted by the server)
      */
     public delete(user: User | null = null) {
         if (this.exists !== false && this.emit("canDelete?", ({ entity: this, user }))) {

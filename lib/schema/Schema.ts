@@ -5,7 +5,7 @@ import { Server } from "../connection";
 
 export function Schema<EntityType extends Entity>(entityClass: typeof Entity, privateSchema?: EntitySchema<EntityType>) {
     if (!privateSchema) {
-        const dummy = new entityClass({ server: Server.dummy, channel: Server.dummy.mainChannel });
+        const dummy = new entityClass({ server: Server.dummy, channel: Server.dummy.mainChannel, dummy: true });
         const attributeList = Entity.attributes(dummy);
         dummy.delete();
 
