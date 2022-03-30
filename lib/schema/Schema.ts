@@ -28,7 +28,7 @@ export abstract class Schema {
                     attributeName
                 )?.name.toLowerCase() as EntityAttributeType;
 
-                return type === "any" ? undefined : type;
+                return type === "object" ? undefined : type;
             }
 
             // Workaround private access modifier
@@ -116,7 +116,6 @@ export abstract class Schema {
             readonly id: string;
             readonly type: string;
             readonly owned: boolean;
-            readonly roles: string[];
 
             readonly delete: () => void;
         }
@@ -130,19 +129,22 @@ export abstract class Schema {
 
         `;
 
+        const schemaInterfaceMemberDeclarations:string[] = [];
+
          // This code will generate client schemas for each user role in the entity
         for (const entityName in schema) {
             const entitySchema = schema[entityName];
 
             const userRoles = entitySchema.userRoles.filter(role => role !== "all"); // "all" is excluded beacuse it's impossible for an user to not have this role
 
-            fileContent += `export namespace ${entityName} {`;
+            fileContent += `namespace ${entityName} {`;
+
+            const roleCombinations: string[] = [];
 
             // 2^n possible combinations
-            const roleCombinations = Math.pow(2, userRoles.length);
-
-            for (let counter = 0; counter < roleCombinations; counter++) {
+            for (let counter = 0; counter < Math.pow(2, userRoles.length); counter++) {
                 const includedRoles: string[] = ["all"];
+                let booleanRoleDeclarations = "";
 
                 /**
                  * This code "secretly" converts the current counter value to binary, and associates each bit to an index on the role array, in reverse order.
@@ -165,14 +167,22 @@ export abstract class Schema {
                     const divider = Math.pow(2, index + 1);
 
                     if (counter % divider >= divider / 2 && !includedRoles.includes(currentRole)) {
+                        booleanRoleDeclarations += `${currentRole}: true;`
                         includedRoles.push(currentRole);
+                    } else {
+                        booleanRoleDeclarations += `${currentRole}: false;`
                     }
                 }
 
-                console.log("rendering", counter, includedRoles);
                 const interfaceName = includedRoles.length > 1 ? includedRoles.map(role => role === "all" ? "" : StringTransform.capitalize(role)).join("") : "Default";
+                roleCombinations.push(interfaceName);
 
-                fileContent += `export interface ${interfaceName} extends ${entitySchema.isChannel ? "Channel" : "Entity"} {`;
+                fileContent += `export interface ${interfaceName} extends ${entitySchema.isChannel ? "Channel" : "Entity"} {
+                    readonly owned: ${includedRoles.includes("owner")}; ${entitySchema.isChannel ? `readonly inside: ${includedRoles.includes("inside")};` : ""}
+                    readonly roles: {
+                        ${booleanRoleDeclarations}
+                    }
+                `;
 
                 for (const attributeName in entitySchema.attributes) {
                     const {name, type, input, output} = entitySchema.attributes[attributeName];
@@ -192,8 +202,21 @@ export abstract class Schema {
                 fileContent += `}`;
             }
 
-            fileContent += `}`;
+            fileContent += `}
+
+            export type ${entityName} = ${roleCombinations.map(name => `${entityName}.${name}`).join("|")};
+
+            `;
+
+            schemaInterfaceMemberDeclarations.push(`${entityName}: EntityListSchema<${entityName}>;`);
         }
+
+        fileContent += `export interface ${config.interfaceName || "Schema"} extends SharedIOSchema {
+           ${schemaInterfaceMemberDeclarations.join("")}
+        }
+
+        export default ${config.interfaceName || "Schema"};
+        `;
 
         fs.writeFileSync(newPath, fileContent);
 
