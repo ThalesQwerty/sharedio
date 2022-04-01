@@ -5,6 +5,7 @@ import {
     ServerEmitterOverloads,
     ServerListenerOverloads,
     ServerStartListener,
+    EntityAttributeName,
 } from "../types";
 import { User, Entity, SharedEntity, Channel, SharedChannel } from "../schema";
 import { Queue } from "../schema/Queue";
@@ -184,10 +185,11 @@ class RawServer extends HasId {
         wss.on("close", () => this.handleServerStop(wss));
 
         this.on("start", () => {
+            Schema.optimize();
+
             if (this.config.clientSchema) {
                 Schema.export(
-                    Schema.all,
-                    this.config.clientSchema,
+                    this.config.clientSchema
                 );
             } else {
                 console.warn(`No client schema file is being generated.\nIf you want to automatically generate a schema file to be used in the client-side, use the "clientSchema" attribute of the server configuration.

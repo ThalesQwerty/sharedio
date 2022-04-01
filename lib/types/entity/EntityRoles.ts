@@ -1,3 +1,4 @@
+import { KeyValue } from "..";
 import { Entity, User } from "../../schema";
 
 /**
@@ -28,6 +29,11 @@ type DoubleExpresison<Roles extends string[]> = `${EntityRoleName<Roles>}${OP}${
 type MultiExpression = `${string}${OP}${string}${OP}${string}`;
 
 export type EntityRoleBooleanExpression<Roles extends string[] = []> = SingleExpression<Roles> | DoubleExpresison<Roles> | MultiExpression;
+
+export type EntityRolesData<Roles extends string[] = string[]> = {
+    lists: KeyValue<User[], EntityRoleName<Roles>>,
+    binary: KeyValue<number, string> // {[userId]: number}
+}
 
 export interface EntityRolesInterface<Roles extends string[] = []> {
     /**
@@ -71,4 +77,9 @@ export interface EntityRolesInterface<Roles extends string[] = []> {
      * Lists all users that have a given role
      */
     users: (role: EntityRoleName<Roles>) => User[]
+
+    /**
+     * Returns a given user's roles encoded in a binary number
+     */
+     combinationId: (user: User) => number
 }

@@ -1,7 +1,7 @@
 import SharedIO, { hidden, input, inputFor, output, User } from "../../lib";
 
 class TestEntity extends SharedIO.Entity {
-    @output name = "Thales";
+    @input @output name = "Thales";
     @output power = 9001;
 
     @input right = false;
@@ -64,15 +64,13 @@ const server = new SharedIO.Server({
     }
 });
 
-const test = new TestEntity({ server }).then(() => {
-    test.delete();
-    // console.log(test.exists);
-});
-
 // console.log(test.schema);
 Error.stackTraceLimit = 100;
 
-console.log(test.schema.userRoles);
-server.start();
+server.start(() => {
+    console.dir(TestEntity.schema, { depth: null});
+}).on("connection", () => {
+    const test = new TestEntity({ server });
+})
 
 

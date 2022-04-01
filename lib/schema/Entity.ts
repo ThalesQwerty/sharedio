@@ -14,6 +14,7 @@ import {
     EntitySchema,
     EntityChangeEvent,
     EntityRolesInterface,
+    EntityRolesData,
 } from "../types";
 import { HasEvents, ObjectTransform, WatchObject } from "../utils";
 import { Mixin } from "../utils/Mixin";
@@ -190,7 +191,7 @@ class Entity
                         changes: ObjectTransform.clone(this.state.changes)
                     });
 
-                    this.channel.queue.add(this as Entity);
+                    // this.channel.queue.add(this as Entity);
                     this.state.hasChanges = false;
 
                     process.nextTick(() => {
@@ -201,7 +202,10 @@ class Entity
         }
     };
 
-    private _roles: KeyValue<User[], string> = {};
+    private _roles: EntityRolesData = {
+        lists: {},
+        binary: {}
+    };
     public readonly roles = UserRoles.apply(this, this._roles);
 
     public get schema(): EntitySchema<this> {

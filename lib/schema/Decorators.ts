@@ -10,8 +10,11 @@ function addUserRoles<EntityType extends Entity>(expression: string, schema: Ent
     const roles = expression.replace(/\W+/g, " ").replace(/\s+/g, " ").trim().split(" ");
 
     roles.forEach(role => {
-        if (!schema.userRoles.includes(role)) {
-            schema.userRoles.push(role);
+        if (!(role in schema.userRoles)) {
+            schema.userRoles[role] = {
+                name: role,
+                value: Math.pow(2, Object.keys(schema.userRoles).length - 1)
+            }
         }
     })
 }

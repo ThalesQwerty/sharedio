@@ -1,5 +1,6 @@
 import { User, Entity } from ".";
 import { EntityAttributeName, KeyValue } from "../types";
+import { UserRoles } from "./Roles";
 
 /**
  * Class specialized in executing users' actions in the server
@@ -38,9 +39,9 @@ export class Action {
                 _attributeName as EntityAttributeName<EntityType>;
             const newValue = (values as any)[attributeName];
 
-            const authorized = entity.roles.verify(this._user, entity.schema.attributes[attributeName].input);
+            const authorized = UserRoles.verifyCombination("input", entity.roles.combinationId(this._user), entity.schema.attributes[attributeName]);
 
-            if (newValue !== undefined) {
+            if (authorized && newValue !== undefined) {
                 entity[attributeName] = newValue;
                 viewed.state[attributeName] = newValue;
             } else {
@@ -59,7 +60,7 @@ export class Action {
         methodName: EntityAttributeName<EntityType>,
         params?: unknown[],
     ) {
-        const authorized = entity.roles.verify(this._user, entity.schema.attributes[methodName].input);
+        const authorized = UserRoles.verifyCombination("input", entity.roles.combinationId(this._user), entity.schema.attributes[methodName]);
 
         if (
             authorized &&
