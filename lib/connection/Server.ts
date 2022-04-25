@@ -185,8 +185,6 @@ class RawServer extends HasId {
         wss.on("close", () => this.handleServerStop(wss));
 
         this.on("start", () => {
-            Schema.optimize();
-
             if (this.config.clientSchema) {
                 Schema.export(
                     this.config.clientSchema

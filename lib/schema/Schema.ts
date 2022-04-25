@@ -21,7 +21,7 @@ export abstract class Schema {
             const attributeList = Entity.attributes(dummy);
             dummy.delete();
 
-            const getType = (object: any, attributeName: string) => {
+            const getType = (object: any, attributeName: string): string | undefined => {
                 const type = Reflect.getMetadata(
                     "design:type",
                     object,
@@ -63,7 +63,7 @@ export abstract class Schema {
                 const attributeName = _attributeName as EntityAttributeName<EntityType>;
                 const initialValue = (dummy as any)[attributeName];
                 privateSchema.attributes[attributeName] = {
-                    ...defaultSchema,
+                    ...ObjectTransform.clone(defaultSchema),
                     name: attributeName,
                     type: getType(dummy, attributeName) ?? typeof initialValue,
                     initialValue
@@ -92,66 +92,71 @@ export abstract class Schema {
             }
 
             this._schemas[entityClass.name] = privateSchema;
+
+            console.log("old roles", entityClass.className, privateSchema.userRoles);
+            process.nextTick(() => {
+                console.log("new roles", entityClass.className, privateSchema?.userRoles);
+                this.optimize(privateSchema as any);
+            });
         }
 
         return privateSchema as EntitySchema<EntityType>;
     }
 
-    static optimize() {
-        for (const entityName in this._schemas) {
-            const schema = this._schemas[entityName];
+    /**
+     * This function calculates beforehands the access level that each user role has on each property of an entity and then stores this information on its schema
+     */
+    private static optimize<EntityType extends Entity>(schema: EntitySchema<EntityType>) {
+        const numRoles = Object.keys(schema.userRoles).length - 1;
+        const numCombinations = Math.pow(2, numRoles);
 
-            const numRoles = Object.keys(schema.userRoles).length - 1;
-            const numCombinations = Math.pow(2, numRoles);
+        const maxWhitelistLength = Math.max(1, Math.ceil(numCombinations / 2));
 
-            const maxWhitelistLength = Math.max(1, Math.ceil(numCombinations / 2));
+        /**
+         * It's not viable to verify roles everytime an user tries to view or interact with an entity,
+         * since this computation might take some time.
+         *
+         * Therefore, I decided to calculate all possible outcomes beforehands and store the values in the entity schema.
+         */
+        for (const attributeName in schema.attributes) {
+            const attribute = schema.attributes[attributeName as EntityAttributeName<EntityType>];
+
+            // denied combinations
+            // the "-1" at the start indicates that this list is a blacklist and not a whitelist
+            const blacklist = {
+                input: [-1] as number[],
+                output: [-1] as number[]
+            };
+
+            // allowed combinations
+            const whitelist = {
+                input: [] as number[],
+                output: [] as number[]
+            };
+
+            for (let roleCombinationId = 0; roleCombinationId < numCombinations; roleCombinationId++) {
+                const currentRoles: string[] = [];
+
+                for (const role in schema.userRoles) {
+                    const { value, name } = schema.userRoles[role];
+                    if ((roleCombinationId & value) === value) currentRoles.push(name);
+                }
+
+                const isInput = UserRoles.test(currentRoles, attribute.input);
+                const isOutput = isInput || UserRoles.test(currentRoles, attribute.output);
+
+                (isInput ? whitelist : blacklist).input.push(roleCombinationId);
+                (isOutput ? whitelist : blacklist).output.push(roleCombinationId);
+            }
 
             /**
-             * It's not viable to verify roles everytime an user tries to view or interact with an entity,
-             * since this computation might take some time.
-             *
-             * Therefore, I decided to calculate all possible outcomes beforehands and store the values in the entity schema.
+             * If most roles don't have input/output access, the list can be shortened if instead
+             * of listing the allowed roles (whitelist), it lists the denied roles (blacklist)
              */
-            for (const attributeName in schema.attributes) {
-                const attribute = schema.attributes[attributeName as EntityAttributeName<any>];
-
-                // denied combinations
-                // the "-1" at the start indicates that this list is a blacklist and not a whitelist
-                const blacklist = {
-                    input: [-1] as number[],
-                    output: [-1] as number[]
-                }
-
-                // allowed combinations
-                const whitelist = {
-                    input: [] as number[],
-                    output: [] as number[]
-                }
-
-                for (let roleCombinationId = 0; roleCombinationId < numCombinations; roleCombinationId++) {
-                    const currentRoles: string[] = [];
-
-                    for (const role in schema.userRoles) {
-                        const { value, name } = schema.userRoles[role];
-                        if ((roleCombinationId & value) === value) currentRoles.push(name);
-                    }
-
-                    const isInput = UserRoles.test(currentRoles, attribute.input);
-                    const isOutput = isInput || UserRoles.test(currentRoles, attribute.output);
-
-                    if (isInput) whitelist.input.push(roleCombinationId);
-                    else blacklist.input.push(roleCombinationId);
-
-                    if (isOutput) whitelist.output.push(roleCombinationId);
-                    else blacklist.output.push(roleCombinationId);
-                }
-
-                /**
-                 * If most roles don't have input/output access, the list can be shortened if instead
-                 * of listing the allowed roles (whitelist), it lists the denied roles (blacklist)
-                 */
-                attribute.binary.input = [...(whitelist.input.length <= maxWhitelistLength ? whitelist.input : blacklist.input)];
-                attribute.binary.output = [...(whitelist.output.length <= maxWhitelistLength ? whitelist.output : blacklist.output)];
+            for (const key of ["input", "output"] as ("input" | "output")[]) {
+                let addToBinary = [] as number[];
+                addToBinary = whitelist[key].length <= maxWhitelistLength ? [...whitelist[key]] : [...blacklist[key]];
+                attribute.binary[key] = [...addToBinary];
             }
         }
     }
@@ -265,9 +270,6 @@ export abstract class Schema {
                             if (accessType === "output") fileContent += "readonly ";
                             fileContent += `${name}: ${type};`;
                         }
-
-                        if (accessType === "input") binary.input.push(counter);
-                        else if (accessType === "output") binary.output.push(counter);
                     }
                 }
 
