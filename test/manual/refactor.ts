@@ -1,4 +1,5 @@
 import SharedIO, { hidden, input, inputFor, output, User } from "../../lib";
+import { Schema } from "../../lib/schema/Schema";
 
 class TestEntity extends SharedIO.Entity {
     @input @output name = "Thales";
@@ -69,6 +70,7 @@ Error.stackTraceLimit = 100;
 
 server.start(() => {
     console.dir(TestEntity.schema, { depth: null});
+    // setImmediate(() =>  console.dir(Schema.all, { depth: null }));
 }).on("connection", () => {
     const test = new TestEntity({ server });
 })
