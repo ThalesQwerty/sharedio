@@ -2,6 +2,34 @@ import { EntityAttribute, EntityBuiltinRoleName, EntityRoleBooleanExpression, En
 import { Entity } from "./Entity";
 import { User } from "./User";
 
+/**
+ * Lists the user roles that are built-in on the entities
+ */
+export const BuiltinRoles = Object.freeze({
+    /**
+     * All users have this role
+     */
+    USER: "all",
+
+    /**
+     * Automatically assigned to the user who created this entity
+     */
+    OWNER: "owner",
+
+    /**
+     * (Applies only for channels)
+     *
+     * Automatically assigned to whoever enters this channel
+     *
+     * Automatically revoked from whoever leaves this channel
+     */
+    MEMBER: "inside",
+
+    /**
+     * Equivalent to the owner of the channel this entity is in
+     */
+    HOST: "host",
+}) as Readonly<KeyValue<EntityBuiltinRoleName, "USER"|"OWNER"|"MEMBER"|"HOST">>;
 export class UserRoles {
     /**
      * Adds user roles to the entity
@@ -43,7 +71,7 @@ export class UserRoles {
             },
 
             list: (user: User) => {
-                const list: EntityBuiltinRoleName[] = ["all"];
+                const list: EntityBuiltinRoleName[] = [BuiltinRoles.USER];
 
                 for (const _role in roleLists) {
                     const role = _role as EntityBuiltinRoleName;
@@ -61,9 +89,13 @@ export class UserRoles {
             verify: (user: User|string[], role: EntityBuiltinRoleName) => {
                 if (user instanceof Array) return user.includes(role);
 
-                if (role === "all") return true;
-                roleLists[role] ??= [];
-                return !!roleLists[role].find(currentUser => currentUser.is(user));
+                switch (role) {
+                    case BuiltinRoles.USER:
+                        return true;
+                    default:
+                        roleLists[role] ??= [];
+                        return !!roleLists[role].find(currentUser => currentUser.is(user));
+                }
             },
 
             verifyExpression: (user: User|string[], expression: EntityRoleBooleanExpression) => {

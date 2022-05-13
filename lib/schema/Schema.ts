@@ -7,6 +7,7 @@ import { Entity } from "./Entity";
 import { Server } from "../connection";
 import { Channel } from "./Channel";
 import { UserRoles } from ".";
+import { BuiltinRoles } from "./Roles";
 
 export abstract class Schema {
     private static _schemas: KeyValue<EntitySchema<any>, string> = {};
@@ -19,7 +20,6 @@ export abstract class Schema {
         if (!privateSchema) {
             const dummy = new entityClass({ server: Server.dummy, channel: Server.dummy.mainChannel, dummy: true });
             const attributeList = Entity.attributes(dummy);
-            dummy.delete();
 
             const getType = (object: any, attributeName: string): string | undefined => {
                 const type = Reflect.getMetadata(
@@ -36,7 +36,7 @@ export abstract class Schema {
                 className: dummy.type,
                 userRoles: {
                     all: {
-                        name: "all",
+                        name: BuiltinRoles.USER,
                         value: 0
                     }
                 },
@@ -152,9 +152,7 @@ export abstract class Schema {
              * of listing the allowed roles (whitelist), it lists the denied roles (blacklist)
              */
             for (const key of ["input", "output"] as ("input" | "output")[]) {
-                let addToBinary = [] as number[];
-                addToBinary = whitelist[key].length <= maxWhitelistLength ? [...whitelist[key]] : [...blacklist[key]];
-                attribute.binary[key] = [...addToBinary];
+                attribute.binary[key] = whitelist[key].length <= maxWhitelistLength ? whitelist[key] : blacklist[key];
             }
         }
     }
@@ -205,7 +203,7 @@ export abstract class Schema {
         for (const entityName in schema) {
             const entitySchema = schema[entityName];
 
-            const userRoles = Object.keys(entitySchema.userRoles).filter(role => role !== "all"); // "all" is excluded beacuse it's impossible for an user to not have this role
+            const userRoles = Object.keys(entitySchema.userRoles).filter(role => role !== BuiltinRoles.USER); // "all" is excluded beacuse it's impossible for an user to not have this role
 
             fileContent += `namespace ${entityName} {`;
 
@@ -213,7 +211,7 @@ export abstract class Schema {
 
             // 2^n possible combinations
             for (let counter = 0; counter < Math.pow(2, userRoles.length); counter++) {
-                const includedRoles: string[] = ["all"];
+                const includedRoles: string[] = [BuiltinRoles.USER];
                 let booleanRoleDeclarations = "";
 
                 /**
@@ -246,11 +244,11 @@ export abstract class Schema {
                     }
                 }
 
-                const interfaceName = includedRoles.length > 1 ? includedRoles.map(role => role === "all" ? "" : StringTransform.capitalize(role)).join("") : "Default";
+                const interfaceName = includedRoles.length > 1 ? includedRoles.map(role => role === BuiltinRoles.USER ? "" : StringTransform.capitalize(role)).join("") : "Default";
                 roleCombinations.push(interfaceName);
 
                 fileContent += `export interface ${interfaceName} extends ${entitySchema.isChannel ? "Channel" : "Entity"} {
-                    readonly owned: ${includedRoles.includes("owner")}; ${entitySchema.isChannel ? `readonly inside: ${includedRoles.includes("inside")};` : ""}
+                    readonly owned: ${includedRoles.includes(BuiltinRoles.OWNER)}; ${entitySchema.isChannel ? `readonly inside: ${includedRoles.includes(BuiltinRoles.MEMBER)};` : ""}
                     readonly roles: {
                         ${booleanRoleDeclarations}
                     }

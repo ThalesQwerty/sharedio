@@ -1,6 +1,7 @@
 import { Channel } from ".";
 import { EntityAttributeName, EntityRoleBooleanExpression, EntitySchema, EntitySchemaAttribute, KeyValue } from "../types";
 import { Entity } from "./Entity";
+import { BuiltinRoles } from "./Roles";
 
 function getSchema<EntityType extends Entity>(entity: EntityType) {
     return (entity.constructor as typeof Entity).schema;
@@ -86,7 +87,7 @@ export function input<EntityType extends Entity>(
     entity: EntityType,
     attributeName: EntityAttributeName<EntityType>
 ) {
-    inputFor("owner")(entity, attributeName);
+    inputFor(BuiltinRoles.OWNER)(entity, attributeName);
 };
 
 /**
@@ -104,7 +105,7 @@ export function output<EntityType extends Entity>(
     entity: EntityType,
     attributeName: EntityAttributeName<EntityType>
 ) {
-    (entity instanceof Channel ? outputFor("inside") : outputFor("all"))(entity, attributeName);
+    (entity instanceof Channel ? outputFor(BuiltinRoles.MEMBER) : outputFor(BuiltinRoles.USER))(entity, attributeName);
 };
 
 /**
@@ -118,5 +119,5 @@ export function hidden<EntityType extends Entity>(
     entity: EntityType,
     attributeName: EntityAttributeName<EntityType>
 ) {
-    hiddenFor("all")(entity, attributeName);
+    hiddenFor(BuiltinRoles.USER)(entity, attributeName);
 };
