@@ -16,7 +16,7 @@ import {
     EntityRolesInterface,
     EntityRolesData,
 } from "../types";
-import { HasEvents, ObjectTransform, WatchObject } from "../utils";
+import { HasEvents, ObjectTransform, WatchedObject } from "../utils";
 import { Mixin } from "../utils/Mixin";
 import "reflect-metadata";
 
@@ -49,7 +49,7 @@ class Entity
     }
 
     public static get schema(): EntitySchema {
-        return Schema.generate(this, this._schema);
+        return this._schema ?? (this._schema = Schema.generate(this));
     }
     private static _schema?: EntitySchema;
 
@@ -57,12 +57,15 @@ class Entity
         super("Entity");
 
         if (dummy) {
-            server = Server.dummy;
-            channel = Server.dummy.mainChannel;
+            this._channel = undefined as any;
+            this._server = undefined as any;
+            this._owner = owner ?? null;
 
             // Disables event listeners for dummy entities
             this.on = (event: any, callback: any) => undefined;
             this.off();
+
+            return this;
         }
 
         channel ??= server?.mainChannel;
@@ -85,52 +88,6 @@ class Entity
             if (!this._channel || !this._server) throw new SharedIOError("serverAndChannelUndefined");
 
             this._exists = true;
-
-            const attributeList = Entity.attributes(this);
-            WatchObject(
-                this,
-                this.state,
-                "data",
-                ({ path, newValue }) => {
-                    console.log("setting", this.type, path, newValue);
-                    ObjectTransform.set(this.state.changes, path, newValue);
-                    this.state.emitChanges();
-                },
-                attributeList
-            )
-
-            const schema = (this.constructor as any).schema as EntitySchema<this>;
-
-            if (schema) {
-                for (const attributeName in schema.attributes) {
-                    if (attributeName in this) {
-                        const rules = schema.attributes[attributeName as EntityAttributeName<this>];
-
-                        if (rules.type !== "function") {
-                            this.state.data[attributeName as EntityAttributeName<this>] = rules.initialValue;
-
-                            if (rules && rules.dependencies.length) {
-                                this.bind(attributeName, rules.dependencies);
-                            }
-
-                            if (initialState) {
-                                const value = (initialState as any)[
-                                    attributeName
-                                ];
-                                if (value !== undefined)
-                                    (this as any)[attributeName] = value;
-                            }
-                        }
-                    }
-                }
-            }
-
-            this._server.entities.push(this as SharedEntity);
-
-            this.emit("create", {
-                entity: this,
-                user: owner,
-            });
         });
     }
 
@@ -177,31 +134,6 @@ class Entity
     }
     private _exists: boolean|null = null;
 
-    private readonly state: EntityState<this> = {
-        data: {},
-        changes: {},
-        hasChanges: false,
-        emitChanges: () => {
-            this.state.hasChanges = true;
-
-            process.nextTick(() => {
-                if (this.state.hasChanges) {
-                    this.emit("change", {
-                        entity: this,
-                        changes: ObjectTransform.clone(this.state.changes)
-                    });
-
-                    // this.channel.queue.add(this as Entity);
-                    this.state.hasChanges = false;
-
-                    process.nextTick(() => {
-                        this.state.changes = {};
-                    });
-                }
-            })
-        }
-    };
-
     private _roles: EntityRolesData = {
         lists: {},
         binary: {}
@@ -240,69 +172,6 @@ class Entity
 
             return true;
         }
-    }
-
-    /**
-     * This function will be called right after this entity is successfully created
-     */
-    public readonly then: (listener: EntityCreateListener<this>) => this = (listener: EntityCreateListener<this>): this => {
-        this.on("create", listener);
-        return this;
-    }
-
-    /**
-     * This function will be called if the entity fails to be created
-     */
-    public readonly catch: (listener: EntityFailedCreateListener<this>) => this = (listener: EntityFailedCreateListener<this>): this => {
-        this.on("failedCreate", listener);
-        return this;
-    }
-
-    /**
-     * Manually informs SharedIO that certain values of this entity are dependant on other values from this entity.
-     */
-    protected readonly bind = (properties: string | string[], dependencies: string | string[]) => {
-        const propertyArray = (properties instanceof Array ? properties : [properties]) as EntityAttributeName<this>[];
-        const dependencyArray = (dependencies instanceof Array ? dependencies : [dependencies]) as EntityAttributeName<this>[];
-
-        const notFound: string[] = [];
-
-        for (const dependencyName of dependencyArray) {
-            for (const propertyName of propertyArray) {
-                if (dependencyName === propertyName) throw new SharedIOError("circularPropertyDepedency", propertyName);
-
-                if (!(propertyName in this) && notFound.indexOf(propertyName) < 0) notFound.push(propertyName);
-                if (!(dependencyName in this) && notFound.indexOf(dependencyName) < 0) notFound.push(dependencyName);
-            }
-        }
-
-        if (notFound.length) throw new SharedIOError("entityAttributesNotFound", this.type, notFound);
-
-        this.on("change", ({ changes }: EntityChangeEvent) => {
-            let hasDependenciesChanged = false;
-
-            for (const dependencyName of dependencyArray) {
-                if (Object.keys(changes).indexOf(dependencyName) >= 0) {
-                    hasDependenciesChanged = true;
-
-                    for (const propertyName of propertyArray) {
-                        const oldValue = this.state.data[propertyName];
-                        const newValue = this[propertyName];
-
-                        if (!ObjectTransform.isEqual(oldValue, newValue)) {
-                            this.state.changes[propertyName] = newValue;
-                            this.state.hasChanges = true;
-                        }
-                    }
-
-                    this.state.emitChanges();
-
-                    break;
-                }
-            }
-        })
-
-        return this;
     }
 }
 

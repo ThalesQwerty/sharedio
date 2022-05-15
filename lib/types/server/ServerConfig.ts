@@ -34,4 +34,6 @@ export interface ServerConfig {
     tickRate?: number;
 
     clientSchema?: ClientSchemaConfig;
+
+    dummy?: boolean;
 }

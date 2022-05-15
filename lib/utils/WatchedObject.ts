@@ -1,108 +1,86 @@
-import { Entity } from "../schema";
-import { KeyValue } from "../types";
-import { ObjectTransform } from "./ObjectTransform";
+type WatchedObjectChangeHandler = (params: { propertyName: string, previousValue: unknown, value: unknown }) => void;
+type WatchedObjectCallHandler = (params: { methodName: string, parameters: any[] }) => void;
 
-function isObject(value: any) {
-    return value instanceof Object && typeof value !== "function";
-}
+type WatchedObjectHandlers = {
+    write?: WatchedObjectChangeHandler,
+    call?: WatchedObjectCallHandler
+};
 
-export type WatchedObjectChangeHandler = (params: {
-    object: object, path: string, oldValue: unknown, newValue: unknown
-}) => void
+type WatchedObjectOptions<ObjectType extends object> = {
+    include?: (keyof ObjectType)[],
+    exclude?: (keyof ObjectType)[]
+};
 
-export function WatchObject<T extends Object>(object: T, dataStorage: KeyValue, key: string, onChange: WatchedObjectChangeHandler, watchedKeys?: string[]) {
-    dataStorage[key] = {};
-    watchedKeys ??= Object.keys(object);
+export function WatchedObject<ObjectType extends object>(object: ObjectType, eventHandlers: WatchedObjectHandlers, options: WatchedObjectOptions<ObjectType> = {}, previousPath: string[] = []): ObjectType {
+    type ObjectKey = keyof ObjectType;
 
-    if (object instanceof Array) {
-        dataStorage[key] = object;
-        const data = dataStorage[key];
-
-        return new Proxy(object, {
-            apply: (methodName: string, target: any, argumentsList: any[]) => {
-                return target[methodName].apply(data, argumentsList);
-            },
-            deleteProperty: () => {
-                return true;
-            },
-            set: (target: any, propertyName: string, newValue: any) => {
-                const oldValue = target[propertyName];
-                const oldArray = [...data];
-
-                target[propertyName] = newValue;
-                data[propertyName] = newValue;
-
-                if (oldValue !== newValue) {
-                    onChange({ object, path: "", newValue: [...data], oldValue: oldArray });
-                }
-                return true;
-            }
-        });
+    const getPath = (propertyName: string) => {
+        return [...previousPath, propertyName];
     }
 
-    const data = dataStorage[key];
-
-    for (const propertyName of watchedKeys) {
-        const value = (object as any)[propertyName];
-        data[propertyName] = isObject(value) ? ObjectTransform.clone(value) : value;
-
-        delete (object as any)[propertyName];
-
-        Object.defineProperty(object, propertyName, {
-            get: () => {
-                const value = data[propertyName];
-
-                if (isObject(value)) {
-                    return WatchObject(value, data, propertyName, ({ path, ...params }) => {
-                        onChange({ path: path ? `${propertyName}.${path}` : propertyName, ...params })
-                    });
-                } else {
-                    return value;
-                }
-            },
-            set: (newValue: any) => {
-                const oldValue = data[propertyName];
-                data[propertyName] = newValue;
-                if (newValue !== oldValue) {
-                    onChange({ object, path: `${propertyName}`, newValue, oldValue });
-                }
-            },
-            configurable: true,
-            enumerable: true,
-        })
+    const shouldWatchKey = (_propertyName: string) => {
+        const propertyName = _propertyName as ObjectKey;
+        if (options.exclude?.includes(propertyName) || (options.include && !options.include?.includes(propertyName))) return false;
+        else return true;
     }
 
     return new Proxy(object, {
-        get: (target: any, propertyName: string) => {
-            return target[propertyName];
+        get(target: any, propertyName: string) {
+            const value = target[propertyName];
+            if (!shouldWatchKey(propertyName)) return value;
+
+            if (value instanceof Function) {
+                return function (...args: any[]) {
+                    eventHandlers.call?.({ methodName: getPath(propertyName).join("."), parameters: args });
+                    value(...args);
+                }
+            } else if (value instanceof Array) {
+                return new Proxy(value, {
+                    apply: (methodName: string, target: any, argumentsList: any[]) => {
+                        return target[methodName].apply(target, argumentsList);
+                    },
+                    deleteProperty: () => {
+                        return true;
+                    },
+                    set: (target: any, index: string, newValue: any) => {
+                        const oldValue = target[index];
+                        const oldArray = [...target];
+
+                        target[index] = newValue;
+
+                        if (oldValue !== newValue) {
+                            eventHandlers.write?.({
+                                propertyName: getPath(propertyName).join("."),
+                                value: target,
+                                previousValue: oldArray
+                            });
+                        }
+                        return true;
+                    }
+                });
+            } else if (value instanceof Object) {
+                return WatchedObject(value, eventHandlers, {}, getPath(propertyName));
+            }
+            else {
+                return value;
+            }
         },
-        set: (target: any, propertyName: string, newValue: any) => {
+        set(target: any, propertyName: string, newValue: any) {
             const oldValue = target[propertyName];
+
             target[propertyName] = newValue;
 
-            // detects the creation of a new property
-            if (Object.keys(data).indexOf(propertyName) < 0) {
-                onChange({ object, path: propertyName, newValue, oldValue });
+            if (shouldWatchKey(propertyName) && newValue !== oldValue) {
+                eventHandlers.write?.({ propertyName: getPath(propertyName).join("."), value: target[propertyName], previousValue: oldValue });
             }
 
-            data[propertyName] = newValue;
             return true;
         },
-        deleteProperty: (target: any, propertyName: string) => {
-            Object.defineProperty(target, propertyName, {
-                ...Object.getOwnPropertyDescriptor(target, propertyName),
-                configurable: true
-            });
-
-            if (Object.keys(data).indexOf(propertyName) >= 0) {
-                console.log("deleted ", propertyName);
-                const oldValue = target[propertyName];
-                onChange({ object, path: propertyName, newValue: undefined, oldValue });
+        deleteProperty(target: any, propertyName: string) {
+            if (shouldWatchKey(propertyName) && propertyName in target) {
+                eventHandlers.write?.({ propertyName: getPath(propertyName).join("."), value: undefined, previousValue: target[propertyName] });
             }
-
-            delete target[propertyName];
-            delete data[propertyName];
             return true;
         }
-    });
+    } as ProxyHandler<any>);
 }

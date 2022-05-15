@@ -7,7 +7,7 @@ import {
     ServerStartListener,
     EntityAttributeName,
 } from "../types";
-import { User, Entity, SharedEntity, Channel, SharedChannel } from "../schema";
+import { User, Entity, SharedEntity, Channel, SharedChannel, EntityCreateFunction } from "../schema";
 import { Queue } from "../schema/Queue";
 import { Mixin } from "../utils/Mixin";
 import { generateClientSchema } from "../scripts";
@@ -26,7 +26,7 @@ class RawServer extends HasId {
      * Returns a dummy server for testing/mocking purposes
      */
     static get dummy() {
-        if (!this._dummy) this._dummy = new Server();
+        if (!this._dummy) this._dummy = new Server({ dummy: true });
 
         return this._dummy;
     }
@@ -138,6 +138,17 @@ class RawServer extends HasId {
     }
     private _serverStartTimestamp: number = 0;
 
+    /**
+     * Creates an entity inside the server's main channel
+     */
+    public get create() {
+        const fn = <EntityType extends Entity = Entity>(...args: Parameters<EntityCreateFunction<EntityType>>) => {
+            return (this.mainChannel.create as any)(...args) as EntityType;
+        };
+
+        return fn;
+    }
+
     constructor(config: ServerConfig = {}) {
         super("RawServer");
 
@@ -148,7 +159,7 @@ class RawServer extends HasId {
         config.debug ??= false;
         config.mainChannel ??= SharedChannel;
 
-        this._mainChannel = new config.mainChannel({ server: this }) as SharedChannel;
+        this._mainChannel = new config.mainChannel({ server: this, dummy: config.dummy }) as SharedChannel;
         this._config = ObjectTransform.clone(config);
     }
 

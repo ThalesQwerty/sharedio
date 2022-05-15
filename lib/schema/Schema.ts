@@ -16,89 +16,87 @@ export abstract class Schema {
         return ObjectTransform.clone(this._schemas);
     }
 
-    static generate<EntityType extends Entity = Entity>(entityClass: typeof Entity, privateSchema?: EntitySchema<EntityType>) {
-        if (!privateSchema) {
-            const dummy = new entityClass({ server: Server.dummy, channel: Server.dummy.mainChannel, dummy: true });
-            const attributeList = Entity.attributes(dummy);
+    static generate<EntityType extends Entity = Entity>(entityClass: typeof Entity) {
+        const dummy = new entityClass({ server: Server.dummy, channel: Server.dummy.mainChannel, dummy: true });
+        const attributeList = Entity.attributes(dummy);
 
-            const getType = (object: any, attributeName: string): string | undefined => {
-                const type = Reflect.getMetadata(
-                    "design:type",
-                    object,
-                    attributeName
-                )?.name.toLowerCase() as EntityAttributeType;
+        const getType = (object: any, attributeName: string): string | undefined => {
+            const type = Reflect.getMetadata(
+                "design:type",
+                object,
+                attributeName
+            )?.name.toLowerCase() as EntityAttributeType;
 
-                return type === "object" ? undefined : type;
-            }
-
-            // Workaround private access modifier
-            privateSchema = (entityClass as any)["_schema"] = {
-                className: dummy.type,
-                userRoles: {
-                    all: {
-                        name: BuiltinRoles.USER,
-                        value: 0
-                    }
-                },
-                isChannel: dummy instanceof Channel,
-                attributes: {} as any
-            };
-
-            const defaultSchema: EntitySchemaAttribute<EntityType> = {
-                name: "" as EntityAttributeName<EntityType>,
-                type: "any",
-                initialValue: undefined,
-                dependencies: [],
-                output: "",
-                input: "",
-                get: false,
-                set: false,
-                binary: {
-                    input: [],
-                    output: [],
-                }
-            };
-
-            for (const _attributeName of attributeList) {
-                const attributeName = _attributeName as EntityAttributeName<EntityType>;
-                const initialValue = (dummy as any)[attributeName];
-                privateSchema.attributes[attributeName] = {
-                    ...ObjectTransform.clone(defaultSchema),
-                    name: attributeName,
-                    type: getType(dummy, attributeName) ?? typeof initialValue,
-                    initialValue
-                }
-            }
-
-            const computedAttributes = Object.getOwnPropertyDescriptors(entityClass.prototype);
-
-            for (const _attributeName in computedAttributes) {
-                const attributeName = _attributeName as EntityAttributeName<EntityType>;
-                if (attributeName !== "constructor") {
-                    const propertyDescriptor = computedAttributes[attributeName];
-                    const dependencies = ExtractDependencies(entityClass as typeof Entity, attributeName) as EntityAttributeName<EntityType>[];
-                    const initialValue = (dummy as any)[attributeName];
-
-                    privateSchema.attributes[attributeName] = {
-                        ...defaultSchema,
-                        name: attributeName,
-                        type: getType(entityClass.prototype, attributeName) ?? typeof initialValue,
-                        initialValue,
-                        get: !!propertyDescriptor.get,
-                        set: !!propertyDescriptor.set,
-                        dependencies
-                    }
-                }
-            }
-
-            this._schemas[entityClass.name] = privateSchema;
-
-            process.nextTick(() => {
-                this.optimize(privateSchema as EntitySchema<EntityType>);
-            });
+            return type === "object" ? undefined : type;
         }
 
-        return privateSchema as EntitySchema<EntityType>;
+        const generatedSchema = {
+            className: dummy.type,
+            userRoles: {
+                all: {
+                    name: BuiltinRoles.USER,
+                    value: 0
+                }
+            },
+            isChannel: dummy instanceof Channel,
+            attributes: {} as any
+        };
+
+        const defaultSchema: EntitySchemaAttribute<EntityType> = {
+            name: "" as EntityAttributeName<EntityType>,
+            type: "any",
+            initialValue: undefined,
+            dependencies: [],
+            output: "",
+            input: "",
+            get: false,
+            set: false,
+            binary: {
+                input: [],
+                output: [],
+            }
+        };
+
+        for (const _attributeName of attributeList) {
+            const attributeName = _attributeName as EntityAttributeName<EntityType>;
+            const initialValue = (dummy as any)[attributeName];
+            generatedSchema.attributes[attributeName] = {
+                ...ObjectTransform.clone(defaultSchema),
+                name: attributeName,
+                type: getType(dummy, attributeName) ?? typeof initialValue,
+                initialValue
+            }
+        }
+
+        const computedAttributes = Object.getOwnPropertyDescriptors(entityClass.prototype);
+
+        for (const _attributeName in computedAttributes) {
+            const attributeName = _attributeName as EntityAttributeName<EntityType>;
+            if (attributeName !== "constructor") {
+                const propertyDescriptor = computedAttributes[attributeName];
+                const dependencies = ExtractDependencies(entityClass as typeof Entity, attributeName) as EntityAttributeName<EntityType>[];
+                const initialValue = (dummy as any)[attributeName];
+
+                generatedSchema.attributes[attributeName] = {
+                    ...defaultSchema,
+                    name: attributeName,
+                    type: getType(entityClass.prototype, attributeName) ?? typeof initialValue,
+                    initialValue,
+                    get: !!propertyDescriptor.get,
+                    set: !!propertyDescriptor.set,
+                    dependencies
+                }
+            }
+        }
+
+        this._schemas[entityClass.name] = generatedSchema;
+
+        // Can only execute after the entities' decorators have been executed
+        process.nextTick(() => {
+            this.optimize(generatedSchema as EntitySchema<EntityType>);
+        });
+
+        return generatedSchema as EntitySchema<EntityType>;
     }
 
     /**
