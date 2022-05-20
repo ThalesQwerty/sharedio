@@ -1,15 +1,14 @@
 import WS from "ws";
 import {
     Server,
-    SharedIORequest,
-    SharedIOResponse,
-    PongRequest,
+    Input,
+    Output,
+    PongInput,
 } from "./";
 import { HasId, RandomHex } from "../utils";
 import { Mixin } from "../utils/Mixin";
 import {
     KeyValue,
-    ClientEvents,
     ClientListenerOverloads,
     ClientEmitterOverloads,
 } from "../types";
@@ -25,9 +24,13 @@ class RawClient extends HasId {
     public set user(newUser) {
         if (newUser) {
             this.send({
-                action: "auth",
-                userId: newUser.id,
-                token: newUser.token,
+                type: "auth",
+                id: "",
+                data: {
+                    userId: newUser.id,
+                    token: newUser.token
+                },
+                user: null
             });
             this._user = newUser;
         }
@@ -102,7 +105,7 @@ class RawClient extends HasId {
         ws.removeAllListeners();
 
         ws.on("message", (data) => {
-            this.recieve(data);
+            this.handleInput(data);
         });
 
         ws.on("open", () => {
@@ -127,47 +130,49 @@ class RawClient extends HasId {
         this._ws = ws;
     }
 
-    public recieve(data: WS.RawData) {
-        const request: SharedIORequest = JSON.parse(data.toString());
+    public handleInput(data: WS.RawData) {
+        const input: Input = JSON.parse(data.toString());
 
-        switch (request.action) {
+        if (this.user) this.server.currentUser = this.user;
+
+        switch (input.type) {
             case "auth": {
                 this.emit("auth", {
-                    request: request,
+                    request: input,
                 });
                 this.sendPing();
                 break;
             }
             case "pong": {
-                this.sendPing(request);
+                this.sendPing(input);
                 break;
             }
             case "write": {
                 if (this.user) {
-                    const entity = Entity.find(request.entityId);
+                    const entity = Entity.find(input.data.entityId);
 
                     if (entity) {
-                        this.user.action.write(entity, request.props);
+                        this.user.action.write(entity, input.data.properties);
                     }
                 }
                 break;
             }
             case "call": {
                 if (this.user) {
-                    const entity = Entity.find(request.entityId);
+                    const entity = Entity.find(input.data.entityId);
 
                     if (entity) {
                         this.user.action.call(
                             entity as any,
-                            request.methodName,
-                            request.params,
+                            input.data.methodName,
+                            input.data.parameters,
                         );
                     }
                 }
                 break;
             }
             default: {
-                this.emit("message", { request });
+                this.emit("message", { input });
                 break;
             }
         }
@@ -189,7 +194,8 @@ class RawClient extends HasId {
      * Sends a message to the client
      * @param message Message to be sent. It has to be one of the possible SharedIO response types
      */
-    public send(message: SharedIOResponse) {
+    public send(message: Output) {
+        delete (message as any).user;
         this.sendRaw(message);
     }
 
@@ -197,8 +203,8 @@ class RawClient extends HasId {
      * Sends a new "ping" message to the client and calculates the connection round trip time
      * @param pongRequest The pong sent by the client in response to the last packet
      */
-    private sendPing(pongRequest?: PongRequest) {
-        const match = pongRequest?.packetId === this._currentPacketId;
+    private sendPing(pongRequest?: PongInput) {
+        const match = pongRequest?.data.packetId === this._currentPacketId;
         if (!pongRequest || match) {
             this._currentPacketId = RandomHex(8);
             if (match) {
@@ -210,10 +216,14 @@ class RawClient extends HasId {
         this.log(`Sending ping: ${this._currentPacketId}`);
 
         this.send({
-            action: "ping",
-            packetId: this._currentPacketId,
-            roundTripTime: this.ping,
-            packetLossRatio: this.packetLoss,
+            type: "ping",
+            id: this._currentPacketId,
+            data: {
+                packetId: this._currentPacketId,
+                roundTripTime: this.ping,
+                packetLossRatio: this.packetLoss,
+            },
+            user: null
         });
         this._packetsSent++;
 

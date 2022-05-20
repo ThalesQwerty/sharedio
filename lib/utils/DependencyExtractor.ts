@@ -16,7 +16,6 @@ export function ExtractDependencies(entityClass: typeof Entity, computedProperty
         const runGet = () => {
             if (currentDescriptor?.get) {
                 const code = removeFlowControl(currentDescriptor.get.toString().replace("function ()", "if (true)"));
-                console.log("code", code);
                 eval(code);
             }
         }

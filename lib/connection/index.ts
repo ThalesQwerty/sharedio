@@ -1,4 +1,4 @@
 export * from "./Client";
 export * from "./Server";
-export * from "./Request";
-export * from "./Response";
+export * from "./Input";
+export * from "./Output";

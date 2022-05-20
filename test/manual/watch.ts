@@ -58,6 +58,5 @@ const test = server.create(WatchTestEntity);
 
 test.method(test.number);
 test.string = "oxe";
-console.log(test.computed);
 test.computed = 50;
 test.array.push(3);

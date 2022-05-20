@@ -1,25 +1,25 @@
-import { SharedIORequest, AuthRequest, PongRequest, Client } from "../../connection";
+import { Input, AuthInput, PongInput, Client } from "../../connection";
 import { ListenerOverloads, EmitterOverloads } from "../../utils";
-import { WriteRequest, CallRequest } from "../../connection/Request";
+import { WriteInput, CallInput } from "../../connection/Input";
 
 interface ClientAuthEvent {
-    request: AuthRequest;
+    input: AuthInput;
 }
 
 interface ClientMessageEvent {
-    request: SharedIORequest;
+    input: Input;
 }
 
 interface ClientPongEvent {
-    request: PongRequest;
+    input: PongInput;
 }
 
 interface ClientWriteEvent {
-    request: WriteRequest;
+    input: WriteInput;
 }
 
 interface ClientCallEvent {
-    request: CallRequest;
+    input: CallInput;
 }
 
 interface ClientCloseEvent {}

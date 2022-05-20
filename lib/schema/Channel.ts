@@ -1,5 +1,5 @@
 import { ChannelListenerOverloads, ChannelEmitterOverloads, EntityConfig, KeyValue, EntityRolesInterface, EntityBuiltinRoleName, EntityAttributeName, EntitySchema } from "../types";
-import { HasEvents, WatchedObject } from "../utils";
+import { HasEvents, ObjectTransform, RandomHex, WatchedObject } from "../utils";
 import { Mixin } from "../utils/Mixin";
 import { Entity, SharedEntity } from "./Entity";
 import { User, Queue } from ".";
@@ -70,11 +70,46 @@ class Channel extends Entity implements ChannelFunctions {
         });
 
         return WatchedObject(newEntity, {
-            write(e) {
-                console.log("write", e);
+            write: ({ propertyName, previousValue, attemptedValue, value}) => {
+                // TO-DO: allow computed property binding
+                /*
+                    const propertySchema = newEntity.schema.attributes[e.propertyName as EntityAttributeName<EntityType>];
+
+                    for (const dependency of propertySchema.dependencies) {
+
+                    }
+                */
+
+                /*
+                    If the "set" mutator of the property alters the value that would be written into the property,
+                    the server should also send to the author the new value.
+
+                    Otherwise, it will be sent to everyone in the channel except for the author of the change in order
+                    to avoid unnecessary latency issues, since they know the new value already.
+                 */
+                const shouldSendToAuthor = (typeof value !== typeof attemptedValue) || (value instanceof Object ? !ObjectTransform.isEqual(value, attemptedValue) : value !== attemptedValue);
+
+                this.queue.addOutput({
+                    type: "write",
+                    data: {
+                        entityId: newEntity.id,
+                        properties: {
+                            [propertyName]: value
+                        }
+                    },
+                    user: shouldSendToAuthor ? null : this.server.currentUser
+                });
             },
-            call(e) {
-                console.log("call", e);
+            call: ({ methodName, parameters }) => {
+                this.queue.addOutput({
+                    type: "call",
+                    data: {
+                        entityId: newEntity.id,
+                        methodName: methodName,
+                        parameters: parameters
+                    },
+                    user: this.server.currentUser
+                })
             }
         }, {
             exclude: Entity.reservedAttributes as (keyof EntityType)[]

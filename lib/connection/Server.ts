@@ -1,18 +1,13 @@
 import {
-    KeyValue,
     ServerConfig,
-    ServerEvents,
     ServerEmitterOverloads,
     ServerListenerOverloads,
     ServerStartListener,
-    EntityAttributeName,
 } from "../types";
 import { User, Entity, SharedEntity, Channel, SharedChannel, EntityCreateFunction } from "../schema";
-import { Queue } from "../schema/Queue";
 import { Mixin } from "../utils/Mixin";
-import { generateClientSchema } from "../scripts";
 import { HasEvents, HasId, ObjectTransform } from "../utils";
-import { SharedIORequest, Client } from ".";
+import { Client } from ".";
 import WS from "ws";
 import { Schema } from "../schema/Schema";
 
@@ -138,6 +133,17 @@ class RawServer extends HasId {
     }
     private _serverStartTimestamp: number = 0;
 
+    public get currentUser() {
+        return this._currentUser;
+    }
+    public set currentUser(user) {
+        this._currentUser = user;
+        process.nextTick(() => {
+            this._currentUser = null;
+        });
+    }
+    private _currentUser: User | null = null;
+
     /**
      * Creates an entity inside the server's main channel
      */
@@ -233,7 +239,7 @@ class RawServer extends HasId {
     private tick() {
         this._ticks++;
 
-        const channels:SharedChannel[] = [];
+        const channels: SharedChannel[] = [];
 
         this.entities.forEach((entity) => {
             if (entity.exists) {
@@ -262,8 +268,8 @@ class RawServer extends HasId {
      */
     private handleNewConnection(ws: WS.WebSocket) {
         const newClient = new Client(ws, this);
-        newClient.on("auth", ({ request }) => {
-            const { token } = request;
+        newClient.on("auth", ({ input }) => {
+            const { token } = input.data;
             const newUser =
                 User.auth(newClient, this, token) ||
                 new User(this, newClient);
@@ -287,8 +293,8 @@ class RawServer extends HasId {
                 newUser.view.reset();
             });
 
-            newClient.on("message", ({ request }) => {
-                this.emit("message", request);
+            newClient.on("message", ({ input }) => {
+                this.emit("message", input);
             });
         });
     }
@@ -319,4 +325,4 @@ interface RawServer extends HasEvents {
     on: ServerListenerOverloads
 }
 
-export class Server extends Mixin(RawServer, [HasEvents]) {};
+export class Server extends Mixin(RawServer, [HasEvents]) { };

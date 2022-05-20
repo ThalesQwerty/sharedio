@@ -76,8 +76,12 @@ export class View {
 
         if (Object.keys(difference.add).length || difference.remove.length) {
             this.user.client.send({
-                action: "view",
-                ...difference,
+                type: "view",
+                id: "",
+                data: {
+                    ...difference
+                },
+                user: null
             });
         }
 

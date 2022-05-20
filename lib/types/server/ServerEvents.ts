@@ -1,6 +1,6 @@
 import { User } from "../../schema";
 import { ListenerOverloads, EmitterOverloads } from "../../utils";
-import { Server, SharedIORequest } from "../../connection";
+import { Server, Input } from "../../connection";
 
 interface ServerStartEvent {}
 interface ServerConnectionEvent {
@@ -13,7 +13,7 @@ interface ServerDisconnectionEvent {
 
 interface ServerMessageEvent {
     user: User;
-    message: SharedIORequest;
+    message: Input;
 }
 
 export interface ServerTickEvent {}

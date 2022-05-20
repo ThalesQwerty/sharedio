@@ -1,4 +1,4 @@
-type WatchedObjectChangeHandler = (params: { propertyName: string, previousValue: unknown, value: unknown }) => void;
+type WatchedObjectChangeHandler = (params: { propertyName: string, previousValue: unknown, attemptedValue: unknown, value: unknown }) => void;
 type WatchedObjectCallHandler = (params: { methodName: string, parameters: any[] }) => void;
 
 type WatchedObjectHandlers = {
@@ -42,16 +42,17 @@ export function WatchedObject<ObjectType extends object>(object: ObjectType, eve
                     deleteProperty: () => {
                         return true;
                     },
-                    set: (target: any, index: string, newValue: any) => {
+                    set: (target: any, index: string, newArray: any) => {
                         const oldValue = target[index];
                         const oldArray = [...target];
 
-                        target[index] = newValue;
+                        target[index] = newArray;
 
-                        if (oldValue !== newValue) {
+                        if (oldValue !== newArray) {
                             eventHandlers.write?.({
                                 propertyName: getPath(propertyName).join("."),
                                 value: target,
+                                attemptedValue: newArray,
                                 previousValue: oldArray
                             });
                         }
@@ -71,14 +72,14 @@ export function WatchedObject<ObjectType extends object>(object: ObjectType, eve
             target[propertyName] = newValue;
 
             if (shouldWatchKey(propertyName) && newValue !== oldValue) {
-                eventHandlers.write?.({ propertyName: getPath(propertyName).join("."), value: target[propertyName], previousValue: oldValue });
+                eventHandlers.write?.({ propertyName: getPath(propertyName).join("."), value: target[propertyName], previousValue: oldValue, attemptedValue: newValue });
             }
 
             return true;
         },
         deleteProperty(target: any, propertyName: string) {
             if (shouldWatchKey(propertyName) && propertyName in target) {
-                eventHandlers.write?.({ propertyName: getPath(propertyName).join("."), value: undefined, previousValue: target[propertyName] });
+                eventHandlers.write?.({ propertyName: getPath(propertyName).join("."), value: undefined, attemptedValue: undefined, previousValue: target[propertyName] });
             }
             return true;
         }

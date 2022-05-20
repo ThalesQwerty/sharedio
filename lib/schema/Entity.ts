@@ -134,6 +134,13 @@ class Entity
     }
     private _exists: boolean|null = null;
 
+    /**
+     * The user who's curently using the entity
+     */
+    public get user() {
+        return this.server.currentUser;
+    }
+
     private _roles: EntityRolesData = {
         lists: {},
         binary: {}
