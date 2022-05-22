@@ -1,5 +1,4 @@
-import { Channel, EntityConfig, Server } from "../../lib";
-import { Entity } from "../../lib/schema";
+import { Channel, EntityConfig, Entity, Server } from "../../lib";
 class TestChannel extends Channel {
     constructor(config: EntityConfig) {
         super(config);
@@ -18,6 +17,7 @@ const server = new Server({
     port: 8080,
     debug: true
 });
+
 class WatchTestEntity extends Entity {
     number = 0;
     string = "";
@@ -54,9 +54,10 @@ class WatchTestEntity extends Entity {
     }
 }
 
-const test = server.create(WatchTestEntity);
+const test = server.create(WatchTestEntity) as WatchTestEntity;
 
 test.method(test.number);
 test.string = "oxe";
 test.computed = 50;
 test.array.push(3);
+
