@@ -32,3 +32,5 @@ export type EntityConfig<EntityType extends RawEntity = RawEntity> = ({
 export type EntityInterface<EntityType extends RawEntity = RawEntity> = {
     [key in keyof EntityType]: EntityType[key]
 }
+
+export type EntityConstructor<EntityType extends RawEntity> = new (config: EntityConfig<EntityType>) => EntityType;

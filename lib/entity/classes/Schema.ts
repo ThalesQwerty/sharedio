@@ -55,6 +55,7 @@ export abstract class Schema {
             input: "",
             get: false,
             set: false,
+            async: false,
             binary: {
                 input: [],
                 output: [],

@@ -1,3 +1,4 @@
+import { Entity } from "../../entity";
 import { KeyValue } from "../../sharedio";
 import { Client } from "../../sharedio";
 import { ClientEvents } from "../../sharedio";
@@ -39,6 +40,25 @@ export interface CallInput extends SharedIOBaseInput {
     }
 }
 
+export interface RoutedWriteInput extends SharedIOBaseInput {
+    type: "write";
+    data: {
+        entity: Entity;
+        properties: KeyValue;
+    };
+    client: Client;
+}
+
+export interface RoutedCallInput extends SharedIOBaseInput {
+    type: "call";
+    data: {
+        entity: Entity;
+        methodName: string;
+        parameters: unknown[];
+    };
+    client: Client;
+}
+
 export type Assigned<InputType extends SharedIOBaseInput> = InputType & { client: Client }
 
 export type Input =
@@ -55,3 +75,6 @@ export type ServerInput =
     | AuthInput
     | PongInput;
 
+export type RoutedChannelInput =
+    | RoutedWriteInput
+    | RoutedCallInput

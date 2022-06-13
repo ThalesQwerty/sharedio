@@ -1,13 +1,21 @@
-import { SerializedEntity } from "../../sharedio";
+import { Client, SerializedEntity } from "../../sharedio";
 import { KeyValueDifference } from "../../sharedio";
 import { KeyValue } from "../../sharedio";
-import { User } from "../../sharedio";
-
 export interface SharedIOBaseOutput {
-    type: "auth" | "ping" | "view" | "write" | "call";
+    type: "auth" | "ping" | "view" | "write" | "call" | "return";
     id: string;
     data: KeyValue;
-    user: User|null;
+
+    /**
+     * Specifies, if applicable,  a client that is responsible for the generation of this output.
+     */
+    client?: Client;
+
+    /**
+     * If true, sends this output only to the client specified.
+     * Otherwise, sends this output to every client connected to the channel, except the client specified.
+     */
+    private?: boolean;
 }
 
 export interface AuthOutput extends SharedIOBaseOutput {
@@ -49,16 +57,51 @@ export interface CallOutput extends SharedIOBaseOutput {
     }
 }
 
+export interface ReturnOutput extends SharedIOBaseOutput {
+    type: "return";
+    data: {
+        inputId: string,
+        returnedValue: unknown
+    },
+    private: true
+}
+
+type Assigned<OutputType extends SharedIOBaseOutput> = OutputType&{client: Client};
+
+export interface AssignedWriteOutput extends WriteOutput {
+    client: Client
+}
+
+export interface AssignedCallOutput extends CallOutput {
+    client: Client
+}
+
+export interface AssignedReturnOutput extends CallOutput {
+    client: Client
+}
+
+
+
 export type Output =
     | AuthOutput
     | PingOutput
     | ViewOutput
     | WriteOutput
-    | CallOutput;
+    | CallOutput
+    | ReturnOutput;
 
 export type ChannelOutput =
     | WriteOutput
-    | CallOutput;
+    | CallOutput
+    | ReturnOutput;
+
+/**
+ * Output with a client associated with it
+ */
+export type AssignedChannelOutput =
+    | AssignedWriteOutput
+    | AssignedCallOutput
+    | AssignedReturnOutput;
 
 export type ServerOutput =
     | AuthOutput

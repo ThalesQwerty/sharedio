@@ -68,16 +68,16 @@ export class View {
     public update() {
         const difference = this.changes;
 
-        if (Object.keys(difference.add).length || difference.remove.length) {
-            this.user.client.send({
-                type: "view",
-                id: "",
-                data: {
-                    ...difference
-                },
-                user: null
-            });
-        }
+        // if (Object.keys(difference.add).length || difference.remove.length) {
+        //     this.user.client.send({
+        //         type: "view",
+        //         id: "",
+        //         data: {
+        //             ...difference
+        //         },
+        //         user: null
+        //     });
+        // }
 
         this._current = ObjectTransform.clone(this._next);
     }

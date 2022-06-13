@@ -5,12 +5,9 @@ import { HasId, RandomHex, HasEvents, Mixin } from "../../sharedio";
 import { KeyValue } from "../../sharedio";
 import { User } from "../../sharedio";
 import { ClientEmitterOverloads, ClientListenerOverloads } from "../../sharedio";
-import { Input, PongInput } from "../../sharedio";
-import { Output } from "../../sharedio";
+import { Input, PongInput, Output, Router } from "../../sharedio";
+import { ConnectionInfo } from "./ConnectionInfo";
 import WS from "ws";
-
-const PING_SAMPLE_TIME = 1;
-
 class RawClient extends HasId {
     public get user() {
         return this._user;
@@ -19,12 +16,10 @@ class RawClient extends HasId {
         if (newUser) {
             this.send({
                 type: "auth",
-                id: "",
                 data: {
                     userId: newUser.id,
                     token: newUser.token
                 },
-                user: null
             });
             this._user = newUser;
         }
@@ -49,35 +44,17 @@ class RawClient extends HasId {
     }
     private _online: boolean;
 
-    /**
-     * Calculates the connection latency (in microseconds)
-     */
-    public get ping() {
-        this._lastPings = this._lastPings.filter(
-            (time) => time >= this.server.time - PING_SAMPLE_TIME,
-        );
-        const numPings = this._lastPings.length;
-        if (!numPings) return 1000 * PING_SAMPLE_TIME - 1;
-
-        const latency =
-            1000 * (this.server.time - this._lastPings[0]);
-        return Math.round(latency / numPings);
-    }
+    private _connection: ConnectionInfo;
 
     /**
-     * Calculates the packet loss ratio
+     * Gets the connection latency (in milliseconds)
      */
-    public get packetLoss() {
-        if (!this._packetsSent) return 0;
-        if (!this._packetsReceived) return 1;
-        return 1 - this._packetsReceived / this._packetsSent;
-    }
+    public get ping() { return this._connection.ping };
 
-    private _lastPings: number[] = [];
-    private _currentPacketId: string = "";
-    private _packetsSent: number = 0;
-    private _packetsReceived: number = 0;
-    private _packetTimeout?: NodeJS.Timeout;
+    /**
+     * Gets the packet loss ratio
+     */
+    public get packetLoss() { return this._connection.packetLoss };
 
     private _debugMode = false;
 
@@ -87,6 +64,8 @@ class RawClient extends HasId {
         this._server = server;
         this._online = false;
         this._ws = ws;
+        this._connection = new ConnectionInfo(this);
+
         this.reset(ws);
     }
 
@@ -110,15 +89,12 @@ class RawClient extends HasId {
         ws.on("close", () => {
             this._online = false;
             this.emit("close");
-            if (this._packetTimeout)
-                clearTimeout(this._packetTimeout);
+            this._connection.stopPings();
             ws.removeAllListeners();
             this.log(`Disconnected`);
         });
 
-        if (this._packetTimeout) clearTimeout(this._packetTimeout);
-        this._packetsSent = this._packetsReceived = 0;
-        this._lastPings = [];
+        this._connection.reset();
 
         this._online = ws.readyState === WS.OPEN;
         this._ws = ws;
@@ -131,39 +107,17 @@ class RawClient extends HasId {
 
         switch (input.type) {
             case "auth": {
-                this.emit("auth", {
-                    request: input,
-                });
-                this.sendPing();
+                this.server.auth(this, input.data.token);
+                this._connection.sendPing();
                 break;
             }
             case "pong": {
-                this.sendPing(input);
+                this._connection.sendPing();
                 break;
             }
-            case "write": {
-                if (this.user) {
-                    const entity = RawEntity.find(input.data.entityId);
-
-                    if (entity && this.user.in(entity.channel)) {
-                        RawChannel.getIOQueue(entity.channel).addInput(input);
-                        this.user.action.write(entity, input.data.properties);
-                    }
-                }
-                break;
-            }
+            case "write":
             case "call": {
-                if (this.user) {
-                    const entity = RawEntity.find(input.data.entityId);
-
-                    if (entity && this.user.in(entity.channel)) {
-                        this.user.action.call(
-                            entity as any,
-                            input.data.methodName,
-                            input.data.parameters,
-                        );
-                    }
-                }
+                this.server.router.handle(input, this);
                 break;
             }
             default: {
@@ -189,43 +143,12 @@ class RawClient extends HasId {
      * Sends a message to the client
      * @param message Message to be sent. It has to be one of the possible SharedIO response types
      */
-    public send(message: Output) {
+    public send(message: Output|Omit<Output, "id">) {
         delete (message as any).user;
-        this.sendRaw(message);
-    }
-
-    /**
-     * Sends a new "ping" message to the client and calculates the connection round trip time
-     * @param pongRequest The pong sent by the client in response to the last packet
-     */
-    private sendPing(pongRequest?: PongInput) {
-        const match = pongRequest?.data.packetId === this._currentPacketId;
-        if (!pongRequest || match) {
-            this._currentPacketId = RandomHex(8);
-            if (match) {
-                this._lastPings.push(this.server.time);
-                this._packetsReceived++;
-            }
-        }
-
-        this.log(`Sending ping: ${this._currentPacketId}`);
-
-        this.send({
-            type: "ping",
-            id: this._currentPacketId,
-            data: {
-                packetId: this._currentPacketId,
-                roundTripTime: this.ping,
-                packetLossRatio: this.packetLoss,
-            },
-            user: null
+        this.sendRaw({
+            id: RandomHex(16),
+            ...message
         });
-        this._packetsSent++;
-
-        if (this._packetTimeout) clearTimeout(this._packetTimeout);
-        this._packetTimeout = setTimeout(() => {
-            this.sendPing();
-        }, PING_SAMPLE_TIME * 1000);
     }
 }
 
@@ -234,4 +157,4 @@ interface RawClient extends HasEvents {
     on: ClientListenerOverloads
 }
 
-export class Client extends Mixin(RawClient, [HasEvents]) {};
+export class Client extends Mixin(RawClient, [HasEvents]) { };

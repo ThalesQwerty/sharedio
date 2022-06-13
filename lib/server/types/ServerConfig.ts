@@ -29,9 +29,9 @@ export interface ServerConfig {
     wsOptions?: KeyValue;
 
     /**
-     * How many ticks will happen per second (default is 64)
+     * How many times per second the server will synchronize its state with the clients connected? (default is 64)
      */
-    tickRate?: number;
+    syncRate?: number;
 
     clientSchema?: ClientSchemaConfig;
 

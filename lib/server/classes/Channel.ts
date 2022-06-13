@@ -1,10 +1,12 @@
+import { EntityAttributeName, EntityConstructor } from "../../entity";
+import { EntityList } from "../../entity/classes/EntityList";
 import { RawEntity, Entity, EntityConfig, EntitySchema, WatchedObject, EntityRolesInterface } from "../../sharedio";
 import { ObjectTransform, HasEvents, Mixin } from "../../sharedio";
 import { KeyValue } from "../../sharedio";
 import { User } from "../../sharedio";
 import { ChannelListenerOverloads, ChannelEmitterOverloads, Queue } from "../../sharedio";
 
-export type EntityCreateFunction<EntityType extends RawEntity = RawEntity> = (type: new (config: EntityConfig<EntityType>) => EntityType, config?: EntityConfig<EntityType>, props?: KeyValue) => EntityType;
+export type EntityCreateFunction<EntityType extends Entity = Entity> = (type: EntityConstructor<EntityType>, config?: EntityConfig<EntityType>, props?: KeyValue) => EntityType;
 
 interface ChannelFunctions {
     create: EntityCreateFunction
@@ -19,7 +21,7 @@ class RawChannel extends RawEntity implements ChannelFunctions {
     public get entities() {
         return this._entities;
     }
-    private _entities: RawEntity[] = [];
+    private _entities: EntityList = new EntityList();
 
     public static getIOQueue(channel: RawChannel) {
         return channel._queue;
@@ -47,7 +49,7 @@ class RawChannel extends RawEntity implements ChannelFunctions {
      * @param props
      * @returns
      */
-    public create<EntityType extends RawEntity>(type: new (config: EntityConfig<EntityType>) => EntityType, config: EntityConfig = {} as any, props: KeyValue = {}) {
+    public create<EntityType extends RawEntity>(type: new (config: EntityConfig<EntityType>) => EntityType, config: EntityConfig = {} as any, props: KeyValue = {}): EntityType {
         const newEntity = new type({
             ...config,
             channel: this as Channel,
@@ -88,28 +90,35 @@ class RawChannel extends RawEntity implements ChannelFunctions {
                     to avoid unnecessary latency issues, since they know the new value already.
                  */
                 const shouldSendToAuthor = (typeof value !== typeof attemptedValue) || (value instanceof Object ? !ObjectTransform.isEqual(value, attemptedValue) : value !== attemptedValue);
+                const schema = newEntity.schema.attributes[propertyName as EntityAttributeName<EntityType>];
 
-                this._queue.addOutput({
-                    type: "write",
-                    data: {
-                        entityId: newEntity.id,
-                        properties: {
-                            [propertyName]: value
-                        }
-                    },
-                    user: shouldSendToAuthor ? null : this.server.currentUser
-                });
+                if (!schema.async) {
+                    this._queue.addOutput({
+                        type: "write",
+                        data: {
+                            entityId: newEntity.id,
+                            properties: {
+                                [propertyName]: value
+                            }
+                        },
+                        client: shouldSendToAuthor ? undefined : this.server.currentUser?.client
+                    });
+                }
             },
             call: ({ methodName, parameters }) => {
-                this._queue.addOutput({
-                    type: "call",
-                    data: {
-                        entityId: newEntity.id,
-                        methodName: methodName,
-                        parameters: parameters
-                    },
-                    user: this.server.currentUser
-                })
+                const schema = newEntity.schema.attributes[methodName as EntityAttributeName<EntityType>];
+
+                if (!schema.async) {
+                    this._queue.addOutput({
+                        type: "call",
+                        data: {
+                            entityId: newEntity.id,
+                            methodName: methodName,
+                            parameters: parameters
+                        },
+                        client: this.server.currentUser?.client
+                    });
+                }
             }
         }, {
             exclude: RawEntity.reservedAttributes as (keyof EntityType)[]

@@ -10,6 +10,7 @@ export type EntitySchemaAttribute<EntityType extends RawEntity> = {
     output: EntityRoleBooleanExpression<string[]>,
     get: boolean,
     set: boolean,
+    async: boolean,
     dependencies: EntityAttributeName<EntityType>[],
     binary: {
         input: number[],

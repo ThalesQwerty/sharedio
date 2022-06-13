@@ -1,19 +1,22 @@
 import { Server } from "../../sharedio";
 import { ListenerOverloads, EmitterOverloads } from "../../sharedio";
-import { User } from "../../sharedio";
+import { User, Client } from "../../sharedio";
 import { Input } from "../../sharedio";
 
 interface ServerStartEvent {}
 interface ServerConnectionEvent {
     user: User;
+    client: Client;
 }
 
 interface ServerDisconnectionEvent {
     user: User;
+    client: Client;
 }
 
 interface ServerMessageEvent {
     user: User;
+    client: Client;
     message: Input;
 }
 

@@ -59,7 +59,7 @@ export class Action {
         entity: EntityType,
         methodName: EntityAttributeName<EntityType>,
         params?: unknown[],
-    ) {
+    ): unknown {
         const authorized = UserRoles.verifyCombination("input", entity.roles.combinationId(this._user), entity.schema.attributes[methodName]);
 
         if (
@@ -67,7 +67,8 @@ export class Action {
             typeof entity[methodName] === "function"
         ) {
             const method = entity[methodName] as unknown as Function;
-            params ? method(...params) : method();  //, this._user);
+            const returnedValue = params ? method(...params) : method();  //, this._user);
+            return returnedValue;
         }
     }
 }

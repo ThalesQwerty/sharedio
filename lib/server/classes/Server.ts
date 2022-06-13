@@ -6,9 +6,11 @@ import { ServerConfig } from "../../sharedio";
 import { ServerStartListener, ServerEmitterOverloads, ServerListenerOverloads } from "../../sharedio";
 import { Client } from "../../sharedio";
 import WS from "ws";
+import { Router } from "./Router";
+import { EntityList } from "../../entity/classes/EntityList";
 
 const DEFAULT_PORT = 3000;
-const DEFAULT_TICK_RATE = 64;
+const DEFAULT_SYNC_RATE = 64;
 
 class RawServer extends HasId {
     static current: Server;
@@ -90,15 +92,15 @@ class RawServer extends HasId {
     }
 
     public get entities() {
-        return this._entities as Entity[];
+        return this._entities as EntityList<Entity>;
     }
-    private _entities: RawEntity[] = [];
+    private _entities: EntityList;
 
     /**
      * How many tick events will happen per second
      */
-    public get tickRate() {
-        return this.config.tickRate ?? DEFAULT_TICK_RATE;
+    public get syncRate() {
+        return this.config.syncRate ?? DEFAULT_SYNC_RATE;
     }
 
     /**
@@ -140,24 +142,63 @@ class RawServer extends HasId {
     }
     private _currentUser: User | null = null;
 
+    public get router() {
+        return this._router;
+    }
+    private _router: Router;
+
     /**
      * Creates an entity inside the server's main channel
      */
     public get create() {
-        const fn = <EntityType extends RawEntity = RawEntity>(...args: Parameters<EntityCreateFunction<EntityType>>) => {
+        const fn = <EntityType extends Entity = Entity>(...args: Parameters<EntityCreateFunction<EntityType>>) => {
             return (this.mainChannel.create as any)(...args) as EntityType;
         };
 
         return fn;
     }
 
+    /**
+     * Finds an entity by its ID
+     * @param id Entity ID
+     */
+     public findEntity(id: string) {
+        const ids = id.trim().split(".").reduce((previousSteps, currentStep, index) => {
+            return [...previousSteps, previousSteps[index - 1] ? `${previousSteps[index - 1] ?? ""}.${currentStep}` : currentStep]
+        }, [] as string[]);
+
+        if (ids[0] === this.mainChannel?.id) {
+            ids.shift();
+            let currentChild: RawEntity|null = null;
+
+            for (const step of ids) {
+                const parent: RawEntity = currentChild ?? this.mainChannel;
+
+                if (parent instanceof RawChannel) {
+                    const child = parent.entities.findById(step);
+                    if (!child) break;
+
+                    currentChild = child;
+                } else {
+                    break;
+                }
+            }
+
+            return currentChild?.id === id ? currentChild as Entity : null;
+        }
+
+        return null;
+    }
+
     constructor(config: ServerConfig = {}) {
         super("RawServer");
 
         Server.current = this;
+        this._entities = new EntityList();
+        this._router = new Router(this);
 
         config.port ??= DEFAULT_PORT;
-        config.tickRate ??= DEFAULT_TICK_RATE;
+        config.syncRate ??= DEFAULT_SYNC_RATE;
         config.debug ??= false;
         config.mainChannel ??= Channel;
 
@@ -190,8 +231,8 @@ class RawServer extends HasId {
             new Date().getTime();
 
         this.tickIntervalRef = setInterval(
-            () => this.tick(),
-            1000 / this.tickRate,
+            () => this.sync(),
+            1000 / this.syncRate,
         );
 
         wss.on("connection", (ws) => this.handleNewConnection(ws));
@@ -232,7 +273,7 @@ class RawServer extends HasId {
     /**
      * This function emits the tick event
      */
-    private tick() {
+    private sync() {
         this._ticks++;
 
         const channels: Channel[] = [];
@@ -263,36 +304,41 @@ class RawServer extends HasId {
      * This function is executed whenever a new client connects to the server
      */
     private handleNewConnection(ws: WS.WebSocket) {
-        const newClient = new Client(ws, this);
-        newClient.on("auth", ({ input }) => {
-            const { token } = input.data;
-            const newUser =
-                User.auth(newClient, this, token) ||
-                new User(this, newClient);
+        new Client(ws, this);
+    }
 
-            newClient.user = newUser;
+    public auth(client: Client, token: string|null) {
+        const user = User.auth(client, this, token) || new User(this, client);
 
-            if (!this._users.filter((user) => user.is(newUser))[0]) {
-                this._users.push(newUser);
+        if (user) {
+            client.user = user;
+
+            if (!this._users.find((user) => user.is(user))) {
+                this._users.push(user);
+                this.mainChannel.join(user);
             }
 
-            this.mainChannel.join(newUser);
-
             this.emit("connection", {
-                user: newUser,
+                user,
+                client
             });
 
-            newClient.on("close", () => {
+            client.on("close", () => {
                 this.emit("disconnection", {
-                    user: newUser,
+                    user,
+                    client
                 });
-                newUser.view.reset();
+                user.view.reset();
             });
 
-            newClient.on("message", ({ input }) => {
-                this.emit("message", input);
+            client.on("message", ({ input }) => {
+                this.emit("message", {
+                    user,
+                    client,
+                    message: input
+                });
             });
-        });
+        }
     }
 
     /**

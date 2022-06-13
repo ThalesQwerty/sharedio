@@ -1,5 +1,5 @@
 import { Server } from "../../sharedio";
-import type { Channel, RawChannel } from "../../sharedio";
+import { Channel, RawChannel } from "../../sharedio";
 import { HasEvents, Mixin } from "../../sharedio";
 import { SharedIOError } from "../../sharedio";
 import { KeyValue } from "../../sharedio";
@@ -39,7 +39,7 @@ class RawEntity
     private static _schema?: EntitySchema;
 
     constructor({ server, channel, initialState, owner, dummy = false }: EntityConfig) {
-        super("RawEntity");
+        super("Entity", 8);
 
         if (dummy) {
             this._channel = undefined as any;
@@ -59,6 +59,15 @@ class RawEntity
         this._channel = (channel ?? server?.mainChannel) as Channel;
         this._server = (server ?? channel?.server) as Server;
         this._owner = owner ?? null;
+
+        do {
+            if (this._channel) {
+                this.resetId(this._channel.id ?? "", 8, ".");
+            }
+        } while (this.server.findEntity(this.id));
+
+        this._channel?.entities.push(this);
+        this._server?.entities.push(this as Entity);
 
         process.nextTick(() => {
             const created = this.exists !== false;
@@ -162,6 +171,8 @@ class RawEntity
                 });
             }
 
+            this._channel.entities.remove(this);
+
             return true;
         }
     }
@@ -169,7 +180,7 @@ class RawEntity
 
 interface RawEntity extends HasEvents { }
 
-interface Entity<Roles extends string[] = []> extends HasEvents {
+interface Entity<Roles extends string[] = string[]> extends HasEvents {
     on: EntityListenerOverloads<this>,
     emit: EntityEmitterOverloads<this>,
 
@@ -183,6 +194,6 @@ interface Entity<Roles extends string[] = []> extends HasEvents {
     roles: EntityRolesInterface<Roles>
 }
 
-class Entity<Roles extends string[] = []> extends Mixin(RawEntity, [HasEvents]) { }
+class Entity<Roles extends string[] = string[]> extends Mixin(RawEntity, [HasEvents]) { }
 
 export { RawEntity, Entity };

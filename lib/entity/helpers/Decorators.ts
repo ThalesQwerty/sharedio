@@ -23,6 +23,23 @@ function addUserRoles<EntityType extends RawEntity>(expression: string, schema: 
 }
 
 /**
+ * Disables automatic synchronization with user clients for this property/method, which means they have to be imperatively outputted to the users by calling the entity's `$output` method
+ *
+ * This is useful for handling some edge cases, such as:
+ * - Avoiding a computationally expensive getter from being calculated more often than necessary
+ * - Creating a method that doesn't generate side effects on other users' clients
+ */
+ export function async<EntityType extends RawEntity>(
+    entity: EntityType,
+    attributeName: EntityAttributeName<EntityType>
+) {
+    const schema = getSchema(entity);
+    const attributeSchema = schema.attributes[attributeName];
+
+    attributeSchema.async = true;
+};
+
+/**
  * Determines which user roles can write values into this property or call this method
  * @param expressions List of roles, or boolean expression involving roles
  */

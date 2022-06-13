@@ -1,4 +1,5 @@
-import { Channel, EntityConfig, Entity, Server } from "../../lib";
+import { Channel, EntityConfig, Entity, Server, async, output, input } from "../../lib";
+import { EntityList } from "../../lib/entity/classes/EntityList";
 class TestChannel extends Channel {
     constructor(config: EntityConfig) {
         super(config);
@@ -42,6 +43,7 @@ class WatchTestEntity extends Entity {
     };
 
     private _computed = 5;
+
     get computed() {
         return this._computed;
     }
@@ -54,10 +56,17 @@ class WatchTestEntity extends Entity {
     }
 }
 
-const test = server.create(WatchTestEntity) as WatchTestEntity;
+// const a = new EntityList(server.create(WatchTestEntity));
+
+const test = server.mainChannel.create(WatchTestEntity) as WatchTestEntity;
 
 test.method(test.number);
 test.string = "oxe";
 test.computed = 50;
 test.array.push(3);
 
+console.log(server.mainChannel.id);
+console.log(test.id);
+console.log(server.findEntity(test.id)?.id);
+
+server.start();

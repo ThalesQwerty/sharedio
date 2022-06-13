@@ -57,20 +57,21 @@ export abstract class HasId {
     /**
      * Generates a new ID for this object
      */
-    protected resetId(preffix?: string) {
+    protected resetId(preffix?: string, length: number = ID_CHAR_LENGTH, separator: string = "_") {
         let id = "";
-        preffix = preffix != undefined ? preffix + "_" : this.preffix;
+        if (preffix) preffix += separator;
+        else if (preffix === undefined) preffix = this.preffix;
 
         do {
-            id = RandomHex(ID_CHAR_LENGTH);
+            id = RandomHex(length);
             this._id = preffix + id;
         } while (id in HasId.list);
 
         HasId.list.push(this);
     }
 
-    public constructor(preffix: string = "") {
+    public constructor(preffix: string = "", length: number = ID_CHAR_LENGTH, separator: string = "_") {
         this._id = "placeholder";
-        this.resetId(preffix);
+        this.resetId(preffix, length, separator);
     }
 }
