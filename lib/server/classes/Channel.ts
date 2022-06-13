@@ -101,7 +101,7 @@ class RawChannel extends RawEntity implements ChannelFunctions {
                                 [propertyName]: value
                             }
                         },
-                        client: shouldSendToAuthor ? undefined : this.server.currentUser?.client
+                        client: shouldSendToAuthor ? undefined : this.server.currentUser?.clients.last
                     });
                 }
             },
@@ -116,7 +116,7 @@ class RawChannel extends RawEntity implements ChannelFunctions {
                             methodName: methodName,
                             parameters: parameters
                         },
-                        client: this.server.currentUser?.client
+                        client: this.server.currentUser?.clients.last
                     });
                 }
             }

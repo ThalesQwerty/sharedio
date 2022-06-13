@@ -98,13 +98,13 @@ export class Queue {
                 const user = output.client?.user;
 
                 if (user?.in(this.channel)) {
-                    user.client.send(output);
+                    user.send(output);
                 }
             } else {
                 for (const user of this.channel.users) {
                     // It's not necessary to broadcast an output to the user who caused it
                     if (!output.client?.user?.is(user)) {
-                        user.client.send(output);
+                        user.send(output);
                     }
                 }
             }

@@ -77,20 +77,6 @@ class RawServer extends HasId {
     }
     private _users: User[] = [];
 
-    /**
-     * Lists all online users on the server
-     */
-    public get onlineUsers() {
-        return this._users.filter((user) => user.client.online);
-    }
-
-    /**
-     * Lists all offline users on the server
-     */
-    public get offlineUsers() {
-        return this._users.filter((user) => !user.client.online);
-    }
-
     public get entities() {
         return this._entities as EntityList<Entity>;
     }

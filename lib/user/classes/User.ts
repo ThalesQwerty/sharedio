@@ -1,4 +1,4 @@
-import { Server } from "../../sharedio";
+import { ClientList, Output, Server } from "../../sharedio";
 import { RawChannel } from "../../sharedio";
 import { RawEntity } from "../../sharedio";
 import { HasId, RandomHex } from "../../sharedio";
@@ -10,10 +10,10 @@ export class User extends HasId {
     /**
      * The websocket client associated with this user
      */
-    public get client() {
-        return this._client;
+    public get clients() {
+        return this._clients;
     }
-    private _client: Client;
+    private _clients: ClientList;
 
     /**
      * The server where this user is connected
@@ -52,11 +52,20 @@ export class User extends HasId {
     constructor(server: Server, client: Client) {
         super("User");
 
-        this._client = client;
+        this._clients = new ClientList(client);
         this._server = server;
         this._token = RandomHex();
         this._view = new View(this);
         this._action = new Action(this);
+    }
+
+    public send(output: Output|Omit<Output, "id">) {
+        this.clients.forEach(client => {
+            const shouldSendOutput = !output.client || (output.private && client.is(output.client)) || (!output.private && !client.is(output.client));
+            if (shouldSendOutput) {
+                client.send(output);
+            }
+        });
     }
 
     /**
@@ -72,7 +81,7 @@ export class User extends HasId {
         )[0];
         if (!user) return null;
 
-        user._client = client;
+        user._clients.add(client);
         return user;
     }
 

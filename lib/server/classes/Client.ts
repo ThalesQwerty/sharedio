@@ -13,7 +13,8 @@ class RawClient extends HasId {
         return this._user;
     }
     public set user(newUser) {
-        if (newUser) {
+        if (newUser && !this._user) {
+            newUser.clients.add(this);
             this.send({
                 type: "auth",
                 data: {
@@ -24,7 +25,14 @@ class RawClient extends HasId {
             this._user = newUser;
         }
     }
-    private _user?: User;
+    private _user: User|null = null;
+
+    /**
+     * Is this client associated with an user?
+     */
+    public get authenticated() {
+        return !!this.user;
+    }
 
     public get ws() {
         return this._ws;
@@ -66,14 +74,6 @@ class RawClient extends HasId {
         this._ws = ws;
         this._connection = new ConnectionInfo(this);
 
-        this.reset(ws);
-    }
-
-    private log(message: any) {
-        if (this._debugMode) console.log(`[${this.id}] ${message}`);
-    }
-
-    public reset(ws: WS.WebSocket) {
         this._ws?.removeAllListeners();
         ws.removeAllListeners();
 
@@ -98,6 +98,10 @@ class RawClient extends HasId {
 
         this._online = ws.readyState === WS.OPEN;
         this._ws = ws;
+    }
+
+    private log(message: any) {
+        if (this._debugMode) console.log(`[${this.id}] ${message}`);
     }
 
     public handleInput(data: WS.RawData) {

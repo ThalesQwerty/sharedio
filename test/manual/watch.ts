@@ -16,7 +16,7 @@ class TestChannel extends Channel {
 const server = new Server({
     mainChannel: TestChannel,
     port: 8080,
-    debug: true
+    debug: true,
 });
 
 class WatchTestEntity extends Entity {
@@ -69,4 +69,6 @@ console.log(server.mainChannel.id);
 console.log(test.id);
 console.log(server.findEntity(test.id)?.id);
 
-server.start();
+server.start().on("connection", ({ user })=> {
+    console.log(user.clients.online);
+})
