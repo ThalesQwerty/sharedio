@@ -69,6 +69,12 @@ console.log(server.mainChannel.id);
 console.log(test.id);
 console.log(server.findEntity(test.id)?.id);
 
-server.start().on("connection", ({ user })=> {
-    console.log(user.clients.online);
-})
+server.start(() => {
+    setInterval(() => {
+        const firstUser = server.users[0];
+
+        if (firstUser) {
+            console.log(firstUser.clients.length, "clients connected");
+        }
+    }, 5000);
+});

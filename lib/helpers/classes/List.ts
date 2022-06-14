@@ -18,6 +18,13 @@ export class List<T> extends Array<T> {
     }
 
     /**
+     * Is this list empty?
+     */
+    get empty() {
+        return !this.length;
+    }
+
+    /**
      * Counts the elements which satisfies a given expression
      */
     count(...args: Parameters<T[]["filter"]>): number {

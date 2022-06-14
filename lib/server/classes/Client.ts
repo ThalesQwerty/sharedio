@@ -92,6 +92,7 @@ class RawClient extends HasId {
             this._connection.stopPings();
             ws.removeAllListeners();
             this.log(`Disconnected`);
+            this.user?.clients.remove(this);
         });
 
         this._connection.reset();

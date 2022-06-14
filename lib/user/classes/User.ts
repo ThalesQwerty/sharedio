@@ -31,9 +31,8 @@ export class User extends HasId {
     }
     private _token: string;
 
-    private _online: boolean = false;
     public get online() {
-        return this._online;
+        return !this.clients.empty;
     }
 
     public get view() {
