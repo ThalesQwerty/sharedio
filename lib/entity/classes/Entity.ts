@@ -10,7 +10,6 @@ import { EntityRolesData, EntityRolesInterface } from "../../sharedio";
 import { EntitySchema } from "../../sharedio";
 import { EntityStaticMembers } from "./EntityStaticMembers";
 import { UserRoles, Schema } from "../../sharedio";
-
 interface EntityReservedAttributes {
     type: string;
     owner: User | null;
@@ -62,7 +61,7 @@ class RawEntity
 
         do {
             if (this._channel) {
-                this.resetId(this._channel.id ?? "", 8, ".");
+                this.resetId(this._channel.id ?? "", 8, Entity.ID_SEPARATOR);
             }
         } while (this.server.findEntity(this.id));
 

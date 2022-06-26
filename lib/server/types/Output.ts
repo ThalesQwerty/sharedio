@@ -37,7 +37,10 @@ export interface PingOutput extends SharedIOBaseOutput {
 
 export interface ViewOutput extends SharedIOBaseOutput {
     type: "view";
-    data: KeyValueDifference<KeyValue<SerializedEntity>>
+    data: {
+        changes: KeyValue<SerializedEntity, string>,
+        deleted: string[]
+    }
 }
 
 export interface WriteOutput extends SharedIOBaseOutput {

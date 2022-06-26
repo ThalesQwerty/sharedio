@@ -39,7 +39,7 @@ export class Action {
                 _attributeName as EntityAttributeName<EntityType>;
             const newValue = (values as any)[attributeName];
 
-            const authorized = UserRoles.verifyCombination("input", entity.roles.combinationId(this._user), entity.schema.attributes[attributeName]);
+            const authorized = this._user.can("input", entity, attributeName);
 
             if (authorized && newValue !== undefined) {
                 entity[attributeName] = newValue;
@@ -60,7 +60,7 @@ export class Action {
         methodName: EntityAttributeName<EntityType>,
         params?: unknown[],
     ): unknown {
-        const authorized = UserRoles.verifyCombination("input", entity.roles.combinationId(this._user), entity.schema.attributes[methodName]);
+        const authorized = this._user.can("input", entity, methodName);
 
         if (
             authorized &&

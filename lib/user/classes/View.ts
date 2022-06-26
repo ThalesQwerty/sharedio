@@ -1,7 +1,7 @@
-import { SerializedEntity, RawEntity, EntityReservedAttributeName, EntityAttributeName, Cache } from "../../sharedio";
+import { SerializedEntity, RawEntity, EntityReservedAttributeName, EntityAttributeName, Cache, RawChannel, ViewOutput } from "../../sharedio";
 import { ObjectTransform, KeyValueDifference } from "../../sharedio";
 import { KeyValue } from "../../sharedio";
-import { User } from "../../sharedio";
+import { User, Client } from "../../sharedio";
 
 /**
  * Class specialized in serializing entities as JSON and sending them to users
@@ -13,7 +13,6 @@ export class View {
     public get user() {
         return this._user;
     }
-    private _user: User;
 
     /**
      * Returns a JSON that represents what the user is viewing right now
@@ -24,62 +23,95 @@ export class View {
     private _current: KeyValue<SerializedEntity, string> = {};
 
     /**
-     * Returns a JSON that represents what the user will view in the next server tick
-     */
-    public get next() {
-        return this._next;
-    }
-    private _next: KeyValue<SerializedEntity, string> = {};
-
-    /**
-     * Returns the difference between the current view and the next view as a JSON
+     * Returns a JSON that represents the changes that will be sent to the user in the next server tick
      */
     public get changes() {
-        return ObjectTransform.delta(
-            this._current,
-            this._next,
-        ) as KeyValueDifference<KeyValue<SerializedEntity>>;
+        return this._changes;
     }
+    private _changes: KeyValue<SerializedEntity, string> = {};
+
+    /**
+     * Returns an array of entities and entity properties that have been deleted or hidden from this user's perspective
+     */
+    public get deleted() {
+        return this._deleted;
+    }
+    private _deleted: string[] = [];
+
+    constructor(private _user: User) {}
 
     /**
      * Returns how the user is currently viewing an entity as JSON.
      *
      * If the entity is not visible for the user, this function returns null.
      */
-    public find(entity: RawEntity): SerializedEntity | null {
+    public get(entity: RawEntity): SerializedEntity | null {
         return this._current[entity.id] ?? null;
     }
 
-    constructor(viewer: User) {
-        this._user = viewer;
-    }
-
     /**
-     * Renders an entity into the view
+     * Forces a re-render of an entity into the view
      */
     public render(entity: RawEntity) {
-        this._next = {};
-        this._next[entity.id] = this.serialize(entity);
+        this._changes[entity.id] = this.serialize(entity);
     }
 
     /**
-     * Sends the next view as JSON to the user, and turns it into the current view
+     * Hides an entity (or some of its properties) from this user's perspective
+     * @param entity
+     * @param propertyNames
      */
-    public update() {
-        const difference = this.changes;
+    public hide<EntityType extends RawEntity>(entity: EntityType, ...propertyNames: EntityAttributeName<EntityType>[]) {
+        if (propertyNames.length) {
+            for (const propertyName of propertyNames) {
+                this._deleted.push(`${entity.id}.state.${propertyName}`);
+            }
+        } else {
+            this._deleted.push(entity.id);
+        }
+    }
 
-        // if (Object.keys(difference.add).length || difference.remove.length) {
-        //     this.user.client.send({
-        //         type: "view",
-        //         id: "",
-        //         data: {
-        //             ...difference
-        //         },
-        //         user: null
-        //     });
-        // }
+    /**
+     * Sends the current changes and deletions as JSON to the user, and turns it into the current view
+     * @param clients Should it send only to some specific user clients? If left blank, it will send to all user clients.
+     */
+    public update(...clients: Client[]) {
+        const output: Omit<ViewOutput, "id"> = {
+            type: "view",
+            data: {
+                changes: this.changes,
+                deleted: this.deleted
+            }
+        };
 
-        this._current = ObjectTransform.clone(this._next);
+        for (const changedKey in this.changes) {
+            const newValue = this.changes[changedKey];
+
+            this.current[changedKey] = newValue;
+        }
+
+        for (const deletedKey in this.deleted) {
+            let parent = this.current as KeyValue;
+            let childKey = deletedKey;
+
+            while (childKey.includes(".")) {
+                if (!Object.keys(parent).includes(childKey)) continue;
+                parent = parent[childKey.split(".")[0]];
+                childKey = childKey.substring(childKey.indexOf(".") + 1);
+            }
+
+            delete parent[childKey];
+        }
+
+        if (clients.length) {
+            for (const client of clients) {
+                if (client.user?.is(this.user)) {
+                    client.send(output);
+                }
+            }
+        } else {
+            this.user.send(output);
+        }
     }
 
     /**
@@ -95,86 +127,32 @@ export class View {
     public serialize<EntityType extends RawEntity>(
         entity: EntityType,
     ): SerializedEntity {
-        const clone = RawEntity.clone(entity);
-
         const serialized: SerializedEntity = {
-            owned: false,
+            id: entity.id,
             type: "RawEntity",
-            id: "",
+            owner: this.user.owns(entity),
+            inside: entity instanceof RawChannel && this.user.in(entity),
+            roles: {},
             state: {},
             actions: [],
         };
 
-        function removeAttribute(name: string) {
-            delete (clone as any)[name];
-            delete (clone as any)["_" + name];
-        }
+        for (const attributeName of RawEntity.attributes(entity) as EntityAttributeName<EntityType>[]) {
+            if (this._user.can("output", entity, attributeName)) {
+                const attributeValue = entity[attributeName];
 
-        for (const reservedAttribute of RawEntity.reservedAttributes) {
-            switch (reservedAttribute) {
-                case "id":
-                    serialized.id = entity.id;
-                    break;
-                case "type":
-                    serialized.type = entity.type;
-                    break;
-                case "owner":
-                    serialized.owned = !!(
-                        entity.owner?.id && entity.owner.is(this.user)
-                    );
-                    break;
-            }
-            removeAttribute(reservedAttribute);
-        }
-
-        const currentEntityCache = Cache.get(entity);
-
-        for (const _attributeName in clone) {
-            if (
-                RawEntity.reservedAttributes.indexOf(
-                    _attributeName as EntityReservedAttributeName,
-                ) < 0
-            ) {
-                const attributeName =
-                    _attributeName as EntityAttributeName<EntityType>;
-
-                const rawValue = (clone as any)[attributeName];
-                const rules = entity.schema.attributes[attributeName];
-                const authorized = entity.roles.verify(this.user, rules.output);
-
-                const cached = currentEntityCache[attributeName];
-                const isCached =
-                    Object.keys(currentEntityCache).indexOf(
-                        attributeName,
-                    ) >= 0;
-
-                let attributeBehavior: "attribute" | "method" | undefined =
-                    undefined;
-                let serializedValue = undefined;
-
-                if (authorized) {
-                    if (typeof rawValue === "function") {
-                        attributeBehavior = "method";
-                    } else {
-                        attributeBehavior = "attribute";
-                        serializedValue = serialized.state[
-                            attributeName
-                        ] = isCached ? cached : rawValue;
-                    }
-                }
-
-                switch (attributeBehavior) {
-                    case "attribute":
-                        serialized.state[attributeName] =
-                            serializedValue;
-                        break;
-                    case "method":
-                        serialized.actions.push(attributeName);
-                        break;
+                if (typeof attributeValue === "function") {
+                    serialized.actions.push(attributeName);
+                } else {
+                    serialized.state[attributeName] = entity[attributeName];
                 }
             }
         }
 
-        return serialized;
+        for (const roleName of Object.keys(entity.schema.userRoles)) {
+            serialized.roles[roleName] = entity.roles.verify(this.user, roleName);
+        }
+
+        return ObjectTransform.clone(serialized);
     }
 }

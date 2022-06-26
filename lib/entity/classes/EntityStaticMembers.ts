@@ -7,6 +7,7 @@ import { PrintableEntity } from "../../sharedio";
 import { RawEntity } from "../../sharedio";
 
 export abstract class EntityStaticMembers extends HasId {
+    public static ID_SEPARATOR = "*";
     /**
      * Lists the names of the reserved entity attributes. Those names cannot be used to create custom attributes.
      */

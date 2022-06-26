@@ -136,6 +136,9 @@ export class UserRoles {
         return passed;
     }
 
+    /**
+     * Verifies if a given role combination ID satisfies the input/output rules of an attribute
+     */
     static verifyCombination<EntityType extends RawEntity>(action: "input"|"output", userRoleCombinationId: number, attributeSchema: EntitySchemaAttribute<EntityType>) {
         const list = attributeSchema.binary[action];
         if (!list.length) return false;

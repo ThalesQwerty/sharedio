@@ -1,12 +1,14 @@
 import { id } from "../../sharedio";
 import { KeyValue } from "../../sharedio";
 import { RawEntity } from "../../sharedio";
-import { EntityReservedAttributeName } from "../../sharedio";
+import { EntityReservedAttributeName, EntityBuiltinRoleName } from "../../sharedio";
 
 export interface SerializedEntity {
     id: string;
     type: string;
-    owned: boolean;
+    owner: boolean,
+    inside: boolean,
+    roles: KeyValue<boolean>,
     state: KeyValue;
     actions: string[];
 }

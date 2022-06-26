@@ -149,7 +149,7 @@ class RawServer extends HasId {
      * @param id Entity ID
      */
      public findEntity(id: string) {
-        const ids = id.trim().split(".").reduce((previousSteps, currentStep, index) => {
+        const ids = id.trim().split(Entity.ID_SEPARATOR).reduce((previousSteps, currentStep, index) => {
             return [...previousSteps, previousSteps[index - 1] ? `${previousSteps[index - 1] ?? ""}.${currentStep}` : currentStep]
         }, [] as string[]);
 
@@ -301,7 +301,7 @@ class RawServer extends HasId {
 
             if (!this._users.find((user) => user.is(user))) {
                 this._users.push(user);
-                this.mainChannel.join(user);
+                user.join(this.mainChannel);
             }
 
             this.emit("connection", {

@@ -20,9 +20,10 @@ const server = new Server({
 });
 
 class WatchTestEntity extends Entity {
-    number = 0;
-    string = "";
-    boolean = false;
+    @output number = 0;
+    @output string = "";
+    @output boolean = false;
+
     unchangedNumber = 0;
     unchangedString = "unchanged";
     unchangedBoolean = false;
@@ -70,11 +71,11 @@ console.log(test.id);
 console.log(server.findEntity(test.id)?.id);
 
 server.start(() => {
-    setInterval(() => {
-        const firstUser = server.users[0];
+    // setInterval(() => {
+    //     const firstUser = server.users[0];
 
-        if (firstUser) {
-            console.log(firstUser.clients.length, "clients connected");
-        }
-    }, 5000);
+    //     if (firstUser) {
+    //         console.log(firstUser.clients.length, "clients connected");
+    //     }
+    // }, 5000);
 });
