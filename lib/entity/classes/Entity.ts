@@ -37,55 +37,8 @@ class RawEntity
     }
     private static _schema?: EntitySchema;
 
-    constructor({ server, channel, initialState, owner, dummy = false }: EntityConfig) {
-        super("Entity", 8);
-
-        if (dummy) {
-            this._channel = undefined as any;
-            this._server = undefined as any;
-            this._owner = owner ?? null;
-
-            // Disables event listeners for dummy entities
-            this.on = (event: any, callback: any) => undefined;
-            this.off();
-
-            return this;
-        }
-
-        channel ??= server?.mainChannel;
-        server ??= channel?.server;
-
-        this._channel = (channel ?? server?.mainChannel) as Channel;
-        this._server = (server ?? channel?.server) as Server;
-        this._owner = owner ?? null;
-
-        do {
-            if (this._channel) {
-                this.resetId(this._channel.id ?? "", 8, Entity.ID_SEPARATOR);
-            }
-        } while (this.server.findEntity(this.id));
-
-        this._channel?.entities.push(this);
-        this._server?.entities.push(this as Entity);
-
-        process.nextTick(() => {
-            const created = this.exists !== false;
-            if (!created) {
-                this.delete();
-                return;
-            }
-
-            this._channel ??= (this._server?.mainChannel) as Channel;
-            this._server ??= (this._channel?.server) as Server;
-
-            if (!this._channel || !this._server) throw new SharedIOError("serverAndChannelUndefined");
-
-            this._exists = true;
-        });
-    }
-
     /**
-     * RawEntity class name
+     * Entity class name
      */
     public get type() {
         return this.constructor.name;
@@ -143,6 +96,58 @@ class RawEntity
     public get schema(): EntitySchema<this> {
         return (this.constructor as typeof RawEntity).schema as EntitySchema<this>;
     }
+
+    constructor({ server, channel, initialState, owner, dummy = false }: EntityConfig) {
+        super("Entity", 8);
+
+        if (dummy) {
+            this._channel = undefined as any;
+            this._server = undefined as any;
+            this._owner = owner ?? null;
+
+            // Disables event listeners for dummy entities
+            this.on = (event: any, callback: any) => undefined;
+            this.off();
+
+            return this;
+        }
+
+        channel ??= server?.mainChannel;
+        server ??= channel?.server;
+
+        this._channel = (channel ?? server?.mainChannel) as Channel;
+        this._server = (server ?? channel?.server) as Server;
+        this._owner = owner ?? null;
+
+        do {
+            if (this._channel) {
+                this.resetId(this._channel.id ?? "", 8, Entity.ID_SEPARATOR);
+            }
+        } while (this.server.findEntity(this.id));
+
+        this._channel?.entities.push(this);
+        this._server?.entities.push(this as Entity);
+
+        process.nextTick(() => {
+            const created = this.exists !== false;
+            if (!created) {
+                this.delete();
+                return;
+            }
+
+            this._channel ??= (this._server?.mainChannel) as Channel;
+            this._server ??= (this._channel?.server) as Server;
+
+            if (!this._channel || !this._server) throw new SharedIOError("serverAndChannelUndefined");
+
+            this._exists = true;
+        });
+    }
+
+    /**
+     * Use this method to initialize the entity
+     */
+    public $init(config: EntityConfig) {}
 
     /**
      * Deletes this entity

@@ -1,4 +1,5 @@
-import { SerializedEntity, RawEntity, EntityReservedAttributeName, EntityAttributeName, Cache, RawChannel, ViewOutput } from "../../sharedio";
+import _ from "lodash";
+import { SerializedEntity, RawEntity, EntityReservedAttributeName, EntityAttributeName, Cache, RawChannel, ViewOutput, ViewInterface, ViewChanges, ViewDeletions, Output, WriteOutput } from "../../sharedio";
 import { ObjectTransform, KeyValueDifference } from "../../sharedio";
 import { KeyValue } from "../../sharedio";
 import { User, Client } from "../../sharedio";
@@ -20,7 +21,7 @@ export class View {
     public get current() {
         return this._current;
     }
-    private _current: KeyValue<SerializedEntity, string> = {};
+    private _current: ViewInterface = {};
 
     /**
      * Returns a JSON that represents the changes that will be sent to the user in the next server tick
@@ -28,7 +29,7 @@ export class View {
     public get changes() {
         return this._changes;
     }
-    private _changes: KeyValue<SerializedEntity, string> = {};
+    private _changes: ViewChanges = {};
 
     /**
      * Returns an array of entities and entity properties that have been deleted or hidden from this user's perspective
@@ -36,9 +37,9 @@ export class View {
     public get deleted() {
         return this._deleted;
     }
-    private _deleted: string[] = [];
+    private _deleted: ViewDeletions = [];
 
-    constructor(private _user: User) {}
+    constructor(private _user: User) { }
 
     /**
      * Returns how the user is currently viewing an entity as JSON.
@@ -85,9 +86,9 @@ export class View {
         };
 
         for (const changedKey in this.changes) {
-            const newValue = this.changes[changedKey];
+            const changes = this.changes[changedKey];
 
-            this.current[changedKey] = newValue;
+            this.current[changedKey] = ObjectTransform.merge(this.current[changedKey] ?? {}, changes);
         }
 
         for (const deletedKey in this.deleted) {
@@ -112,6 +113,36 @@ export class View {
         } else {
             this.user.send(output);
         }
+
+        this._changes = {};
+        this._deleted = [];
+    }
+
+    /**
+     * Automatically updated the user's view given an output
+     */
+    public handleOutput(output: Omit<WriteOutput, "id">) {
+        const { entityId, properties } = output.data;
+
+        this._changes[entityId] ??= {};
+
+        if (this._changes[entityId]) {
+            this._changes[entityId].state ??= {};
+            const stateChanges = this._changes[entityId] as SerializedEntity;
+
+            for (const propertyName in properties) {
+                const newValue = properties[propertyName];
+
+                if (newValue === undefined) {
+                    this._deleted.push(propertyName);
+                } else {
+                    stateChanges.state[propertyName] = newValue;
+                }
+            }
+        }
+
+        console.log("view output", output, this._changes[entityId]);
+        this.update();
     }
 
     /**
@@ -129,7 +160,7 @@ export class View {
     ): SerializedEntity {
         const serialized: SerializedEntity = {
             id: entity.id,
-            type: "RawEntity",
+            type: entity.type,
             owner: this.user.owns(entity),
             inside: entity instanceof RawChannel && this.user.in(entity),
             roles: {},

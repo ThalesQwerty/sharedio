@@ -91,4 +91,5 @@ export class ObjectTransform {
     static readonly clone = _.cloneDeep;
     static readonly get = _.get;
     static readonly set = _.set;
+    static readonly merge = _.merge;
 }

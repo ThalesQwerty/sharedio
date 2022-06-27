@@ -50,11 +50,13 @@ class RawChannel extends RawEntity implements ChannelFunctions {
      * @returns
      */
     public create<EntityType extends RawEntity>(type: new (config: EntityConfig<EntityType>) => EntityType, config: EntityConfig = {} as any, props: KeyValue = {}): EntityType {
-        const newEntity = new type({
+        const newConfig = {
             ...config,
             channel: this as Channel,
             server: this.server
-        }) as EntityType;
+        };
+
+        const newEntity = new type(newConfig) as EntityType;
 
         const created = newEntity.exists !== false;
         if (!created) {
@@ -66,12 +68,7 @@ class RawChannel extends RawEntity implements ChannelFunctions {
 
         this.server.entities.push(newEntity as Entity);
 
-        newEntity.emit("create", {
-            entity: this,
-            user: config.owner,
-        });
-
-        return WatchedObject(newEntity, {
+        const watched = WatchedObject(newEntity, {
             write: ({ propertyName, previousValue, attemptedValue, value}) => {
                 // TO-DO: allow computed property binding
                 /*
@@ -123,6 +120,15 @@ class RawChannel extends RawEntity implements ChannelFunctions {
         }, {
             exclude: RawEntity.reservedAttributes as (keyof EntityType)[]
         });
+
+        watched.$init(newConfig);
+
+        newEntity.emit("create", {
+            entity: this,
+            user: config.owner,
+        });
+
+        return watched;
     }
 
     constructor(config: EntityConfig) {

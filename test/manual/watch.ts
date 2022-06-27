@@ -24,7 +24,7 @@ class WatchTestEntity extends Entity {
     @output string = "";
     @output boolean = false;
 
-    unchangedNumber = 0;
+    @input unchangedNumber = 0;
     unchangedString = "unchanged";
     unchangedBoolean = false;
     object = {
@@ -52,23 +52,22 @@ class WatchTestEntity extends Entity {
         this._computed = value / 2;
     }
 
+    $init() {
+        setInterval(() => {
+            if (this.exists) {
+                console.log("incrementing...");
+                this.number ++;
+            }
+        }, 5000);
+    }
+
     method(whatever: any) {
         console.log("method", whatever);
     }
 }
 
-// const a = new EntityList(server.create(WatchTestEntity));
-
-const test = server.mainChannel.create(WatchTestEntity) as WatchTestEntity;
-
-test.method(test.number);
-test.string = "oxe";
-test.computed = 50;
-test.array.push(3);
-
-console.log(server.mainChannel.id);
-console.log(test.id);
-console.log(server.findEntity(test.id)?.id);
+const testEntity = server.mainChannel.create(WatchTestEntity) as WatchTestEntity;
+testEntity.number = -1;
 
 server.start(() => {
     // setInterval(() => {

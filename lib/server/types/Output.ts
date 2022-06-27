@@ -1,4 +1,4 @@
-import { Client, SerializedEntity } from "../../sharedio";
+import { Client, SerializedEntity, ViewChanges, ViewDeletions } from "../../sharedio";
 import { KeyValueDifference } from "../../sharedio";
 import { KeyValue } from "../../sharedio";
 export interface SharedIOBaseOutput {
@@ -38,8 +38,8 @@ export interface PingOutput extends SharedIOBaseOutput {
 export interface ViewOutput extends SharedIOBaseOutput {
     type: "view";
     data: {
-        changes: KeyValue<SerializedEntity, string>,
-        deleted: string[]
+        changes: ViewChanges,
+        deleted: ViewDeletions
     }
 }
 
@@ -82,8 +82,6 @@ export interface AssignedCallOutput extends CallOutput {
 export interface AssignedReturnOutput extends CallOutput {
     client: Client
 }
-
-
 
 export type Output =
     | AuthOutput

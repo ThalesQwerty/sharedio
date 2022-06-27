@@ -49,6 +49,11 @@ export class Queue {
         this._entities = {};
     }
 
+    public sync() {
+        this.runInput();
+        this.runOutput();
+    }
+
     /**
      * Adds a new entry for output queue
      */
@@ -73,7 +78,6 @@ export class Queue {
      * Sends the current changes to the users and clears the update queue
      */
     public runOutput() {
-
         // Simplifies output list in order to prevent multiple "write" events for the same entity
         const reducedOutput = this._output.reduce((queue, output) => {
             const sameEntity = queue.find(possibleOutput => {
@@ -98,13 +102,16 @@ export class Queue {
                 const user = output.client?.user;
 
                 if (user?.in(this.channel)) {
-                    user.send(output);
+                    if (output.type === "write") user.view.handleOutput(output);
+                    else user.send(output);
                 }
             } else {
                 for (const user of this.channel.users) {
                     // It's not necessary to broadcast an output to the user who caused it
                     if (!output.client?.user?.is(user)) {
-                        user.send(output);
+
+                        if (output.type === "write") user.view.handleOutput(output);
+                        else user.send(output);
                     }
                 }
             }
@@ -142,6 +149,8 @@ export class Queue {
                 }
             }
         }
+
+        this._input = [];
     }
 
     public constructor(private _channel: RawChannel) {

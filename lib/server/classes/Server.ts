@@ -275,7 +275,7 @@ class RawServer extends HasId {
         });
 
         channels.forEach((channel) => {
-            RawChannel.getIOQueue(channel).broadcast();
+            RawChannel.getIOQueue(channel).sync();
         })
 
         this.emit("nextTick");
