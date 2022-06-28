@@ -28,7 +28,7 @@ export class Action {
     public write<EntityType extends RawEntity>(
         entity: EntityType,
         values: KeyValue<any, EntityAttributeName<EntityType>>,
-        debug: boolean = true
+        debug: boolean = false
     ) {
         const viewed = this._user.view.current[entity.id];
 

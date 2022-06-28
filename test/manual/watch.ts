@@ -1,4 +1,4 @@
-import { Channel, EntityConfig, Entity, Server, async, output, input } from "../../lib";
+import { Channel, EntityConfig, Entity, Server, async, output, input, inputFor } from "../../lib";
 import { EntityList } from "../../lib/entity/classes/EntityList";
 class TestChannel extends Channel {
     constructor(config: EntityConfig) {
@@ -21,7 +21,7 @@ const server = new Server({
 
 class WatchTestEntity extends Entity {
     @output number = 0;
-    @output string = "";
+    @output @inputFor("all") string = "wololo";
     @output boolean = false;
 
     @input unchangedNumber = 0;
@@ -53,12 +53,11 @@ class WatchTestEntity extends Entity {
     }
 
     $init() {
-        setInterval(() => {
-            if (this.exists) {
-                console.log("incrementing...");
-                this.number ++;
-            }
-        }, 5000);
+        // setInterval(() => {
+        //     if (this.exists) {
+        //         console.log("string value:", this.string);
+        //     }
+        // }, 5000);
     }
 
     method(whatever: any) {
@@ -78,3 +77,7 @@ server.start(() => {
     //     }
     // }, 5000);
 });
+
+server.on("connection", () => {
+    console.log(server.users.length + " users on server");
+})

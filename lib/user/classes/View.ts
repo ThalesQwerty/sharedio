@@ -141,7 +141,6 @@ export class View {
             }
         }
 
-        console.log("view output", output, this._changes[entityId]);
         this.update();
     }
 

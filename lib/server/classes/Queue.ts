@@ -124,10 +124,11 @@ export class Queue {
         for (const input of this._input) {
             const user = input.client.user;
             const entity = input.data.entity;
+
             if (entity) {
                 switch (input.type) {
                     case "write": {
-                        user?.action.write(entity, input.data.properties);
+                        user?.action.write(entity, input.data.properties, true);
                         break;
                     }
                     case "call": {
