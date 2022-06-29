@@ -1,4 +1,4 @@
-import { Server } from "../../sharedio";
+import { Client, EntityAttributeName, Server } from "../../sharedio";
 import { Channel, RawChannel } from "../../sharedio";
 import { HasEvents, Mixin } from "../../sharedio";
 import { SharedIOError } from "../../sharedio";
@@ -84,8 +84,9 @@ class RawEntity
      * The user who's curently using the entity
      */
     public get user() {
-        return this.server.currentUser;
+        return this._user;
     }
+    private _user: User|null = null;
 
     private _roles: EntityRolesData = {
         lists: {},
@@ -124,9 +125,6 @@ class RawEntity
                 this.resetId(this._channel.id ?? "", 8, Entity.ID_SEPARATOR);
             }
         } while (this.server.findEntity(this.id));
-
-        this._channel?.entities.push(this);
-        this._server?.entities.push(this as Entity);
 
         process.nextTick(() => {
             const created = this.exists !== false;

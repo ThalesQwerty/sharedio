@@ -1,4 +1,4 @@
-import { RawEntity } from "../../sharedio";
+import { Entity, RawEntity } from "../../sharedio";
 import { RandomHex } from "../../sharedio";
 import { KeyValue } from "../../sharedio";
 import { ChannelOutput, AssignedChannelOutput, RoutedChannelInput, WriteInput } from "../../sharedio";
@@ -97,7 +97,9 @@ export class Queue {
             return queue;
         }, [] as (ChannelOutput|AssignedChannelOutput)[]);
 
+
         for (const output of reducedOutput) {
+            console.log("output client", output.client, output.data);
             if (output.private) {
                 const user = output.client?.user;
 
@@ -128,7 +130,8 @@ export class Queue {
             if (entity) {
                 switch (input.type) {
                     case "write": {
-                        user?.action.write(entity, input.data.properties, true);
+                        Entity.lastClient = input.client || null;
+                        user?.action.write(entity, input.data.properties);
                         break;
                     }
                     case "call": {

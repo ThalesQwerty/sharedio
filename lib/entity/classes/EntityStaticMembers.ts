@@ -1,4 +1,4 @@
-import { Server } from "../../sharedio";
+import { Client, Server } from "../../sharedio";
 import { RawChannel } from "../../sharedio";
 import { HasId, HasEvents, ObjectTransform } from "../../sharedio";
 import { KeyValue } from "../../sharedio";
@@ -7,6 +7,15 @@ import { PrintableEntity } from "../../sharedio";
 import { RawEntity } from "../../sharedio";
 
 export abstract class EntityStaticMembers extends HasId {
+    public static get lastClient() { return this._lastClient };
+    public static set lastClient(newValue) {
+        this._lastClient = newValue || null;
+        if (newValue) process.nextTick(() => {
+            this._lastClient = null;
+        })
+    }
+    private static _lastClient: Client|null = null;
+
     public static ID_SEPARATOR = ".";
     /**
      * Lists the names of the reserved entity attributes. Those names cannot be used to create custom attributes.

@@ -23,10 +23,68 @@ class RawChannel extends RawEntity implements ChannelFunctions {
     }
     private _entities: EntityList = new EntityList();
 
-    public static getIOQueue(channel: RawChannel) {
+    public static getIOQueue<ChannelType extends RawChannel>(channel: ChannelType) {
         return channel._queue;
     }
     private _queue: Queue;
+
+    /**
+     * Configures the I/O queue of a channel to watch an entity for future updates
+     */
+    public static setupProxy<ChannelType extends RawChannel, EntityType extends RawEntity>(channel: ChannelType, entity: EntityType) {
+        return WatchedObject(entity, {
+            write: ({ propertyName, previousValue, attemptedValue, value}) => {
+                // TO-DO: allow computed property binding
+                /*
+                    const propertySchema = entity.schema.attributes[e.propertyName as EntityAttributeName<EntityType>];
+
+                    for (const dependency of propertySchema.dependencies) {
+
+                    }
+                */
+
+                /*
+                    If the "set" mutator of the property alters the value that would be written into the property,
+                    the server should also send to the author the new value.
+
+                    Otherwise, it will be sent to everyone in the channel except for the author of the change in order
+                    to avoid unnecessary latency issues, since they know the new value already.
+                 */
+                const shouldSendToAuthor = (typeof value !== typeof attemptedValue) || (value instanceof Object ? !ObjectTransform.isEqual(value, attemptedValue) : value !== attemptedValue);
+                const schema = entity.schema.attributes[propertyName as EntityAttributeName<EntityType>];
+
+                if (!schema.async) {
+                    channel._queue.addOutput({
+                        type: "write",
+                        data: {
+                            entityId: entity.id,
+                            properties: {
+                                [propertyName]: value
+                            }
+                        },
+                        client: (!shouldSendToAuthor && Entity.lastClient) || undefined
+                    });
+                }
+            },
+            call: ({ methodName, parameters }) => {
+                const schema = entity.schema.attributes[methodName as EntityAttributeName<EntityType>];
+
+                if (!schema.async) {
+                    channel._queue.addOutput({
+                        type: "call",
+                        data: {
+                            entityId: entity.id,
+                            methodName: methodName,
+                            parameters: parameters
+                        },
+                        client: Entity.lastClient || undefined
+                    });
+                }
+            }
+        }, {
+            exclude: RawEntity.reservedAttributes as (keyof EntityType)[]
+        });
+    }
 
     public join(user: User) {
         if (!user.in(this)) {
@@ -58,77 +116,30 @@ class RawChannel extends RawEntity implements ChannelFunctions {
 
         const newEntity = new type(newConfig) as EntityType;
 
-        const created = newEntity.exists !== false;
-        if (!created) {
-            newEntity.delete();
-        }
-
         // Generates schema
         (newEntity.constructor as any).schema as EntitySchema<EntityType>;
 
-        this.server.entities.push(newEntity as Entity);
+        const entityProxy = Channel.setupProxy(this, newEntity);
 
-        const watched = WatchedObject(newEntity, {
-            write: ({ propertyName, previousValue, attemptedValue, value}) => {
-                // TO-DO: allow computed property binding
-                /*
-                    const propertySchema = newEntity.schema.attributes[e.propertyName as EntityAttributeName<EntityType>];
+        entityProxy.$init(newConfig);
 
-                    for (const dependency of propertySchema.dependencies) {
+        this.server.entities.push(entityProxy as Entity);
+        if (newEntity instanceof RawChannel) this.server.channels.push(entityProxy as any as Channel);
+        this.entities.push(entityProxy as Entity);
 
-                    }
-                */
+        // const created = entityProxy.exists !== false;
+        // if (!created) {
+        //     entityProxy.delete();
+        // }
 
-                /*
-                    If the "set" mutator of the property alters the value that would be written into the property,
-                    the server should also send to the author the new value.
+        console.log("entities", this.server.entities.map(e => e.id));
 
-                    Otherwise, it will be sent to everyone in the channel except for the author of the change in order
-                    to avoid unnecessary latency issues, since they know the new value already.
-                 */
-                const shouldSendToAuthor = (typeof value !== typeof attemptedValue) || (value instanceof Object ? !ObjectTransform.isEqual(value, attemptedValue) : value !== attemptedValue);
-                const schema = newEntity.schema.attributes[propertyName as EntityAttributeName<EntityType>];
-
-                if (!schema.async) {
-                    this._queue.addOutput({
-                        type: "write",
-                        data: {
-                            entityId: newEntity.id,
-                            properties: {
-                                [propertyName]: value
-                            }
-                        },
-                        client: shouldSendToAuthor ? undefined : this.server.currentUser?.clients.last
-                    });
-                }
-            },
-            call: ({ methodName, parameters }) => {
-                const schema = newEntity.schema.attributes[methodName as EntityAttributeName<EntityType>];
-
-                if (!schema.async) {
-                    this._queue.addOutput({
-                        type: "call",
-                        data: {
-                            entityId: newEntity.id,
-                            methodName: methodName,
-                            parameters: parameters
-                        },
-                        client: this.server.currentUser?.clients.last
-                    });
-                }
-            }
-        }, {
-            exclude: RawEntity.reservedAttributes as (keyof EntityType)[]
-        });
-
-        watched.$init(newConfig);
-
-        newEntity.emit("create", {
+        entityProxy.emit("create", {
             entity: this,
             user: config.owner,
         });
 
-        return watched;
+        return entityProxy;
     }
 
     constructor(config: EntityConfig) {

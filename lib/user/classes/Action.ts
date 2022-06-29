@@ -1,4 +1,4 @@
-import { RawEntity, EntityAttributeName, UserRoles } from "../../sharedio";
+import { RawEntity, EntityAttributeName, UserRoles, Client } from "../../sharedio";
 import { KeyValue } from "../../sharedio";
 import { User } from "../../sharedio";
 

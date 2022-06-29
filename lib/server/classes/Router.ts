@@ -15,8 +15,6 @@ export class Router {
     public handle(input: Input, client: Client) {
         const { user } = client;
 
-        if (user) this.server.currentUser = user;
-
         switch (input.type) {
             // case "auth": {
             //     client.emit("auth", {

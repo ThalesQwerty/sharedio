@@ -82,6 +82,11 @@ class RawServer extends HasId {
     }
     private _entities: EntityList;
 
+    public get channels() {
+        return this._channels as EntityList<Channel>;
+    }
+    private _channels: EntityList<RawChannel>;
+
     /**
      * How many tick events will happen per second
      */
@@ -117,16 +122,16 @@ class RawServer extends HasId {
     }
     private _serverStartTimestamp: number = 0;
 
-    public get currentUser() {
-        return this._currentUser;
-    }
-    public set currentUser(user) {
-        this._currentUser = user;
-        process.nextTick(() => {
-            this._currentUser = null;
-        });
-    }
-    private _currentUser: User | null = null;
+    // public get currentUser() {
+    //     return this._currentUser;
+    // }
+    // public set currentUser(user) {
+    //     this._currentUser = user;
+    //     process.nextTick(() => {
+    //         this._currentUser = null;
+    //     });
+    // }
+    // private _currentUser: User | null = null;
 
     public get router() {
         return this._router;
@@ -183,6 +188,7 @@ class RawServer extends HasId {
 
         Server.current = this;
         this._entities = new EntityList();
+        this._channels = new EntityList<RawChannel>();
         this._router = new Router(this);
 
         config.port ??= DEFAULT_PORT;
@@ -191,6 +197,9 @@ class RawServer extends HasId {
         config.mainChannel ??= Channel;
 
         this._mainChannel = new config.mainChannel({ server: this, dummy: config.dummy }) as Channel;
+        this._entities.push(this._mainChannel);
+        this._channels.push(this._mainChannel);
+
         this._config = ObjectTransform.clone(config);
     }
 
@@ -266,17 +275,17 @@ class RawServer extends HasId {
 
         const channels: Channel[] = [];
 
-        this.entities.forEach((entity) => {
-            if (entity.exists) {
-                // RawEntity.emit(entity)("tick");
+        // this.entities.forEach((entity) => {
+        //     if (entity.exists) {
+        //         // RawEntity.emit(entity)("tick");
 
-                if (entity instanceof RawChannel) {
-                    channels.push(entity as Channel);
-                }
-            }
-        });
+        //         if (entity instanceof RawChannel) {
+        //             channels.push(entity as Channel);
+        //         }
+        //     }
+        // });
 
-        channels.forEach((channel) => {
+        this.channels.forEach((channel) => {
             RawChannel.getIOQueue(channel).sync();
         })
 

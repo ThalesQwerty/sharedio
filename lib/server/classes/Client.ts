@@ -108,8 +108,6 @@ class RawClient extends HasId {
     public handleInput(data: WS.RawData) {
         const input: Input = JSON.parse(data.toString());
 
-        if (this.user) this.server.currentUser = this.user;
-
         switch (input.type) {
             case "auth": {
                 this.server.auth(this, input.data.token);
