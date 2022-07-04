@@ -58,11 +58,12 @@ export class User extends HasId {
         this._action = new Action(this);
     }
 
-    public send(output: Output|Omit<Output, "id">) {
+    public send(output: Output | Omit<Output, "id">) {
+        if (output.type === "return") console.log("returning", output.data);
         this.clients.forEach(client => {
             const shouldSendOutput = !output.client || (output.private && client.is(output.client)) || (!output.private && !client.is(output.client));
             if (shouldSendOutput) {
-                client.send(output);
+                client.send({ ...output, private: undefined, client: undefined });
             }
         });
     }
@@ -157,7 +158,7 @@ export class User extends HasId {
      * @param attributeName The name of the attribute that would be read or written
      * @returns `true` if action would be allowed. `false` otherwise.
      */
-    public can<EntityType extends RawEntity>(action: "input"|"output", entity: EntityType, attributeName: EntityAttributeName<EntityType>) {
+    public can<EntityType extends RawEntity>(action: "input" | "output", entity: EntityType, attributeName: EntityAttributeName<EntityType>) {
         const userRoleCombinationId = entity.roles.combinationId(this);
         const attributeSchema = entity.schema.attributes[attributeName];
 

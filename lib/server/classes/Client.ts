@@ -146,7 +146,7 @@ class RawClient extends HasId {
      * Sends a message to the client
      * @param message Message to be sent. It has to be one of the possible SharedIO response types
      */
-    public send(message: Output|Omit<Output, "id">) {
+    public send(message: (Output|Omit<Output, "id">)&{client?: undefined, private?: undefined}) {
         delete (message as any).user;
         this.sendRaw({
             id: RandomHex(16),

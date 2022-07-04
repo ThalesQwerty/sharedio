@@ -32,7 +32,7 @@ export function WatchedObject<ObjectType extends object>(object: ObjectType, eve
             if (value instanceof Function) {
                 return function (...args: any[]) {
                     eventHandlers.call?.({ methodName: getPath(propertyName).join("."), parameters: args });
-                    value(...args);
+                    return value(...args);
                 }
             } else if (value instanceof Array) {
                 return new Proxy(value, {

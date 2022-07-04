@@ -83,7 +83,7 @@ export abstract class Schema {
                 const initialValue = (dummy as any)[attributeName];
 
                 generatedSchema.attributes[attributeName] = {
-                    ...defaultSchema,
+                    ...ObjectTransform.clone(defaultSchema),
                     name: attributeName,
                     type: getType(entityClass.prototype, attributeName) ?? typeof initialValue,
                     initialValue,
@@ -117,7 +117,7 @@ export abstract class Schema {
          * It's not viable to verify roles everytime an user tries to view or interact with an entity,
          * since this computation might take some time.
          *
-         * Therefore, I decided to calculate all possible outcomes beforehands and store the values in the entity schema.
+         * Therefore, SharedIO calculates all possible outcomes beforehand and store the values into the entity schema.
          */
         for (const attributeName in schema.attributes) {
             const attribute = schema.attributes[attributeName as EntityAttributeName<EntityType>];

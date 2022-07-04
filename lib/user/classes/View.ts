@@ -107,7 +107,7 @@ export class View {
         if (clients.length) {
             for (const client of clients) {
                 if (client.user?.is(this.user)) {
-                    client.send(output);
+                    client.send({...output, client: undefined, private: undefined});
                 }
             }
         } else {

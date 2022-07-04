@@ -60,8 +60,9 @@ class WatchTestEntity extends Entity {
         // }, 5000);
     }
 
-    method(whatever: any) {
-        console.log("method", whatever);
+    @inputFor("all") method(whatever: any) {
+        console.log("method!", whatever);
+        return 5;
     }
 }
 

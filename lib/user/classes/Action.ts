@@ -58,7 +58,7 @@ export class Action {
     public call<EntityType extends RawEntity>(
         entity: EntityType,
         methodName: EntityAttributeName<EntityType>,
-        params?: unknown[],
+        parameters?: unknown[],
     ): unknown {
         const authorized = this._user.can("input", entity, methodName);
 
@@ -66,8 +66,9 @@ export class Action {
             authorized &&
             typeof entity[methodName] === "function"
         ) {
-            const method = entity[methodName] as unknown as Function;
-            const returnedValue = params ? method(...params) : method();  //, this._user);
+            const method = entity[methodName] as any as (...args: any[]) => unknown;
+            const returnedValue = parameters ? method.call(entity, ...parameters) : method.call(entity);  //, this._user);
+
             return returnedValue;
         }
     }

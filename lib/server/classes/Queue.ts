@@ -67,10 +67,10 @@ export class Queue {
     /**
      * Adds a new entry for input queue
      */
-     public addInput(input: Omit<RoutedChannelInput, "id">) {
+     public addInput(input: RoutedChannelInput) {
         this._input.push({
             ...input,
-            id: RandomHex(16)
+            id: input.id || RandomHex(16)
         } as RoutedChannelInput);
     }
 
@@ -99,7 +99,6 @@ export class Queue {
 
 
         for (const output of reducedOutput) {
-            console.log("output client", output.client, output.data);
             if (output.private) {
                 const user = output.client?.user;
 
@@ -135,9 +134,11 @@ export class Queue {
                         break;
                     }
                     case "call": {
+                        Entity.lastClient = input.client || null;
                         const returnedValue = user?.action.call<any>(entity, input.data.methodName, input.data.parameters);
 
                         if (returnedValue !== undefined) {
+
                             this.addOutput({
                                 type: "return",
                                 data: {
