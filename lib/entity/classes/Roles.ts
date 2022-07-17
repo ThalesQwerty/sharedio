@@ -2,7 +2,7 @@ import { KeyValue } from "../../sharedio";
 import { User } from "../../sharedio";
 import { EntityBuiltinRoleName, EntityRolesData, EntityRolesInterface, EntityRoleBooleanExpression } from "../../sharedio";
 import { EntitySchemaAttribute } from "../../sharedio";
-import { RawEntity } from "../../sharedio";
+import { Entity } from "../../sharedio";
 
 /**
  * Lists the user roles that are built-in on the entities
@@ -36,7 +36,7 @@ export class UserRoles {
     /**
      * Adds user roles to the entity
      */
-    static apply(entity: RawEntity, {lists: roleLists, binary: binaryEncoded}: EntityRolesData): EntityRolesInterface<any> {
+    static apply(entity: Entity, {lists: roleLists, binary: binaryEncoded}: EntityRolesData): EntityRolesInterface<any> {
         return {
             assign: (user: User, ...roles: EntityBuiltinRoleName[]) => {
                 binaryEncoded[user.id] ??= 0;
@@ -139,7 +139,7 @@ export class UserRoles {
     /**
      * Verifies if a given role combination ID satisfies the input/output rules of an attribute
      */
-    static verifyCombination<EntityType extends RawEntity>(action: "input"|"output", userRoleCombinationId: number, attributeSchema: EntitySchemaAttribute<EntityType>) {
+    static verifyCombination<EntityType extends Entity>(action: "input"|"output", userRoleCombinationId: number, attributeSchema: EntitySchemaAttribute<EntityType>) {
         const list = attributeSchema.binary[action];
         if (!list.length) return false;
 

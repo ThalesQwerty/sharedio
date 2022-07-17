@@ -1,6 +1,6 @@
 import { ClientList, EntityAttributeName, Output, Server, UserRoles } from "../../sharedio";
-import { RawChannel } from "../../sharedio";
-import { RawEntity } from "../../sharedio";
+import { Channel } from "../../sharedio";
+import { Entity } from "../../sharedio";
 import { HasId, RandomHex } from "../../sharedio";
 import { Client } from "../../sharedio";
 import { Action } from "../../sharedio";
@@ -88,21 +88,21 @@ export class User extends HasId {
     /**
      * Verifies if this user owns an entity
      */
-    public owns(entity: RawEntity) {
+    public owns(entity: Entity) {
         return entity.owner && this.is(entity.owner) ? true : false;
     }
 
     /**
      * Verifies if this user is inside a channel
      */
-    public in(channel: RawChannel) {
+    public in(channel: Channel) {
         return !!channel.users.find(user => user.is(this));
     }
 
     /**
      * Gets the roles of this user in a given entity
      */
-    public roles<EntityType extends RawEntity>(
+    public roles<EntityType extends Entity>(
         entity: EntityType,
     ): string[] {
         return entity.roles.list(this);
@@ -112,7 +112,7 @@ export class User extends HasId {
      * Attempts to join a channel and returns whether the attempt was successful or not.
      * @param channel
      */
-    public join<ChannelType extends RawChannel>(
+    public join<ChannelType extends Channel>(
         channel: ChannelType
     ): boolean {
         const success = true;
@@ -133,7 +133,7 @@ export class User extends HasId {
      * Attempts to leave a channel and returns whether the attempt was successful or not.
      * @param channel
      */
-    public leave<ChannelType extends RawChannel>(
+    public leave<ChannelType extends Channel>(
         channel: ChannelType
     ): boolean {
         const success = true;
@@ -158,7 +158,7 @@ export class User extends HasId {
      * @param attributeName The name of the attribute that would be read or written
      * @returns `true` if action would be allowed. `false` otherwise.
      */
-    public can<EntityType extends RawEntity>(action: "input" | "output", entity: EntityType, attributeName: EntityAttributeName<EntityType>) {
+    public can<EntityType extends Entity>(action: "input" | "output", entity: EntityType, attributeName: EntityAttributeName<EntityType>) {
         const userRoleCombinationId = entity.roles.combinationId(this);
         const attributeSchema = entity.schema.attributes[attributeName];
 

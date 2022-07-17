@@ -1,6 +1,6 @@
 import { EntityAttributeName, EntityConstructor } from "../../entity";
 import { EntityList } from "../../entity/classes/EntityList";
-import { RawEntity, Entity, EntityConfig, EntitySchema, WatchedObject, EntityRolesInterface } from "../../sharedio";
+import { Entity, EntityConfig, EntitySchema, WatchedObject, EntityRolesInterface } from "../../sharedio";
 import { ObjectTransform, HasEvents, Mixin } from "../../sharedio";
 import { KeyValue } from "../../sharedio";
 import { User } from "../../sharedio";
@@ -12,7 +12,7 @@ interface ChannelFunctions {
     create: EntityCreateFunction
 }
 
-class RawChannel extends RawEntity implements ChannelFunctions {
+class RawChannel extends Entity implements ChannelFunctions {
     public get users() {
         return this._users;
     }
@@ -31,7 +31,7 @@ class RawChannel extends RawEntity implements ChannelFunctions {
     /**
      * Configures the I/O queue of a channel to watch an entity for future updates
      */
-    public static setupProxy<ChannelType extends RawChannel, EntityType extends RawEntity>(channel: ChannelType, entity: EntityType) {
+    public static setupProxy<ChannelType extends RawChannel, EntityType extends Entity>(channel: ChannelType, entity: EntityType) {
         return WatchedObject(entity, {
             write: ({ propertyName, previousValue, attemptedValue, value}) => {
                 // TO-DO: allow computed property binding
@@ -82,7 +82,7 @@ class RawChannel extends RawEntity implements ChannelFunctions {
                 }
             }
         }, {
-            exclude: RawEntity.reservedAttributes as (keyof EntityType)[]
+            exclude: Entity.reservedAttributes as (keyof EntityType)[]
         });
     }
 
@@ -107,7 +107,7 @@ class RawChannel extends RawEntity implements ChannelFunctions {
      * @param props
      * @returns
      */
-    public create<EntityType extends RawEntity>(type: new (config: EntityConfig<EntityType>) => EntityType, config: EntityConfig = {} as any, props: KeyValue = {}): EntityType {
+    public create<EntityType extends Entity>(type: new (config: EntityConfig<EntityType>) => EntityType, config: EntityConfig = {} as any, props: KeyValue = {}): EntityType {
         const newConfig = {
             ...config,
             channel: this as Channel,
@@ -147,7 +147,11 @@ class RawChannel extends RawEntity implements ChannelFunctions {
     }
 }
 
-interface RawChannel extends HasEvents { }
+interface RawChannel extends HasEvents {
+    on: ChannelListenerOverloads<this>,
+    emit: ChannelEmitterOverloads<this>,
+    roles: EntityRolesInterface
+}
 
 /**
  * Channels are a special kind of entity that works as a subserver, being able to contain other entities (include other channels).
@@ -156,12 +160,6 @@ interface RawChannel extends HasEvents { }
  *
  * Every entity in the server must belong to one (and only one) channel, while users may be subscribed to multiple channels at the same time.
  */
-class Channel<Roles extends string[] = []> extends Mixin(RawChannel, [HasEvents]) { }
+class Channel extends Mixin(RawChannel, [HasEvents]) { }
 
-interface Channel<Roles extends string[] = []> extends HasEvents {
-    on: ChannelListenerOverloads<this>,
-    emit: ChannelEmitterOverloads<this>,
-    roles: EntityRolesInterface<Roles>
-}
-
-export { RawChannel, Channel };
+export { Channel };

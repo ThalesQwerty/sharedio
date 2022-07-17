@@ -2,10 +2,10 @@ import { Server } from "../../sharedio";
 import { Channel } from "../../sharedio";
 import { KeyValue } from "../../sharedio";
 import { User } from "../../sharedio";
-import { RawEntity } from "../../sharedio";
+import { Entity } from "../../sharedio";
 import { EntityAttribute, EntityAttributeName } from "../../sharedio";
 
-export type EntityConfig<EntityType extends RawEntity = RawEntity> = ({
+export type EntityConfig<EntityType extends Entity = Entity> = ({
     server?: Server;
     channel: Channel;
 }|{
@@ -29,8 +29,8 @@ export type EntityConfig<EntityType extends RawEntity = RawEntity> = ({
     dummy?: boolean;
 }
 
-export type EntityInterface<EntityType extends RawEntity = RawEntity> = {
+export type EntityInterface<EntityType extends Entity = Entity> = {
     [key in keyof EntityType]: EntityType[key]
 }
 
-export type EntityConstructor<EntityType extends RawEntity> = new (config: EntityConfig<EntityType>) => EntityType;
+export type EntityConstructor<EntityType extends Entity> = new (config: EntityConfig<EntityType>) => EntityType;

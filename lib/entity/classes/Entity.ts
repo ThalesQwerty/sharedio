@@ -1,5 +1,5 @@
 import { Client, EntityAttributeName, Server } from "../../sharedio";
-import { Channel, RawChannel } from "../../sharedio";
+import { Channel } from "../../sharedio";
 import { HasEvents, Mixin } from "../../sharedio";
 import { SharedIOError } from "../../sharedio";
 import { KeyValue } from "../../sharedio";
@@ -70,7 +70,7 @@ class RawEntity
     public get channel(): Channel {
         return this._channel as Channel;
     }
-    private _channel: RawChannel;
+    private _channel: Channel;
 
     /**
      * Does this entity exist or has it been deleted?
@@ -107,7 +107,7 @@ class RawEntity
             this._owner = owner ?? null;
 
             // Disables event listeners for dummy entities
-            this.on = (event: any, callback: any) => undefined;
+            this.on = (event: any, callback: any) => this;
             this.off();
 
             return this;
@@ -180,9 +180,12 @@ class RawEntity
     }
 }
 
-interface RawEntity extends HasEvents { }
+interface RawEntity extends HasEvents {
+    on: EntityListenerOverloads<this>,
+    emit: EntityEmitterOverloads<this>
+}
 
-interface Entity<Roles extends string[] = string[]> extends HasEvents {
+interface Entity extends HasEvents {
     on: EntityListenerOverloads<this>,
     emit: EntityEmitterOverloads<this>,
 
@@ -193,9 +196,9 @@ interface Entity<Roles extends string[] = string[]> extends HasEvents {
      *
      * Be aware that user roles are NOT global. Each entitiy/channel has their own possible roles for users.
      */
-    roles: EntityRolesInterface<Roles>
+    roles: EntityRolesInterface
 }
 
-class Entity<Roles extends string[] = string[]> extends Mixin(RawEntity, [HasEvents]) { }
+class Entity extends Mixin(RawEntity, [HasEvents]) { }
 
-export { RawEntity, Entity };
+export { Entity };

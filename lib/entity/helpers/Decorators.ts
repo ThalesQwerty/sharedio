@@ -1,15 +1,15 @@
-import { RawChannel } from "../../sharedio";
-import { RawEntity } from "../../sharedio";
+import { Channel } from "../../sharedio";
+import { Entity } from "../../sharedio";
 import { BuiltinRoles } from "../../sharedio";
 import { EntityAttributeName } from "../../sharedio";
 import { EntityRoleBooleanExpression } from "../../sharedio";
 import { EntitySchema } from "../../sharedio";
 
-function getSchema<EntityType extends RawEntity>(entity: EntityType) {
-    return (entity.constructor as typeof RawEntity).schema;
+function getSchema<EntityType extends Entity>(entity: EntityType) {
+    return (entity.constructor as typeof Entity).schema;
 }
 
-function addUserRoles<EntityType extends RawEntity>(expression: string, schema: EntitySchema<EntityType>) {
+function addUserRoles<EntityType extends Entity>(expression: string, schema: EntitySchema<EntityType>) {
     const roles = expression.replace(/\W+/g, " ").replace(/\s+/g, " ").trim().split(" ");
 
     roles.forEach(role => {
@@ -29,7 +29,7 @@ function addUserRoles<EntityType extends RawEntity>(expression: string, schema: 
  * - Avoiding a computationally expensive getter from being calculated more often than necessary
  * - Creating a method that doesn't generate side effects on other users' clients
  */
- export function async<EntityType extends RawEntity>(
+ export function async<EntityType extends Entity>(
     entity: EntityType,
     attributeName: EntityAttributeName<EntityType>
 ) {
@@ -46,7 +46,7 @@ function addUserRoles<EntityType extends RawEntity>(expression: string, schema: 
 export function inputFor<Expression extends string[] = string[]>(
     ...expressions: Expression
 ) {
-    return function <EntityType extends RawEntity>(
+    return function <EntityType extends Entity>(
         entity: EntityType,
         attributeName: Expression extends EntityRoleBooleanExpression<string[]>[]
             ? EntityAttributeName<EntityType>
@@ -70,7 +70,7 @@ export function inputFor<Expression extends string[] = string[]>(
 export function outputFor<Expression extends string[] = string[]>(
     ...expressions: Expression
 ) {
-    return function <EntityType extends RawEntity>(
+    return function <EntityType extends Entity>(
         entity: EntityType,
         attributeName: Expression extends EntityRoleBooleanExpression<string[]>[]
             ? EntityAttributeName<EntityType>
@@ -117,7 +117,7 @@ export function hiddenFor<Expression extends string[] = string[]>(
  *
  * Shorthand for: `@inputFor("owner")`
  */
-export function input<EntityType extends RawEntity>(
+export function input<EntityType extends Entity>(
     entity: EntityType,
     attributeName: EntityAttributeName<EntityType>
 ) {
@@ -135,11 +135,11 @@ export function input<EntityType extends RawEntity>(
  *
  * `@outputFor("inside")`, if channel
  */
-export function output<EntityType extends RawEntity>(
+export function output<EntityType extends Entity>(
     entity: EntityType,
     attributeName: EntityAttributeName<EntityType>
 ) {
-    (entity instanceof RawChannel ? outputFor(BuiltinRoles.MEMBER) : outputFor(BuiltinRoles.USER))(entity, attributeName);
+    (entity instanceof Channel ? outputFor(BuiltinRoles.MEMBER) : outputFor(BuiltinRoles.USER))(entity, attributeName);
 };
 
 /**
@@ -149,7 +149,7 @@ export function output<EntityType extends RawEntity>(
  *
  * `@hiddenFor("all")`
  */
-export function hidden<EntityType extends RawEntity>(
+export function hidden<EntityType extends Entity>(
     entity: EntityType,
     attributeName: EntityAttributeName<EntityType>
 ) {
@@ -165,7 +165,7 @@ export function hidden<EntityType extends RawEntity>(
  *
  * `@inputFor("owner") @outputFor("inside")`, if channel
  */
- export function shared<EntityType extends RawEntity>(
+ export function shared<EntityType extends Entity>(
     entity: EntityType,
     attributeName: EntityAttributeName<EntityType>
 ) {

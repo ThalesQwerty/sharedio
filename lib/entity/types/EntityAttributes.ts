@@ -1,12 +1,12 @@
-import { RawChannel } from "../../sharedio";
+import { Channel } from "../../sharedio";
 import { HasId } from "../../sharedio";
 import { KeyValue } from "../../sharedio";
-import { RawEntity } from "../../sharedio";
+import { Entity } from "../../sharedio";
 
 export type EntityReservedAttributeName =
-    | keyof RawEntity
+    | keyof Entity
     | keyof HasId
-    | keyof RawChannel
+    | keyof Channel
     | "resetId"
     | "_listeners"
     | "emit"
@@ -14,16 +14,16 @@ export type EntityReservedAttributeName =
     | "constructor"
     | "removeAllListeners";
 
-export type EntityAttributeName<EntityType extends RawEntity> = Exclude<
+export type EntityAttributeName<EntityType extends Entity> = Exclude<
     keyof EntityType,
     EntityReservedAttributeName | number | symbol
 >;
 
 export type EntityAttributeType = "any"|"number"|"string"|"boolean"|"array"|"object"|"function";
 
-export type EntitySetAcessorName<EntityType extends RawEntity> = `_${EntityAttributeName<EntityType>}`|`set${Capitalize<EntityAttributeName<EntityType>>}`;
+export type EntitySetAcessorName<EntityType extends Entity> = `_${EntityAttributeName<EntityType>}`|`set${Capitalize<EntityAttributeName<EntityType>>}`;
 
-export type EntityClassName = typeof RawEntity | string;
+export type EntityClassName = typeof Entity | string;
 
 type AttributePrimitives =
     | string
@@ -39,7 +39,7 @@ export type EntityAttribute =
 
 export type EntityMethod = Function;
 
-export type EntityWithAttribute<name extends string> = RawEntity & {
+export type EntityWithAttribute<name extends string> = Entity & {
     [key in name]: any;
 };
 

@@ -1,5 +1,5 @@
-import { Channel, EntityCreateFunction, RawChannel } from "../../sharedio";
-import { Entity, RawEntity, Schema } from "../../sharedio";
+import { Channel, EntityCreateFunction, Channel } from "../../sharedio";
+import { Entity, Entity, Schema } from "../../sharedio";
 import { HasId, ObjectTransform, HasEvents, Mixin } from "../../sharedio";
 import { User } from "../../sharedio";
 import { ServerConfig } from "../../sharedio";
@@ -85,7 +85,7 @@ class RawServer extends HasId {
     public get channels() {
         return this._channels as EntityList<Channel>;
     }
-    private _channels: EntityList<RawChannel>;
+    private _channels: EntityList<Channel>;
 
     /**
      * How many tick events will happen per second
@@ -162,12 +162,12 @@ class RawServer extends HasId {
 
         if (ids[0] === this.mainChannel?.id) {
             ids.shift();
-            let currentChild: RawEntity|null = null;
+            let currentChild: Entity|null = null;
 
             for (const step of ids) {
-                const parent: RawEntity = currentChild ?? this.mainChannel;
+                const parent: Entity = currentChild ?? this.mainChannel;
 
-                if (parent instanceof RawChannel) {
+                if (parent instanceof Channel) {
                     const child = parent.entities.findById(step);
                     if (!child) break;
 
@@ -188,7 +188,7 @@ class RawServer extends HasId {
 
         Server.current = this;
         this._entities = new EntityList();
-        this._channels = new EntityList<RawChannel>();
+        this._channels = new EntityList<Channel>();
         this._router = new Router(this);
 
         config.port ??= DEFAULT_PORT;
@@ -277,16 +277,16 @@ class RawServer extends HasId {
 
         // this.entities.forEach((entity) => {
         //     if (entity.exists) {
-        //         // RawEntity.emit(entity)("tick");
+        //         // Entity.emit(entity)("tick");
 
-        //         if (entity instanceof RawChannel) {
+        //         if (entity instanceof Channel) {
         //             channels.push(entity as Channel);
         //         }
         //     }
         // });
 
         this.channels.forEach((channel) => {
-            RawChannel.getIOQueue(channel).sync();
+            Channel.getIOQueue(channel).sync();
         })
 
         this.emit("nextTick");
@@ -353,7 +353,7 @@ class RawServer extends HasId {
      * Removes an entity from list
      */
     public removeEntity(
-        entity: RawEntity
+        entity: Entity
     ) {
         this._entities = this._entities.filter(
             (currentEntity) => !currentEntity.is(entity),

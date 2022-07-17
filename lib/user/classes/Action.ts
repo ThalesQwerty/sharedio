@@ -1,4 +1,4 @@
-import { RawEntity, EntityAttributeName, UserRoles, Client } from "../../sharedio";
+import { Entity, EntityAttributeName, UserRoles, Client } from "../../sharedio";
 import { KeyValue } from "../../sharedio";
 import { User } from "../../sharedio";
 
@@ -25,14 +25,14 @@ export class Action {
     /**
      * Attempts to write values into an entity's attributes
      */
-    public write<EntityType extends RawEntity>(
+    public write<EntityType extends Entity>(
         entity: EntityType,
         values: KeyValue<any, EntityAttributeName<EntityType>>,
         debug: boolean = false
     ) {
         const viewed = this._user.view.current[entity.id];
 
-        debug && console.log("write", RawEntity.printable(entity), values);
+        debug && console.log("write", Entity.printable(entity), values);
 
         for (const _attributeName in values) {
             const attributeName =
@@ -49,13 +49,13 @@ export class Action {
             }
         }
 
-        debug && console.log("-->", RawEntity.printable(entity));
+        debug && console.log("-->", Entity.printable(entity));
     }
 
     /**
      * Attempts to call an entity's method
      */
-    public call<EntityType extends RawEntity>(
+    public call<EntityType extends Entity>(
         entity: EntityType,
         methodName: EntityAttributeName<EntityType>,
         parameters?: unknown[],

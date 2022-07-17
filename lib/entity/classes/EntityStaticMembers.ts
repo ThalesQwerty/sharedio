@@ -1,10 +1,10 @@
 import { Client, Server } from "../../sharedio";
-import { RawChannel } from "../../sharedio";
+import { Channel } from "../../sharedio";
 import { HasId, HasEvents, ObjectTransform } from "../../sharedio";
 import { KeyValue } from "../../sharedio";
 import { EntityReservedAttributeName, EntityClassName } from "../../sharedio";
 import { PrintableEntity } from "../../sharedio";
-import { RawEntity } from "../../sharedio";
+import { Entity } from "../../sharedio";
 
 export abstract class EntityStaticMembers extends HasId {
     public static get lastClient() { return this._lastClient };
@@ -24,14 +24,14 @@ export abstract class EntityStaticMembers extends HasId {
         if (!this._reservedAttributes) {
             let array = [
                 ...Object.getOwnPropertyNames(
-                    new RawEntity({ server: Server.dummy, dummy: true }),
+                    new Entity({ server: Server.dummy, dummy: true }),
                 ),
                 ...Object.getOwnPropertyNames(
-                    new RawChannel({ server: Server.dummy, dummy: true }),
+                    new Channel({ server: Server.dummy, dummy: true }),
                 ),
                 ...Object.getOwnPropertyNames(new HasEvents()),
-                ...Object.getOwnPropertyNames(RawEntity.prototype),
-                ...Object.getOwnPropertyNames(RawChannel.prototype),
+                ...Object.getOwnPropertyNames(Entity.prototype),
+                ...Object.getOwnPropertyNames(Channel.prototype),
                 ...Object.getOwnPropertyNames(HasId.prototype),
                 ...Object.getOwnPropertyNames(HasEvents.prototype),
             ] as EntityReservedAttributeName[];
@@ -56,21 +56,21 @@ export abstract class EntityStaticMembers extends HasId {
     /**
      * Lists all custom attributes from an entity
      */
-    public static attributes<EntityType extends RawEntity>(entity: EntityType) {
-        return Object.getOwnPropertyNames(entity).filter(name => !RawEntity.isDefaultAttribute(name));
+    public static attributes<EntityType extends Entity>(entity: EntityType) {
+        return Object.getOwnPropertyNames(entity).filter(name => !Entity.isDefaultAttribute(name));
     }
 
     /**
      * Lists all custom properties from an entity
      */
-    public static properties<EntityType extends RawEntity>(entity: EntityType) {
+    public static properties<EntityType extends Entity>(entity: EntityType) {
         const propertyDescriptors = Object.getOwnPropertyDescriptors(entity.constructor.prototype);
         const propertyNames: string[] = [];
 
         for (const propertyName in propertyDescriptors) {
             let propertyDescriptor = propertyDescriptors[propertyName];
 
-            if ((!!propertyDescriptor.get || !!propertyDescriptor.set) && !RawEntity.isDefaultAttribute(propertyName)) propertyNames.push(propertyName);
+            if ((!!propertyDescriptor.get || !!propertyDescriptor.set) && !Entity.isDefaultAttribute(propertyName)) propertyNames.push(propertyName);
         }
         return propertyNames;
     }
@@ -78,14 +78,14 @@ export abstract class EntityStaticMembers extends HasId {
     /**
      * Lists all custom methods from an entity
      */
-    public static methods<EntityType extends RawEntity>(entity: EntityType) {
+    public static methods<EntityType extends Entity>(entity: EntityType) {
         const methodDescriptors = Object.getOwnPropertyDescriptors(entity.constructor.prototype);
         const methodNames: string[] = [];
 
         for (const methodName in methodDescriptors) {
             let methodDescriptor = methodDescriptors[methodName];
 
-            if ((!methodDescriptor.get && !methodDescriptor.set) && !RawEntity.isDefaultAttribute(methodName)) methodNames.push(methodName);
+            if ((!methodDescriptor.get && !methodDescriptor.set) && !Entity.isDefaultAttribute(methodName)) methodNames.push(methodName);
         }
         return methodNames;
     }
@@ -95,13 +95,13 @@ export abstract class EntityStaticMembers extends HasId {
     }
 
     public static getClassName<
-        EntityType extends RawEntity,
+        EntityType extends Entity,
         T extends EntityClassName | EntityType,
         >(entityOrType: T) {
         if (typeof entityOrType === "string") return entityOrType;
-        else if (entityOrType instanceof RawEntity)
-            return (entityOrType as RawEntity).type;
-        else return (entityOrType as typeof RawEntity).className;
+        else if (entityOrType instanceof Entity)
+            return (entityOrType as Entity).type;
+        else return (entityOrType as typeof Entity).className;
     }
 
     /**
@@ -109,19 +109,19 @@ export abstract class EntityStaticMembers extends HasId {
      *
      * Returns null if it fails to find an entity.
      */
-    public static find(entityId: string): RawEntity | null {
-        return HasId.find(entityId) as RawEntity;
+    public static find(entityId: string): Entity | null {
+        return HasId.find(entityId) as Entity;
     }
 
     /**
      * Clones an entity
      */
-    public static clone(entity: RawEntity): RawEntity {
+    public static clone(entity: Entity): Entity {
         return ObjectTransform.clone(entity);
     }
 
 
-    public static log<EntityType extends RawEntity>(entity: EntityType) {
+    public static log<EntityType extends Entity>(entity: EntityType) {
         const printable = this.printable(entity);
         console.log(printable);
         return printable;
@@ -130,13 +130,13 @@ export abstract class EntityStaticMembers extends HasId {
     /**
      * Generates a simplified key-value pair that represents the entity. Useful for printing things on the console.
      */
-    public static printable<EntityType extends RawEntity>(
+    public static printable<EntityType extends Entity>(
         entity: EntityType,
     ): PrintableEntity<EntityType> {
-        const clone = RawEntity.clone(entity);
+        const clone = Entity.clone(entity);
         const simplified: KeyValue = { ...clone };
 
-        for (const reservedAttribute of RawEntity.reservedAttributes) {
+        for (const reservedAttribute of Entity.reservedAttributes) {
             const value = (entity as any)[reservedAttribute];
 
             if (value instanceof HasId) {
@@ -146,7 +146,7 @@ export abstract class EntityStaticMembers extends HasId {
             }
         }
 
-        for (const reservedAttribute of RawEntity.reservedAttributes) {
+        for (const reservedAttribute of Entity.reservedAttributes) {
             const value = (entity as any)[reservedAttribute];
 
             switch (reservedAttribute) {

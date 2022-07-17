@@ -1,5 +1,5 @@
 import _ from "lodash";
-import { SerializedEntity, RawEntity, EntityReservedAttributeName, EntityAttributeName, Cache, RawChannel, ViewOutput, ViewInterface, ViewChanges, ViewDeletions, Output, WriteOutput } from "../../sharedio";
+import { SerializedEntity, Entity, EntityReservedAttributeName, EntityAttributeName, Cache, Channel, ViewOutput, ViewInterface, ViewChanges, ViewDeletions, Output, WriteOutput } from "../../sharedio";
 import { ObjectTransform, KeyValueDifference } from "../../sharedio";
 import { KeyValue } from "../../sharedio";
 import { User, Client } from "../../sharedio";
@@ -46,14 +46,14 @@ export class View {
      *
      * If the entity is not visible for the user, this function returns null.
      */
-    public get(entity: RawEntity): SerializedEntity | null {
+    public get(entity: Entity): SerializedEntity | null {
         return this._current[entity.id] ?? null;
     }
 
     /**
      * Forces a re-render of an entity into the view
      */
-    public render(entity: RawEntity) {
+    public render(entity: Entity) {
         this._changes[entity.id] = this.serialize(entity);
     }
 
@@ -62,7 +62,7 @@ export class View {
      * @param entity
      * @param propertyNames
      */
-    public hide<EntityType extends RawEntity>(entity: EntityType, ...propertyNames: EntityAttributeName<EntityType>[]) {
+    public hide<EntityType extends Entity>(entity: EntityType, ...propertyNames: EntityAttributeName<EntityType>[]) {
         if (propertyNames.length) {
             for (const propertyName of propertyNames) {
                 this._deleted.push(`${entity.id}.state.${propertyName}`);
@@ -154,20 +154,20 @@ export class View {
     /**
      * Returns a serialized version of an entity, that can be sent as a JSON to the user
      */
-    public serialize<EntityType extends RawEntity>(
+    public serialize<EntityType extends Entity>(
         entity: EntityType,
     ): SerializedEntity {
         const serialized: SerializedEntity = {
             id: entity.id,
             type: entity.type,
             owner: this.user.owns(entity),
-            inside: entity instanceof RawChannel && this.user.in(entity),
+            inside: entity instanceof Channel && this.user.in(entity),
             roles: {},
             state: {},
             actions: [],
         };
 
-        for (const attributeName of RawEntity.attributes(entity) as EntityAttributeName<EntityType>[]) {
+        for (const attributeName of Entity.attributes(entity) as EntityAttributeName<EntityType>[]) {
             if (this._user.can("output", entity, attributeName)) {
                 const attributeValue = entity[attributeName];
 

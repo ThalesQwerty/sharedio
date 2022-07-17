@@ -1,62 +1,62 @@
 import { ListenerOverloads, EmitterOverloads } from "../../sharedio";
 import { User } from "../../sharedio";
-import { RawEntity } from "../../sharedio";
+import { Entity } from "../../sharedio";
 import { EntityState } from "../../sharedio";
 
-export interface EntityCreateEvent<EntityType extends RawEntity = RawEntity> {
+export interface EntityCreateEvent<EntityType extends Entity = Entity> {
     user: User|null;
     entity: EntityType;
 }
 
 export interface EntityFailedCreateEvent<
-    EntityType extends RawEntity = RawEntity,
+    EntityType extends Entity = Entity,
 > {
     user: User|null;
     entity: EntityType;
 }
 
-export interface EntityDeleteEvent<EntityType extends RawEntity = RawEntity> {
+export interface EntityDeleteEvent<EntityType extends Entity = Entity> {
     user: User|null;
     entity: EntityType;
 }
 
-export interface EntityRenderEvent<EntityType extends RawEntity = RawEntity> {}
+export interface EntityRenderEvent<EntityType extends Entity = Entity> {}
 
 
 
-export interface EntityChangeEvent<EntityType extends RawEntity = RawEntity> {
+export interface EntityChangeEvent<EntityType extends Entity = Entity> {
     entity: EntityType;
-    changes: EntityState<EntityType extends RawEntity ? EntityType : RawEntity>["changes"]
+    changes: EntityState<EntityType extends Entity ? EntityType : Entity>["changes"]
 }
 
 export interface EntityCanDeleteEvent<
-    EntityType extends RawEntity = RawEntity,
+    EntityType extends Entity = Entity,
 > {
     user: User|null;
     entity: EntityType;
 }
 
-export type EntityCreateListener<EntityType extends RawEntity = RawEntity> =
+export type EntityCreateListener<EntityType extends Entity = Entity> =
     (event: EntityCreateEvent<EntityType>) => void;
 export type EntityFailedCreateListener<
-    EntityType extends RawEntity = RawEntity,
+    EntityType extends Entity = Entity,
 > = (event: EntityFailedCreateEvent<EntityType>) => void;
-export type EntityCanDeleteListener<EntityType extends RawEntity = RawEntity> =
+export type EntityCanDeleteListener<EntityType extends Entity = Entity> =
     (event: EntityCanDeleteEvent<EntityType>) => boolean;
-    export type EntityDeleteListener<EntityType extends RawEntity = RawEntity> = (
+    export type EntityDeleteListener<EntityType extends Entity = Entity> = (
     event: EntityDeleteEvent<EntityType>,
 ) => void;
-export type EntityRenderListener<EntityType extends RawEntity = RawEntity> = (
+export type EntityRenderListener<EntityType extends Entity = Entity> = (
     event: EntityRenderEvent<EntityType>,
 ) => void;
-export type EntityChangeListener<EntityType extends RawEntity = RawEntity> = (
+export type EntityChangeListener<EntityType extends Entity = Entity> = (
     event: EntityChangeEvent<EntityType>
 ) => void;
 export type EntityTickListener = () => void;
 
 // type Trap<T extends (...args: any[]) => any> = (...args: Parameters<T>) => boolean;
 
-export interface EntityEvents<EntityType extends RawEntity = RawEntity> {
+export interface EntityEvents<EntityType extends Entity = Entity> {
     "canDelete?"?: EntityCanDeleteListener<EntityType>[];
     delete?: EntityDeleteListener<EntityType>[];
     render?: EntityRenderListener<EntityType>[];
@@ -66,7 +66,7 @@ export interface EntityEvents<EntityType extends RawEntity = RawEntity> {
     failedCreate?: EntityFailedCreateListener<EntityType>[];
 }
 
-export interface EntityListenerOverloads<EntityType extends RawEntity = RawEntity>
+export interface EntityListenerOverloads<EntityType extends Entity = Entity>
     extends ListenerOverloads<EntityEvents<EntityType>> {
     /**
      * Called before an user attempts to delete this entity.
@@ -125,7 +125,7 @@ export interface EntityListenerOverloads<EntityType extends RawEntity = RawEntit
         callback: EntityFailedCreateListener<EntityType>,
     ): EntityType;
 }
-export interface EntityEmitterOverloads<EntityType extends RawEntity = RawEntity>
+export interface EntityEmitterOverloads<EntityType extends Entity = Entity>
     extends EmitterOverloads<EntityEvents<EntityType>> {
     (
         event: "canDelete?",

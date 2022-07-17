@@ -1,6 +1,6 @@
 import { id } from "../../sharedio";
 import { KeyValue } from "../../sharedio";
-import { RawEntity } from "../../sharedio";
+import { Entity } from "../../sharedio";
 import { EntityReservedAttributeName, EntityBuiltinRoleName } from "../../sharedio";
 
 export interface SerializedEntity {
@@ -13,11 +13,11 @@ export interface SerializedEntity {
     actions: string[];
 }
 
-export type PrintableEntity<Type extends RawEntity = RawEntity> = KeyValue<
+export type PrintableEntity<Type extends Entity = Entity> = KeyValue<
     unknown,
     Exclude<keyof Type, EntityReservedAttributeName>
 > & {
-    id: id<"RawEntity">;
+    id: id<"Entity">;
     type: string;
     owner: id<"User">;
     server: id<"Server">;

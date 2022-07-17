@@ -1,6 +1,6 @@
 import { Server } from "../../sharedio";
-import { RawChannel } from "../../sharedio";
-import { RawEntity } from "../../sharedio";
+import { Channel } from "../../sharedio";
+import { Entity } from "../../sharedio";
 import { HasId, RandomHex, HasEvents, Mixin } from "../../sharedio";
 import { KeyValue } from "../../sharedio";
 import { User } from "../../sharedio";

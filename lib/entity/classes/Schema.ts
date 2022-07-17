@@ -1,12 +1,12 @@
 import { Server } from "../../sharedio";
-import { RawChannel } from "../../sharedio";
+import { Channel } from "../../sharedio";
 import { ObjectTransform, StringTransform } from "../../sharedio";
 import { KeyValue } from "../../sharedio";
 import { ClientSchemaConfig } from "../../sharedio";
 import { ExtractDependencies } from "../../sharedio";
 import { EntityAttributeType, EntityAttributeName } from "../../sharedio";
 import { EntitySchema, EntitySchemaAttribute } from "../../sharedio";
-import { RawEntity } from "../../sharedio";
+import { Entity } from "../../sharedio";
 import { BuiltinRoles, UserRoles } from "../../sharedio";
 import path from "path";
 import fs from "fs";
@@ -20,9 +20,9 @@ export abstract class Schema {
         return ObjectTransform.clone(this._schemas);
     }
 
-    static generate<EntityType extends RawEntity = RawEntity>(entityClass: typeof RawEntity) {
+    static generate<EntityType extends Entity = Entity>(entityClass: typeof Entity) {
         const dummy = new entityClass({ server: Server.dummy, channel: Server.dummy.mainChannel, dummy: true });
-        const attributeList = RawEntity.attributes(dummy);
+        const attributeList = Entity.attributes(dummy);
 
         const getType = (object: any, attributeName: string): string | undefined => {
             const type = Reflect.getMetadata(
@@ -42,7 +42,7 @@ export abstract class Schema {
                     value: 0
                 }
             },
-            isChannel: dummy instanceof RawChannel,
+            isChannel: dummy instanceof Channel,
             attributes: {} as any
         };
 
@@ -79,7 +79,7 @@ export abstract class Schema {
             const attributeName = _attributeName as EntityAttributeName<EntityType>;
             if (attributeName !== "constructor") {
                 const propertyDescriptor = computedAttributes[attributeName];
-                const dependencies = ExtractDependencies(entityClass as typeof RawEntity, attributeName) as EntityAttributeName<EntityType>[];
+                const dependencies = ExtractDependencies(entityClass as typeof Entity, attributeName) as EntityAttributeName<EntityType>[];
                 const initialValue = (dummy as any)[attributeName];
 
                 generatedSchema.attributes[attributeName] = {
@@ -107,7 +107,7 @@ export abstract class Schema {
     /**
      * This function calculates beforehands the access level that each user role has on each property of an entity and then stores this information on its schema
      */
-    private static optimize<EntityType extends RawEntity>(schema: EntitySchema<EntityType>) {
+    private static optimize<EntityType extends Entity>(schema: EntitySchema<EntityType>) {
         const numRoles = Object.keys(schema.userRoles).length - 1;
         const numCombinations = Math.pow(2, numRoles);
 
@@ -183,7 +183,7 @@ export abstract class Schema {
 
         import type { SharedIOSchema, EntityListSchema } from "${libName}";
 
-        interface RawEntity {
+        interface Entity {
             readonly id: string;
             readonly type: string;
             readonly owned: boolean;
@@ -191,7 +191,7 @@ export abstract class Schema {
             readonly delete: () => void;
         }
 
-        interface RawChannel extends RawEntity {
+        interface Channel extends Entity {
             readonly inside: boolean;
 
             readonly join: () => void;
@@ -250,7 +250,7 @@ export abstract class Schema {
                 const interfaceName = includedRoles.length > 1 ? includedRoles.map(role => role === BuiltinRoles.USER ? "" : StringTransform.capitalize(role)).join("") : "Default";
                 roleCombinations.push(interfaceName);
 
-                fileContent += `export interface ${interfaceName} extends ${entitySchema.isChannel ? "RawChannel" : "RawEntity"} {
+                fileContent += `export interface ${interfaceName} extends ${entitySchema.isChannel ? "Channel" : "Entity"} {
                     readonly owned: ${includedRoles.includes(BuiltinRoles.OWNER)}; ${entitySchema.isChannel ? `readonly inside: ${includedRoles.includes(BuiltinRoles.MEMBER)};` : ""}
                     readonly roles: {
                         ${booleanRoleDeclarations}

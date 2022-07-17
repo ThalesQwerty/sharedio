@@ -2,12 +2,12 @@ import { KeyValue } from "../../sharedio";
 
 const errors: KeyValue<(...args: any[]) => string, string> = {
     entityVariantNotFound (entityType: string, variants: string[]) {
-        return `RawEntity of type ${entityType} does not have these variants: ${variants.map(name => `"${name}"`).join(", ")}\nPlease verify if you've actually declared those variants using the @Type decorator.`;
+        return `Entity of type ${entityType} does not have these variants: ${variants.map(name => `"${name}"`).join(", ")}\nPlease verify if you've actually declared those variants using the @Type decorator.`;
     },
 
     entityAttributesNotFound (entityType: string, attributeNames: string|string[]) {
         if (typeof attributeNames === "string") attributeNames = [attributeNames];
-        return `RawEntity of type ${entityType} does not have the following attributes: ${attributeNames.map(name => `"${name}"`).join(", ")}`;
+        return `Entity of type ${entityType} does not have the following attributes: ${attributeNames.map(name => `"${name}"`).join(", ")}`;
     },
 
     noDecoratorOnReservedAttribute(entityType: string, attributeName: string) {

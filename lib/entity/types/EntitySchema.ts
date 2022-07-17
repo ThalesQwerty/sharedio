@@ -1,8 +1,8 @@
-import { RawEntity } from "../../sharedio"
+import { Entity } from "../../sharedio"
 import { EntityAttributeName } from "../../sharedio"
 import { EntityRoleBooleanExpression } from "../../sharedio"
 
-export type EntitySchemaAttribute<EntityType extends RawEntity> = {
+export type EntitySchemaAttribute<EntityType extends Entity> = {
     name: EntityAttributeName<EntityType>,
     type: string,
     initialValue: any,
@@ -17,7 +17,7 @@ export type EntitySchemaAttribute<EntityType extends RawEntity> = {
         output: number[]
     }
 }
-export interface EntitySchema<EntityType extends RawEntity = any> {
+export interface EntitySchema<EntityType extends Entity = any> {
     className: string,
     userRoles: {
         [name: string]: {

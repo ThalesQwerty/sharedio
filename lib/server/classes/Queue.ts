@@ -1,8 +1,8 @@
-import { Entity, RawEntity } from "../../sharedio";
+import { Entity, Entity } from "../../sharedio";
 import { RandomHex } from "../../sharedio";
 import { KeyValue } from "../../sharedio";
 import { ChannelOutput, AssignedChannelOutput, RoutedChannelInput, WriteInput } from "../../sharedio";
-import { RawChannel } from "../../sharedio";
+import { Channel } from "../../sharedio";
 import { WriteOutput } from "../types/Output";
 
 /**
@@ -29,7 +29,7 @@ export class Queue {
     public get entities() {
         return this._entities;
     }
-    private _entities:KeyValue<RawEntity> = {};
+    private _entities:KeyValue<Entity> = {};
 
     /**
      * Sends the current changes to the users and clears the update queue
@@ -158,7 +158,7 @@ export class Queue {
         this._input = [];
     }
 
-    public constructor(private _channel: RawChannel) {
+    public constructor(private _channel: Channel) {
         // setInterval(() => this.runOutput(), 1000);
     }
 }

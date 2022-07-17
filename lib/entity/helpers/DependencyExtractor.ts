@@ -1,13 +1,13 @@
 import { Server } from "../../sharedio";
-import { RawEntity } from "../../sharedio";
+import { Entity } from "../../sharedio";
 
-export function ExtractDependencies(entityClass: typeof RawEntity, computedPropertyName: string): string[] {
+export function ExtractDependencies(entityClass: typeof Entity, computedPropertyName: string): string[] {
     const propertyDescriptor = Object.getOwnPropertyDescriptor(entityClass.prototype, computedPropertyName);
 
-    if (!propertyDescriptor || !propertyDescriptor.get || RawEntity.isDefaultAttribute(computedPropertyName)) return [];
+    if (!propertyDescriptor || !propertyDescriptor.get || Entity.isDefaultAttribute(computedPropertyName)) return [];
 
     const dummy = new entityClass({server: Server.dummy, dummy: true});
-    const attributes = RawEntity.attributes(dummy);
+    const attributes = Entity.attributes(dummy);
 
     const dependencies: string[] = [];
 

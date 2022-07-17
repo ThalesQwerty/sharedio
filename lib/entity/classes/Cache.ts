@@ -1,5 +1,5 @@
 import { KeyValue } from "../../sharedio";
-import { RawEntity } from "../../sharedio";
+import { Entity } from "../../sharedio";
 
 interface EntityCache {
     [name: string]: CachedAttribute;
@@ -30,7 +30,7 @@ export class Cache {
      * @param duration For how long (in milliseconds) will this cache be used?
      */
     public static add(
-        entity: RawEntity,
+        entity: Entity,
         attributeName: string,
         value: any,
         duration: number,
@@ -53,7 +53,7 @@ export class Cache {
      * @param entity
      * @param attributeName
      */
-    public static remove(entity: RawEntity, attributeName: string) {
+    public static remove(entity: Entity, attributeName: string) {
         const entityCache = this.entities[entity.id];
         if (entityCache) delete entityCache[attributeName];
     }
@@ -82,7 +82,7 @@ export class Cache {
      * Lists the values read from an entity's cache
      * @param entity
      */
-    public static get(entity: RawEntity) {
+    public static get(entity: Entity) {
         const currentTimestamp = new Date().getTime();
         const values: KeyValue<any, string> = {};
 

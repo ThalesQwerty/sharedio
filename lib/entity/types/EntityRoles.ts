@@ -1,6 +1,6 @@
 import { KeyValue } from "../../sharedio";
 import { User } from "../../sharedio";
-import { RawEntity, Entity } from "../../sharedio";
+import { Entity } from "../../sharedio";
 
 /**
  * Classifies the main kinds of users in relation to an entity
@@ -35,9 +35,7 @@ export type EntityRolesData<Roles extends string[] = string[]> = {
     lists: KeyValue<User[], EntityRoleName<Roles>>,
     binary: KeyValue<number, string> // {[userId]: number}
 }
-
-export type EntityRolesName<EntityType extends RawEntity> = EntityType extends Entity<infer Roles> ? Roles[number] : never;
-export interface EntityRolesInterface<Roles extends string[] = []> {
+export interface EntityRolesInterface<Roles extends string[] = string[]> {
     /**
      * Assigns one or more roles to an user
      */

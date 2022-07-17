@@ -1,36 +1,36 @@
-import { EntityEvents, EntityListenerOverloads, RawEntity, Entity, EntityCreateListener, EntityDeleteListener, EntityEmitterOverloads, EntityCreateEvent, EntityDeleteEvent } from "../../sharedio";
+import { EntityEvents, EntityListenerOverloads, Entity, EntityCreateListener, EntityDeleteListener, EntityEmitterOverloads, EntityCreateEvent, EntityDeleteEvent } from "../../sharedio";
 import { User } from "../../sharedio";
-import { RawChannel, Channel } from "../../sharedio";
+import { Channel } from "../../sharedio";
 
-export interface ChannelJoinEvent<ChannelType extends RawChannel = RawChannel> {
+export interface ChannelJoinEvent<ChannelType extends Channel = Channel> {
     user: User;
 }
 
-export interface ChannelCanJoinEvent<ChannelType extends RawChannel = RawChannel> {
+export interface ChannelCanJoinEvent<ChannelType extends Channel = Channel> {
     user: User;
 }
 
 export interface ChannelLeaveEvent<
-    ChannelType extends RawChannel = RawChannel,
+    ChannelType extends Channel = Channel,
     > {
     user: User;
 }
 
-export type ChannelCanJoinListener<ChannelType extends RawChannel = RawChannel> =
+export type ChannelCanJoinListener<ChannelType extends Channel = Channel> =
     (event: ChannelCanJoinEvent<ChannelType>) => boolean;
-export type ChannelJoinListener<ChannelType extends RawChannel = RawChannel> =
+export type ChannelJoinListener<ChannelType extends Channel = Channel> =
     (event: ChannelJoinEvent<ChannelType>) => void;
 export type ChannelLeaveListener<
-    ChannelType extends RawChannel = RawChannel,
+    ChannelType extends Channel = Channel,
     > = (event: ChannelLeaveEvent<ChannelType>) => void;
 
-export interface ChannelEvents<ChannelType extends RawChannel = RawChannel> extends EntityEvents<ChannelType> {
+export interface ChannelEvents<ChannelType extends Channel = Channel> extends EntityEvents<ChannelType> {
     "canJoin?"?: ChannelCanJoinListener<ChannelType>[];
     join?: ChannelJoinListener<ChannelType>[];
     leave?: ChannelLeaveListener<ChannelType>[];
 }
 
-export interface ChannelListenerOverloads<ChannelType extends RawChannel = RawChannel> extends EntityListenerOverloads<ChannelType> {
+export interface ChannelListenerOverloads<ChannelType extends Channel = Channel> extends EntityListenerOverloads<ChannelType> {
     /**
     * Called right after a new user joins this channel.
     */
@@ -59,7 +59,7 @@ export interface ChannelListenerOverloads<ChannelType extends RawChannel = RawCh
     /**
     * Called right after an user joins a subchannel inside this channel.
     */
-    <SubChannel extends RawChannel = Channel>(
+    <SubChannel extends Channel = Channel>(
         event: "joinInside",
         callback: ChannelJoinListener<SubChannel>,
     ): ChannelType;
@@ -67,7 +67,7 @@ export interface ChannelListenerOverloads<ChannelType extends RawChannel = RawCh
     /**
     * Called right after an user creates a new entity inside this channel.
     */
-    <SubEntity extends RawEntity = Entity>(
+    <SubEntity extends Entity = Entity>(
         event: "createInside",
         callback: EntityCreateListener<SubEntity>,
     ): ChannelType;
@@ -75,13 +75,13 @@ export interface ChannelListenerOverloads<ChannelType extends RawChannel = RawCh
     /**
     * Called right after an user deletes an entity inside this channel.
     */
-     <SubEntity extends RawEntity = Entity>(
+     <SubEntity extends Entity = Entity>(
         event: "deleteInside",
         callback: EntityDeleteListener<SubEntity>,
     ): ChannelType;
 }
 
-export interface ChannelEmitterOverloads<ChannelType extends RawChannel = RawChannel> extends EntityEmitterOverloads<ChannelType> {
+export interface ChannelEmitterOverloads<ChannelType extends Channel = Channel> extends EntityEmitterOverloads<ChannelType> {
     (
         event: "canJoin?",
         callback: ChannelCanJoinEvent<ChannelType>,
@@ -94,15 +94,15 @@ export interface ChannelEmitterOverloads<ChannelType extends RawChannel = RawCha
         event: "leave",
         callback: ChannelLeaveEvent<ChannelType>,
     ): true;
-    <SubChannel extends RawChannel = Channel>(
+    <SubChannel extends Channel = Channel>(
         event: "joinInside",
         callback: ChannelJoinEvent<SubChannel>,
     ): true;
-    <SubEntity extends RawEntity = Entity>(
+    <SubEntity extends Entity = Entity>(
         event: "createInside",
         callback: EntityCreateEvent<SubEntity>,
     ): true;
-    <SubEntity extends RawEntity = Entity>(
+    <SubEntity extends Entity = Entity>(
         event: "deleteInside",
         callback: EntityDeleteEvent<SubEntity>,
     ): true;

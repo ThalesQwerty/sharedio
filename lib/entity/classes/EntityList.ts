@@ -1,7 +1,7 @@
 import { EntityConstructor, IdList, User } from "../../sharedio";
-import { RawEntity } from "./Entity";
+import { Entity } from "./Entity";
 
-export class EntityList<EntityType extends RawEntity = RawEntity> extends IdList<EntityType> {
+export class EntityList<EntityType extends Entity = Entity> extends IdList<EntityType> {
     override filter(...args: Parameters<EntityType[]["filter"]>): EntityList<EntityType> {
         return new EntityList(...super.filter(...args));
     }
@@ -9,7 +9,7 @@ export class EntityList<EntityType extends RawEntity = RawEntity> extends IdList
     /**
      * Filters entity by type
      */
-    filterType<EntityType extends RawEntity[]>(...types: EntityConstructor<EntityType[number]>[]): EntityList<EntityType[number]> {
+    filterType<EntityType extends Entity[]>(...types: EntityConstructor<EntityType[number]>[]): EntityList<EntityType[number]> {
         return this.filter(entity => {
             for (const type of types) {
                 if (entity instanceof type) return true
@@ -33,7 +33,7 @@ export class EntityList<EntityType extends RawEntity = RawEntity> extends IdList
     /**
      * Counts the entities from a given type
      */
-    countType<EntityType extends RawEntity[]>(...types: EntityConstructor<EntityType[number]>[]): number {
+    countType<EntityType extends Entity[]>(...types: EntityConstructor<EntityType[number]>[]): number {
         return this.filterType(...types).length;
     }
 
