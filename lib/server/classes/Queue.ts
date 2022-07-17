@@ -159,6 +159,6 @@ export class Queue {
     }
 
     public constructor(private _channel: RawChannel) {
-        setInterval(() => this.runOutput(), 1000);
+        // setInterval(() => this.runOutput(), 1000);
     }
 }

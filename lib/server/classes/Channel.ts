@@ -132,8 +132,6 @@ class RawChannel extends RawEntity implements ChannelFunctions {
         //     entityProxy.delete();
         // }
 
-        console.log("entities", this.server.entities.map(e => e.id));
-
         entityProxy.emit("create", {
             entity: this,
             user: config.owner,
