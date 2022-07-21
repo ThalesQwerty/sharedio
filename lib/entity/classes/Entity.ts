@@ -1,4 +1,4 @@
-import { Client, EntityAttributeName, Server } from "../../sharedio";
+import { Client, EntityAttributeName, HasId, Server } from "../../sharedio";
 import { Channel } from "../../sharedio";
 import { HasEvents, Mixin } from "../../sharedio";
 import { SharedIOError } from "../../sharedio";
@@ -57,12 +57,11 @@ class RawEntity
     private _owner: User | null = null;
 
     /**
-     * In which server is this entity in?
+     * Which server is this entity in?
      */
     public get server() {
-        return this._server;
+        return this.channel.server;
     }
-    private _server: Server;
 
     /**
      * In which channel is this entity in?
@@ -98,12 +97,11 @@ class RawEntity
         return (this.constructor as typeof RawEntity).schema as EntitySchema<this>;
     }
 
-    constructor({ server, channel, initialState, owner, dummy = false }: EntityConfig) {
+    constructor({ channel, initialState, owner, dummy = false }: EntityConfig) {
         super("Entity", 8);
 
         if (dummy) {
             this._channel = undefined as any;
-            this._server = undefined as any;
             this._owner = owner ?? null;
 
             // Disables event listeners for dummy entities
@@ -113,18 +111,12 @@ class RawEntity
             return this;
         }
 
-        channel ??= server?.mainChannel;
-        server ??= channel?.server;
-
-        this._channel = (channel ?? server?.mainChannel) as Channel;
-        this._server = (server ?? channel?.server) as Server;
+        this._channel = channel;
         this._owner = owner ?? null;
 
         do {
-            if (this._channel) {
-                this.resetId(this._channel.id ?? "", 8, Entity.ID_SEPARATOR);
-            }
-        } while (this.server.findEntity(this.id));
+            HasId.reset(this, `Entity_${this.type}`, 16, "_");
+        } while (this.channel.findEntity(this.id));
 
         process.nextTick(() => {
             const created = this.exists !== false;
@@ -133,13 +125,19 @@ class RawEntity
                 return;
             }
 
-            this._channel ??= (this._server?.mainChannel) as Channel;
-            this._server ??= (this._channel?.server) as Server;
-
-            if (!this._channel || !this._server) throw new SharedIOError("serverAndChannelUndefined");
-
             this._exists = true;
+
+            Channel.getIOQueue(this.channel).addEntity(this);
         });
+
+        return Channel.setupProxy(this.channel, this);
+    }
+
+    /**
+     * Verifies if the entity is in a given channel
+     */
+    public in(channel: Channel) {
+        return this.channel.is(channel);
     }
 
     /**
@@ -154,7 +152,7 @@ class RawEntity
      */
     public delete(user: User | null = null) {
         if (this.exists !== false && this.emit("canDelete?", ({ entity: this, user }))) {
-            this.server.removeEntity(this as RawEntity);
+            this.channel.entities.remove(this);
             this._exists = false;
             process.nextTick(() => {
                 this.off();
@@ -167,6 +165,7 @@ class RawEntity
                 });
             }
             else {
+                Channel.getIOQueue(this.channel).removeEntity(this);
                 this.emit("delete", {
                     entity: this,
                     user: this.owner

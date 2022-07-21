@@ -16,6 +16,13 @@ export class View {
     }
 
     /**
+     * The channel where this view is being generated from
+     */
+    public get channel() {
+        return this._channel;
+    }
+
+    /**
      * Returns a JSON that represents what the user is viewing right now
      */
     public get current() {
@@ -39,7 +46,19 @@ export class View {
     }
     private _deleted: ViewDeletions = [];
 
-    constructor(private _user: User) { }
+    constructor(private _user: User, private _channel: Channel) {
+        for (const entity of _channel.entities) {
+            this.render(entity);
+        }
+        this.update();
+    }
+
+    /**
+     * Destroys this view
+     */
+    public destroy() {
+        this.reset();
+    }
 
     /**
      * Returns how the user is currently viewing an entity as JSON.
@@ -79,10 +98,12 @@ export class View {
     public update(...clients: Client[]) {
         const output: Omit<ViewOutput, "id"> = {
             type: "view",
+            channel: this.channel,
             data: {
                 changes: this.changes,
                 deleted: this.deleted
-            }
+            },
+            hidden: {}
         };
 
         for (const changedKey in this.changes) {
@@ -107,7 +128,7 @@ export class View {
         if (clients.length) {
             for (const client of clients) {
                 if (client.user?.is(this.user)) {
-                    client.send({...output, client: undefined, private: undefined});
+                    client.send(output);
                 }
             }
         } else {
@@ -122,7 +143,7 @@ export class View {
      * Automatically updated the user's view given an output
      */
     public handleOutput(output: Omit<WriteOutput, "id">) {
-        const { entityId, properties } = output.data;
+        const { entity: entityId, properties } = output.data;
 
         this._changes[entityId] ??= {};
 

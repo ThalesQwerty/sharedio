@@ -1,7 +1,7 @@
-import { Entity, Entity } from "../../sharedio";
+import { Entity } from "../../sharedio";
 import { RandomHex } from "../../sharedio";
 import { KeyValue } from "../../sharedio";
-import { ChannelOutput, AssignedChannelOutput, RoutedChannelInput, WriteInput } from "../../sharedio";
+import { ChannelOutput, ChannelInput, Routed } from "../../sharedio";
 import { Channel } from "../../sharedio";
 import { WriteOutput } from "../types/Output";
 
@@ -16,12 +16,12 @@ export class Queue {
     public get output() {
         return this._output;
     }
-    private _output: (ChannelOutput|AssignedChannelOutput)[] = [];
+    private _output: ChannelOutput[] = [];
 
     public get input() {
         return this._input;
     }
-    private _input: RoutedChannelInput[] = [];
+    private _input: Routed<ChannelInput>[] = [];
 
     /**
      * Lists which entities have changes that haven't been sent to the users yet
@@ -36,17 +36,6 @@ export class Queue {
      */
     public broadcast() {
         return this.runOutput();
-
-        for (const user of this.channel.users) {
-            for (const entityId in this._entities) {
-                const entity = this._entities[entityId];
-
-                user.view.render(entity);
-            }
-            user.view.update();
-        }
-
-        this._entities = {};
     }
 
     public sync() {
@@ -56,6 +45,7 @@ export class Queue {
 
     /**
      * Adds a new entry for output queue
+     * @param output
      */
     public addOutput(output: Omit<ChannelOutput, "id">) {
         this._output.push({
@@ -66,12 +56,37 @@ export class Queue {
 
     /**
      * Adds a new entry for input queue
+     * @param input
      */
-     public addInput(input: RoutedChannelInput) {
+     public addInput(input: Routed<ChannelInput>) {
         this._input.push({
             ...input,
             id: input.id || RandomHex(16)
-        } as RoutedChannelInput);
+        } as Routed<ChannelInput>);
+    }
+
+    /**
+     * Broadcasts the creation of a new entity to users
+     * @param entity
+     */
+    public addEntity(entity: Entity) {
+        if (entity.in(this.channel)) {
+            for (const user of this._channel.users) {
+                user.getChannelView(this.channel)?.render(entity);
+            }
+        }
+    }
+
+    /**
+     * Broadcasts the deletion of an entity to users
+     * @param entity
+     */
+     public removeEntity(entity: Entity) {
+        if (entity.in(this.channel)) {
+            for (const user of this._channel.users) {
+                user.getChannelView(this.channel)?.hide(entity);
+            }
+        }
     }
 
     /**
@@ -82,7 +97,7 @@ export class Queue {
         const reducedOutput = this._output.reduce((queue, output) => {
             const sameEntity = queue.find(possibleOutput => {
                 const { data, type } = possibleOutput as WriteOutput;
-                return type === "write" && type === output.type && data.entityId === output.data.entityId;
+                return type === "write" && type === output.type && data.entity === output.data.entity;
             }) as WriteOutput|undefined;
 
             if (sameEntity) {
@@ -95,23 +110,23 @@ export class Queue {
 
             queue.push(output);
             return queue;
-        }, [] as (ChannelOutput|AssignedChannelOutput)[]);
+        }, [] as ChannelOutput[]);
 
 
         for (const output of reducedOutput) {
-            if (output.private) {
-                const user = output.client?.user;
+            if (output.hidden?.private) {
+                const user = output.hidden?.client?.user;
 
                 if (user?.in(this.channel)) {
-                    if (output.type === "write") user.view.handleOutput(output);
+                    if (output.type === "write") user.getChannelView(this.channel)?.handleOutput(output);
                     else user.send(output);
                 }
             } else {
                 for (const user of this.channel.users) {
                     // It's not necessary to broadcast an output to the user who caused it
-                    if (!output.client?.user?.is(user)) {
+                    if (!output.hidden?.client?.user?.is(user)) {
 
-                        if (output.type === "write") user.view.handleOutput(output);
+                        if (output.type === "write") user.getChannelView(this.channel)?.handleOutput(output);
                         else user.send(output);
                     }
                 }
@@ -123,18 +138,18 @@ export class Queue {
 
     public runInput() {
         for (const input of this._input) {
-            const user = input.client.user;
-            const entity = input.data.entity;
+            const user = input.routed.user;
+            const entity = input.routed.entity;
 
             if (entity) {
                 switch (input.type) {
                     case "write": {
-                        Entity.lastClient = input.client || null;
+                        Entity.lastClient = input.routed.client || null;
                         user?.action.write(entity, input.data.properties);
                         break;
                     }
                     case "call": {
-                        Entity.lastClient = input.client || null;
+                        Entity.lastClient = input.routed.client || null;
                         const returnedValue = user?.action.call<any>(entity, input.data.methodName, input.data.parameters);
 
                         if (returnedValue !== undefined) {
@@ -145,8 +160,11 @@ export class Queue {
                                     inputId: input.id,
                                     returnedValue
                                 },
-                                client: input.client,
-                                private: true
+                                channel: entity.channel,
+                                hidden: {
+                                    client: input.routed.client,
+                                    private: true
+                                }
                             });
                         }
                         break;

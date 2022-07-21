@@ -1,17 +1,12 @@
-import { Server } from "../../sharedio";
 import { Channel } from "../../sharedio";
 import { KeyValue } from "../../sharedio";
 import { User } from "../../sharedio";
 import { Entity } from "../../sharedio";
 import { EntityAttribute, EntityAttributeName } from "../../sharedio";
 
-export type EntityConfig<EntityType extends Entity = Entity> = ({
-    server?: Server;
-    channel: Channel;
-}|{
-    server: Server;
-    channel?: Channel;
-})&{
+export type EntityConfig<EntityType extends Entity = Entity> = {
+    channel: Channel,
+
     initialState?: Partial<
         KeyValue<EntityAttribute, EntityAttributeName<EntityType>>
     >;

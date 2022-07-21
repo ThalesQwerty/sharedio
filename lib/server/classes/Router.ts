@@ -1,7 +1,10 @@
 import { Channel } from "./Channel";
-import { Input } from "../types/Input";
+import { ChannelInput, Input } from "../types/Input";
 import { Client } from "./Client";
 import { Server } from "./Server";
+import { ChannelOutput } from "../types/Output";
+import { Entity } from "../../entity";
+import { User } from "../../user";
 
 export class Router {
     public get server() {
@@ -14,6 +17,7 @@ export class Router {
 
     public handle(input: Input, client: Client) {
         const { user } = client;
+        if (!user) return;
 
         switch (input.type) {
             // case "auth": {
@@ -27,43 +31,25 @@ export class Router {
             //     // this.sendPing(input);
             //     break;
             // }
-            case "write": {
-                if (user) {
-                    const entity = this.server.findEntity(input.data.entityId);
-
-                    if (entity && user.in(entity.channel)) {
-                        Channel.getIOQueue(entity.channel).addInput({
-                            ...input,
-                            client,
-                            data: {
-                                entity,
-                                properties: input.data.properties
-                            }
-                        });
-                        // user.action.write(entity, input.data.properties);
-                    }
-                }
-                break;
-            }
+            case "write":
             case "call": {
                 if (user) {
-                    const entity = this.server.findEntity(input.data.entityId);
+                    const channel = this.server.findChannel(input.channel);
 
-                    if (entity && user.in(entity.channel)) {
-                        Channel.getIOQueue(entity.channel).addInput({
-                            ...input,
-                            client,
-                            data: {
-                                entity,
-                                methodName: input.data.methodName,
-                                parameters: input.data.parameters
-                            }
-                        });
-                        // user.action.call(
-                        //     entity as any,
-                        //     input.data.methodName,
-                        //     input.data.parameters,
-                        // );
+                    if (channel && user.in(channel)) {
+                        const entity = channel.findEntity(input.data.entity);
+
+                        if (entity) {
+                            Channel.getIOQueue(entity.channel).addInput({
+                                ...input,
+                                routed: {
+                                    client,
+                                    entity,
+                                    channel,
+                                    user: client.user as User,
+                                }
+                            });
+                        }
                     }
                 }
                 break;

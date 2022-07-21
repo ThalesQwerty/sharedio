@@ -1,4 +1,4 @@
-import { ClientList, EntityAttributeName, Output, Server, UserRoles } from "../../sharedio";
+import { ClientList, EntityAttributeName, KeyValue, Output, SerializedEntity, Server, UserRoles } from "../../sharedio";
 import { Channel } from "../../sharedio";
 import { Entity } from "../../sharedio";
 import { HasId, RandomHex } from "../../sharedio";
@@ -35,10 +35,7 @@ export class User extends HasId {
         return !this.clients.empty;
     }
 
-    public get view() {
-        return this._view;
-    }
-    private _view: View;
+    private _views: KeyValue<View, string> = {};
 
     /**
      * Attemtps to execute an action as this user
@@ -54,18 +51,53 @@ export class User extends HasId {
         this._clients = new ClientList(client);
         this._server = server;
         this._token = RandomHex();
-        this._view = new View(this);
         this._action = new Action(this);
     }
 
-    public send(output: Output | Omit<Output, "id">) {
+    /**
+     * What is this user currently viewing in a given channel?
+     * @param channel
+     */
+    public getChannelView(channel: Channel): View|null {
+        return this._views[channel.id] || null;
+    }
+
+    /**
+     * How is this user currently viewing a given entity?
+     * @param entity
+     */
+    public getEntityView(entity: Entity): SerializedEntity|null {
+        const channelView = this.getChannelView(entity.channel);
+        if (!channelView) return null;
+
+        return channelView.current[entity.id];
+    }
+
+    /**
+     * Sends an output to this user
+     * @param output The output that will be sent as JSON
+     * @param clients Specifies which ones of this user's clients should receive the output. If omitted, the output will be sent to all their clients.
+     */
+    public send(output: Output | Omit<Output, "id">, ...clients: Client[]) {
         if (output.type === "return") console.log("returning", output.data);
-        this.clients.forEach(client => {
-            const shouldSendOutput = !output.client || (output.private && client.is(output.client)) || (!output.private && !client.is(output.client));
-            if (shouldSendOutput) {
-                client.send({ ...output, private: undefined, client: undefined });
+
+        if (!clients.length) {
+            for (const client of this.clients) {
+                const shouldSendOutput = !output.hidden?.client || (output.hidden?.private && client.is(output.hidden?.client)) || (!output.hidden?.private && !client.is(output.hidden?.client));
+                if (shouldSendOutput) {
+                    const serializedOutput = {...output, channel: output.channel.id, hidden: undefined };
+                    delete serializedOutput.hidden;
+
+                    client.send(serializedOutput);
+                }
             }
-        });
+        } else {
+            for (const client of clients) {
+                if (client.user?.is(this)) {
+                    client.send(output);
+                }
+            }
+        }
     }
 
     /**
@@ -119,12 +151,14 @@ export class User extends HasId {
         channel.join(this);
 
         if (success) {
-            for (const entity of channel.entities) {
-                this.view.render(entity);
-            }
-        }
+            this._views[channel.id] = new View(this, channel);
 
-        this.view.update();
+            this.send({
+                type: "join",
+                channel,
+                data: {}
+            });
+        }
 
         return success;
     }
@@ -140,12 +174,14 @@ export class User extends HasId {
         channel.leave(this);
 
         if (success) {
-            for (const entity of channel.entities) {
-                this.view.hide(entity);
-            }
-        }
+            this.getChannelView(channel)?.destroy();
 
-        this.view.update();
+            this.send({
+                type: "leave",
+                channel,
+                data: {}
+            });
+        }
 
         return success;
     }

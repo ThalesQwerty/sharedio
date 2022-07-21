@@ -1,6 +1,6 @@
 import { EntityAttributeName, EntityConstructor } from "../../entity";
 import { EntityList } from "../../entity/classes/EntityList";
-import { Entity, EntityConfig, EntitySchema, WatchedObject, EntityRolesInterface } from "../../sharedio";
+import { Entity, EntityConfig, EntitySchema, WatchedObject, EntityRolesInterface, HasId, Server, ChannelConfig, ChannelList } from "../../sharedio";
 import { ObjectTransform, HasEvents, Mixin } from "../../sharedio";
 import { KeyValue } from "../../sharedio";
 import { User } from "../../sharedio";
@@ -12,7 +12,7 @@ interface ChannelFunctions {
     create: EntityCreateFunction
 }
 
-class RawChannel extends Entity implements ChannelFunctions {
+class RawChannel extends HasId implements ChannelFunctions {
     public get users() {
         return this._users;
     }
@@ -27,6 +27,28 @@ class RawChannel extends Entity implements ChannelFunctions {
         return channel._queue;
     }
     private _queue: Queue;
+
+    /**
+     * Entity class name
+     */
+     public get type() {
+        return this.constructor.name;
+    }
+
+    /**
+     * Which server is this channel from?
+     */
+     public get server() {
+        return this._server;
+    }
+    private _server: Server;
+
+    /**
+     * Attempts to find an entity inside this channel by its ID
+     */
+    public get findEntity() {
+        return this._entities.findById;
+    }
 
     /**
      * Configures the I/O queue of a channel to watch an entity for future updates
@@ -57,12 +79,15 @@ class RawChannel extends Entity implements ChannelFunctions {
                     channel._queue.addOutput({
                         type: "write",
                         data: {
-                            entityId: entity.id,
+                            entity: entity.id,
                             properties: {
                                 [propertyName]: value
                             }
                         },
-                        client: (!shouldSendToAuthor && Entity.lastClient) || undefined
+                        channel,
+                        hidden: {
+                            client: (!shouldSendToAuthor && Entity.lastClient) || undefined
+                        }
                     });
                 }
             },
@@ -73,11 +98,14 @@ class RawChannel extends Entity implements ChannelFunctions {
                     channel._queue.addOutput({
                         type: "call",
                         data: {
-                            entityId: entity.id,
+                            entity: entity.id,
                             methodName: methodName,
                             parameters: parameters
                         },
-                        client: Entity.lastClient || undefined
+                        channel,
+                        hidden: {
+                            client: Entity.lastClient || undefined
+                        }
                     });
                 }
             }
@@ -107,43 +135,27 @@ class RawChannel extends Entity implements ChannelFunctions {
      * @param props
      * @returns
      */
-    public create<EntityType extends Entity>(type: new (config: EntityConfig<EntityType>) => EntityType, config: EntityConfig = {} as any, props: KeyValue = {}): EntityType {
+    public create<EntityType extends Entity>(type: EntityConstructor<EntityType>, config: EntityConfig = {} as any, props: KeyValue = {}): EntityType {
         const newConfig = {
             ...config,
-            channel: this as Channel,
-            server: this.server
+            channel: this as Channel
         };
 
-        const newEntity = new type(newConfig) as EntityType;
-
-        // Generates schema
-        (newEntity.constructor as any).schema as EntitySchema<EntityType>;
-
-        const entityProxy = Channel.setupProxy(this, newEntity);
-
-        entityProxy.$init(newConfig);
-
-        this.server.entities.push(entityProxy as Entity);
-        if (newEntity instanceof RawChannel) this.server.channels.push(entityProxy as any as Channel);
-        this.entities.push(entityProxy as Entity);
-
-        // const created = entityProxy.exists !== false;
-        // if (!created) {
-        //     entityProxy.delete();
-        // }
-
-        entityProxy.emit("create", {
-            entity: this,
-            user: config.owner,
-        });
-
-        return entityProxy;
+        return new type(newConfig);
     }
 
-    constructor(config: EntityConfig) {
-        super(config);
+    constructor(config: ChannelConfig) {
+        super("Channel");
 
+        this._server = config.server;
         this._queue = new Queue(this);
+
+        this.server.channels[this.type] ??= new ChannelList();
+        this.server.channels[this.type].push(this);
+
+        do {
+            HasId.reset(this, `Channel_${this.type}`, 16, "_");
+        } while (this.server.findChannel(this.id));
     }
 }
 

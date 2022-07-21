@@ -57,7 +57,7 @@ export abstract class HasId {
     /**
      * Generates a new ID for this object
      */
-    protected resetId(preffix?: string, length: number = ID_CHAR_LENGTH, separator: string = "_") {
+    private resetId(preffix?: string, length: number = ID_CHAR_LENGTH, separator: string = "_") {
         let id = "";
         if (preffix) preffix += separator;
         else if (preffix === undefined) preffix = this.preffix;
@@ -73,5 +73,9 @@ export abstract class HasId {
     public constructor(preffix: string = "", length: number = ID_CHAR_LENGTH, separator: string = "_") {
         this._id = "placeholder";
         this.resetId(preffix, length, separator);
+    }
+
+    public static reset(target: HasId, ...parameters: Parameters<HasId["resetId"]>) {
+        return target.resetId(...parameters);
     }
 }

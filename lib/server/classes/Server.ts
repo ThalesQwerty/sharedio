@@ -1,5 +1,5 @@
-import { Channel, EntityCreateFunction, Channel } from "../../sharedio";
-import { Entity, Entity, Schema } from "../../sharedio";
+import { EntityCreateFunction, Channel, ChannelList, KeyValue } from "../../sharedio";
+import { Entity, Schema } from "../../sharedio";
 import { HasId, ObjectTransform, HasEvents, Mixin } from "../../sharedio";
 import { User } from "../../sharedio";
 import { ServerConfig } from "../../sharedio";
@@ -32,14 +32,6 @@ class RawServer extends HasId {
         return this._config;
     }
     private _config: ServerConfig;
-
-    /**
-     * The main channel of a server is the first channel every user joins automatically when they connect to the server. All entities on the server belong directly or indirectly to the main channel.
-     */
-    public get mainChannel() {
-        return this._mainChannel;
-    }
-    private _mainChannel: Channel;
 
     public get port() {
         return this.wss?.options.port;
@@ -77,15 +69,10 @@ class RawServer extends HasId {
     }
     private _users: User[] = [];
 
-    public get entities() {
-        return this._entities as EntityList<Entity>;
-    }
-    private _entities: EntityList;
-
     public get channels() {
-        return this._channels as EntityList<Channel>;
+        return this._channels;
     }
-    private _channels: EntityList<Channel>;
+    private _channels: KeyValue<ChannelList, string>;
 
     /**
      * How many tick events will happen per second
@@ -138,73 +125,32 @@ class RawServer extends HasId {
     }
     private _router: Router;
 
-    /**
-     * Creates an entity inside the server's main channel
-     */
-    public get create() {
-        const fn = <EntityType extends Entity = Entity>(...args: Parameters<EntityCreateFunction<EntityType>>) => {
-            return (this.mainChannel.create as any)(...args) as EntityType;
-        };
-
-        return fn;
-    }
-
-    /**
-     * Finds an entity by its ID
-     * @param id Entity ID
-     */
-     public findEntity(id: string) {
-        if (!id) return null;
-
-        const ids = id.trim().split(Entity.ID_SEPARATOR).reduce((previousSteps, currentStep, index) => {
-            return [...previousSteps, previousSteps[index - 1] ? `${previousSteps[index - 1] ?? ""}${Entity.ID_SEPARATOR}${currentStep}` : currentStep]
-        }, [] as string[]);
-
-        if (ids[0] === this.mainChannel?.id) {
-            ids.shift();
-            let currentChild: Entity|null = null;
-
-            for (const step of ids) {
-                const parent: Entity = currentChild ?? this.mainChannel;
-
-                if (parent instanceof Channel) {
-                    const child = parent.entities.findById(step);
-                    if (!child) break;
-
-                    currentChild = child;
-                } else {
-                    break;
-                }
-            }
-
-            return currentChild?.id === id ? currentChild as Entity : null;
-        }
-
-        return null;
-    }
-
     constructor(config: ServerConfig = {}) {
         super("RawServer");
 
         Server.current = this;
-        this._entities = new EntityList();
-        this._channels = new EntityList<Channel>();
+        this._channels = {};
         this._router = new Router(this);
 
         config.port ??= DEFAULT_PORT;
         config.syncRate ??= DEFAULT_SYNC_RATE;
         config.debug ??= false;
-        config.mainChannel ??= Channel;
-
-        this._mainChannel = new config.mainChannel({ server: this, dummy: config.dummy }) as Channel;
-        this._entities.push(this._mainChannel);
-        this._channels.push(this._mainChannel);
 
         this._config = ObjectTransform.clone(config);
     }
 
     private log(message: any) {
         if (this._config.debug) console.log(message);
+    }
+
+    /**
+     * Finds a channel on this server by its ID. Returns `undefined` if it couldn't be found.
+     * @param id The ID to look for
+     */
+    findChannel<ChannelType extends Channel = Channel>(id: string): ChannelType|undefined {
+        const [_, type] = id.split("_");
+
+        return this.channels[type]?.find(channel => channel.id === id) as ChannelType;
     }
 
     /**
@@ -273,22 +219,6 @@ class RawServer extends HasId {
     private sync() {
         this._ticks++;
 
-        const channels: Channel[] = [];
-
-        // this.entities.forEach((entity) => {
-        //     if (entity.exists) {
-        //         // Entity.emit(entity)("tick");
-
-        //         if (entity instanceof Channel) {
-        //             channels.push(entity as Channel);
-        //         }
-        //     }
-        // });
-
-        this.channels.forEach((channel) => {
-            Channel.getIOQueue(channel).sync();
-        })
-
         this.emit("nextTick");
         this.off("nextTick");
 
@@ -314,7 +244,6 @@ class RawServer extends HasId {
 
             if (!this._users.find((existingUser) => existingUser.is(user))) {
                 this._users.push(user);
-                user.join(this.mainChannel);
             }
 
             this.emit("connection", {
@@ -327,7 +256,7 @@ class RawServer extends HasId {
                     user,
                     client
                 });
-                user.view.reset();
+                // to-do: reset user views
             });
 
             client.on("message", ({ input }) => {
@@ -347,17 +276,6 @@ class RawServer extends HasId {
         this._isOnline = false;
         wss.removeAllListeners();
         this.log("SharedIO server has stopped");
-    }
-
-    /**
-     * Removes an entity from list
-     */
-    public removeEntity(
-        entity: Entity
-    ) {
-        this._entities = this._entities.filter(
-            (currentEntity) => !currentEntity.is(entity),
-        );
     }
 }
 

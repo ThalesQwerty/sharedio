@@ -24,14 +24,10 @@ export abstract class EntityStaticMembers extends HasId {
         if (!this._reservedAttributes) {
             let array = [
                 ...Object.getOwnPropertyNames(
-                    new Entity({ server: Server.dummy, dummy: true }),
-                ),
-                ...Object.getOwnPropertyNames(
-                    new Channel({ server: Server.dummy, dummy: true }),
+                    new Entity({ channel: new Channel({ server: Server.dummy }), dummy: true }),
                 ),
                 ...Object.getOwnPropertyNames(new HasEvents()),
                 ...Object.getOwnPropertyNames(Entity.prototype),
-                ...Object.getOwnPropertyNames(Channel.prototype),
                 ...Object.getOwnPropertyNames(HasId.prototype),
                 ...Object.getOwnPropertyNames(HasEvents.prototype),
             ] as EntityReservedAttributeName[];

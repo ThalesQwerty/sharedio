@@ -30,7 +30,8 @@ export class Action {
         values: KeyValue<any, EntityAttributeName<EntityType>>,
         debug: boolean = false
     ) {
-        const viewed = this._user.view.current[entity.id];
+        const viewed = this._user.getEntityView(entity);
+        if (!viewed) return false;
 
         debug && console.log("write", Entity.printable(entity), values);
 
@@ -46,10 +47,12 @@ export class Action {
                 viewed.state[attributeName] = newValue;
             } else {
                 debug && console.log(`can't write into "${attributeName}"`);
+                return false;
             }
         }
 
         debug && console.log("-->", Entity.printable(entity));
+        return true;
     }
 
     /**

@@ -1,4 +1,4 @@
-import { Server } from "../../sharedio";
+import { Serialized, Server, ObjectTransform } from "../../sharedio";
 import { Channel } from "../../sharedio";
 import { Entity } from "../../sharedio";
 import { HasId, RandomHex, HasEvents, Mixin } from "../../sharedio";
@@ -142,14 +142,20 @@ class RawClient extends HasId {
         );
     }
 
+    public send(message: Serialized<Output>|Omit<Serialized<Output>, "id">): void;
+    public send(message: Output|Omit<Output, "id">): void;
+
     /**
      * Sends a message to the client
      * @param message Message to be sent. It has to be one of the possible SharedIO response types
      */
-    public send(message: (Output|Omit<Output, "id">)&{client?: undefined, private?: undefined}) {
-        delete (message as any).user;
+    public send(message: KeyValue) {
+        message = ObjectTransform.clone(message);
+        delete message.hidden;
+        if (message.channel instanceof Channel) message.channel = (message.channel as Channel).id;
+
         this.sendRaw({
-            id: RandomHex(16),
+            id: message.id ?? RandomHex(16),
             ...message
         });
     }

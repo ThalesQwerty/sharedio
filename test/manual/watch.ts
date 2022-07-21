@@ -1,7 +1,8 @@
 import { Channel, EntityConfig, Entity, Server, async, output, input, inputFor } from "../../lib";
 import { EntityList } from "../../lib/entity/classes/EntityList";
+import { ChannelConfig } from "../../lib/server";
 class TestChannel extends Channel {
-    constructor(config: EntityConfig) {
+    constructor(config: ChannelConfig) {
         super(config);
 
         const countUsers = () => {
@@ -14,7 +15,6 @@ class TestChannel extends Channel {
 }
 
 const server = new Server({
-    mainChannel: TestChannel,
     port: 8080,
     debug: true,
 });
@@ -66,7 +66,7 @@ class WatchTestEntity extends Entity {
     }
 }
 
-const testEntity = server.mainChannel.create(WatchTestEntity) as WatchTestEntity;
+const testEntity = new WatchTestEntity({ channel: new TestChannel({ server }) });
 testEntity.number = -1;
 
 server.start(() => {

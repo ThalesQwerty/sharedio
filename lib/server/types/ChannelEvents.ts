@@ -24,13 +24,12 @@ export type ChannelLeaveListener<
     ChannelType extends Channel = Channel,
     > = (event: ChannelLeaveEvent<ChannelType>) => void;
 
-export interface ChannelEvents<ChannelType extends Channel = Channel> extends EntityEvents<ChannelType> {
-    "canJoin?"?: ChannelCanJoinListener<ChannelType>[];
+export interface ChannelEvents<ChannelType extends Channel = Channel> {
     join?: ChannelJoinListener<ChannelType>[];
     leave?: ChannelLeaveListener<ChannelType>[];
 }
 
-export interface ChannelListenerOverloads<ChannelType extends Channel = Channel> extends EntityListenerOverloads<ChannelType> {
+export interface ChannelListenerOverloads<ChannelType extends Channel = Channel> {
     /**
     * Called right after a new user joins this channel.
     */
@@ -81,7 +80,7 @@ export interface ChannelListenerOverloads<ChannelType extends Channel = Channel>
     ): ChannelType;
 }
 
-export interface ChannelEmitterOverloads<ChannelType extends Channel = Channel> extends EntityEmitterOverloads<ChannelType> {
+export interface ChannelEmitterOverloads<ChannelType extends Channel = Channel> {
     (
         event: "canJoin?",
         callback: ChannelCanJoinEvent<ChannelType>,

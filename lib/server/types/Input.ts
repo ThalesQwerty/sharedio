@@ -1,65 +1,94 @@
 import { Entity } from "../../entity";
-import { KeyValue } from "../../sharedio";
+import { Channel, KeyValue, User } from "../../sharedio";
 import { Client } from "../../sharedio";
 import { ClientEvents } from "../../sharedio";
 
+/**
+ * Base interface for inputs
+ */
 interface SharedIOBaseInput {
     type: keyof ClientEvents;
     id: string;
-    data: KeyValue
+    channel: Channel | string | null;
+    data: KeyValue;
 }
 
+/**
+ * Attempts to associate a client with an existing user, or a new user if the attempt fails
+ */
 export interface AuthInput extends SharedIOBaseInput {
     type: "auth";
+    channel: null;
     data: {
         token: string | null;
     }
 }
 
+/**
+ * Responds as soon as possible to a ping sent by the server
+ */
 export interface PongInput extends SharedIOBaseInput {
     type: "pong";
+    channel: null;
     data: {
         packetId: string;
     }
 }
 
+/**
+ * Attempts to write values into an entity's properties
+ */
 export interface WriteInput extends SharedIOBaseInput {
     type: "write";
+    channel: string;
     data: {
-        entityId: string;
+        entity: string;
         properties: KeyValue;
     }
 }
 
+/**
+ * Attemps to call an entity's method
+ */
 export interface CallInput extends SharedIOBaseInput {
     type: "call";
+    channel: string;
     data: {
-        entityId: string;
+        entity: string;
         methodName: string;
         parameters: unknown[];
     }
 }
 
-export interface RoutedWriteInput extends SharedIOBaseInput {
-    type: "write";
-    data: {
-        entity: Entity;
-        properties: KeyValue;
-    };
-    client: Client;
-}
+/**
+ * Adds extra information to the input sent by the client so it can be properly handled by the server
+ */
+export type Routed<InputType extends ChannelInput> = InputType & {
+    /**
+     * Extra information that has been added by the router to the original input
+     */
+    routed: {
+        /**
+         * The client that sent the input
+         */
 
-export interface RoutedCallInput extends SharedIOBaseInput {
-    type: "call";
-    data: {
-        entity: Entity;
-        methodName: string;
-        parameters: unknown[];
-    };
-    client: Client;
-}
+        client: Client,
+        /**
+         * The user who sent the input
+         */
 
-export type Assigned<InputType extends SharedIOBaseInput> = InputType & { client: Client }
+        user: User,
+        /**
+         * The channel where the input has been sent
+         */
+
+        channel: Channel,
+        /**
+         * The entity the user is attempting to use
+         */
+        entity: Entity
+    }
+}
 
 export type Input =
     | AuthInput
@@ -74,7 +103,3 @@ export type ChannelInput =
 export type ServerInput =
     | AuthInput
     | PongInput;
-
-export type RoutedChannelInput =
-    | RoutedWriteInput
-    | RoutedCallInput
