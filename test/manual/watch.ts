@@ -52,14 +52,6 @@ class WatchTestEntity extends Entity {
         this._computed = value / 2;
     }
 
-    $init() {
-        // setInterval(() => {
-        //     if (this.exists) {
-        //         console.log("string value:", this.string);
-        //     }
-        // }, 5000);
-    }
-
     @inputFor("all") method(whatever: any) {
         console.log("method!", whatever);
         return 5;
@@ -81,4 +73,4 @@ server.start(() => {
 
 server.on("connection", () => {
     console.log(server.users.length + " users on server");
-})
+});

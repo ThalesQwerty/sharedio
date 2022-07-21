@@ -47,7 +47,7 @@ class RawChannel extends HasId implements ChannelFunctions {
      * Attempts to find an entity inside this channel by its ID
      */
     public get findEntity() {
-        return this._entities.findById;
+        return this._entities.findById.bind(this._entities);
     }
 
     /**
@@ -150,12 +150,14 @@ class RawChannel extends HasId implements ChannelFunctions {
         this._server = config.server;
         this._queue = new Queue(this);
 
-        this.server.channels[this.type] ??= new ChannelList();
+        this.server.channels[this.type] ??= new ChannelList<this>();
         this.server.channels[this.type].push(this);
 
         do {
-            HasId.reset(this, `Channel_${this.type}`, 16, "_");
-        } while (this.server.findChannel(this.id));
+            var newId = `Channel_${this.type}`;
+        } while (this.server.findChannel(newId));
+
+        HasId.reset(this, newId, 16, "_");
     }
 }
 

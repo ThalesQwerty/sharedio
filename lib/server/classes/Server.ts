@@ -149,8 +149,9 @@ class RawServer extends HasId {
      */
     findChannel<ChannelType extends Channel = Channel>(id: string): ChannelType|undefined {
         const [_, type] = id.split("_");
+        const channelList = this.channels[type];
 
-        return this.channels[type]?.find(channel => channel.id === id) as ChannelType;
+        return channelList?.findById(id) as ChannelType;
     }
 
     /**

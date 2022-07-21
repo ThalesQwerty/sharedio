@@ -115,8 +115,10 @@ class RawEntity
         this._owner = owner ?? null;
 
         do {
-            HasId.reset(this, `Entity_${this.type}`, 16, "_");
-        } while (this.channel.findEntity(this.id));
+            var newId = `Entity_${this.type}`;
+        } while (this.channel.findEntity(newId));
+
+        HasId.reset(this, newId, 16, "_");
 
         process.nextTick(() => {
             const created = this.exists !== false;
