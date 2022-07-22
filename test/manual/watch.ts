@@ -58,7 +58,9 @@ class WatchTestEntity extends Entity {
     }
 }
 
-const testEntity = new WatchTestEntity({ channel: new TestChannel({ server }) });
+const testChannel = server.createChannel(TestChannel);
+
+const testEntity = testChannel.createEntity<WatchTestEntity>(WatchTestEntity);
 testEntity.number = -1;
 
 server.start(() => {

@@ -6,13 +6,7 @@ import { KeyValue } from "../../sharedio";
 import { User } from "../../sharedio";
 import { ChannelListenerOverloads, ChannelEmitterOverloads, Queue } from "../../sharedio";
 
-export type EntityCreateFunction<EntityType extends Entity = Entity> = (type: EntityConstructor<EntityType>, config?: EntityConfig<EntityType>, props?: KeyValue) => EntityType;
-
-interface ChannelFunctions {
-    create: EntityCreateFunction
-}
-
-class RawChannel extends HasId implements ChannelFunctions {
+class RawChannel extends HasId {
     public get users() {
         return this._users;
     }
@@ -114,6 +108,22 @@ class RawChannel extends HasId implements ChannelFunctions {
         });
     }
 
+    constructor(config: ChannelConfig) {
+        super("Channel");
+
+        this._server = config.server;
+        this._queue = new Queue(this);
+
+        this.server.channels[this.type] ??= new ChannelList<this>();
+        this.server.channels[this.type].push(this);
+
+        do {
+            var newId = `Channel_${this.type}`;
+        } while (this.server.findChannel(newId));
+
+        HasId.reset(this, newId, 16, "_");
+    }
+
     public join(user: User) {
         if (!user.in(this)) {
             this._users.push(user);
@@ -135,29 +145,11 @@ class RawChannel extends HasId implements ChannelFunctions {
      * @param props
      * @returns
      */
-    public create<EntityType extends Entity>(type: EntityConstructor<EntityType>, config: EntityConfig = {} as any, props: KeyValue = {}): EntityType {
-        const newConfig = {
+    public createEntity<EntityType extends Entity = Entity>(type: EntityConstructor<EntityType>, config: Omit<EntityConfig<EntityType>, "channel"> = {}): EntityType {
+        return new type({
             ...config,
-            channel: this as Channel
-        };
-
-        return new type(newConfig);
-    }
-
-    constructor(config: ChannelConfig) {
-        super("Channel");
-
-        this._server = config.server;
-        this._queue = new Queue(this);
-
-        this.server.channels[this.type] ??= new ChannelList<this>();
-        this.server.channels[this.type].push(this);
-
-        do {
-            var newId = `Channel_${this.type}`;
-        } while (this.server.findChannel(newId));
-
-        HasId.reset(this, newId, 16, "_");
+            channel: this
+        });
     }
 }
 

@@ -1,4 +1,4 @@
-import { EntityCreateFunction, Channel, ChannelList, KeyValue } from "../../sharedio";
+import { Channel, ChannelList, KeyValue, ChannelConfig, ChannelConstructor } from "../../sharedio";
 import { Entity, Schema } from "../../sharedio";
 import { HasId, ObjectTransform, HasEvents, Mixin } from "../../sharedio";
 import { User } from "../../sharedio";
@@ -152,6 +152,16 @@ class RawServer extends HasId {
         const channelList = this.channels[type];
 
         return channelList?.findById(id) as ChannelType;
+    }
+
+    /**
+     * Creates a new channel in this server
+     */
+    createChannel<ChannelType extends Channel = Channel>(type: ChannelConstructor<ChannelType>, config: Omit<ChannelConfig<ChannelType>, "server"> = {}): ChannelType {
+        return new type({
+            ...config,
+            server: this
+        })
     }
 
     /**
