@@ -1,4 +1,4 @@
-import { Channel, EntityConfig, Entity, Server, async, output, input, inputFor } from "../../lib";
+import { Channel, EntityConfig, Entity, Server, async, output, input, inputFor, User } from "../../lib";
 import { EntityList } from "../../lib/entity/classes/EntityList";
 import { ChannelConfig } from "../../lib/server";
 class TestChannel extends Channel {
@@ -11,6 +11,10 @@ class TestChannel extends Channel {
 
         this.on("join", countUsers);
         this.on("leave", countUsers);
+    }
+
+    $sync() {
+        
     }
 }
 
@@ -63,16 +67,10 @@ const testChannel = server.createChannel(TestChannel);
 const testEntity = testChannel.createEntity<WatchTestEntity>(WatchTestEntity);
 testEntity.number = -1;
 
-server.start(() => {
-    // setInterval(() => {
-    //     const firstUser = server.users[0];
+server.start();
 
-    //     if (firstUser) {
-    //         console.log(firstUser.clients.length, "clients connected");
-    //     }
-    // }, 5000);
-});
-
-server.on("connection", () => {
+server.on("connection", ({ user }) => {
     console.log(server.users.length + " users on server");
+
+    user.join(testChannel);
 });

@@ -1,68 +1,37 @@
 import { EntityAttributeName, EntityConstructor } from "../../entity";
 import { EntityList } from "../../entity/classes/EntityList";
-import { Entity, EntityConfig, EntitySchema, WatchedObject, EntityRolesInterface, HasId, Server, ChannelConfig, ChannelList } from "../../sharedio";
+import { Entity, EntityConfig, EntitySchema, WatchedObject, EntityRolesInterface, HasId, Server, ChannelConfig, ChannelList, Clock } from "../../sharedio";
 import { ObjectTransform, HasEvents, Mixin } from "../../sharedio";
 import { KeyValue } from "../../sharedio";
 import { User } from "../../sharedio";
 import { ChannelListenerOverloads, ChannelEmitterOverloads, Queue } from "../../sharedio";
 
+const DEFAULT_SYNC_RATE = 64;
 class RawChannel extends HasId {
-    public get users() {
-        return this._users;
-    }
-    private _users: User[] = [];
-
-    public get entities() {
-        return this._entities;
-    }
-    private _entities: EntityList = new EntityList();
 
     public static getIOQueue<ChannelType extends RawChannel>(channel: ChannelType) {
         return channel._queue;
-    }
-    private _queue: Queue;
-
-    /**
-     * Entity class name
-     */
-     public get type() {
-        return this.constructor.name;
-    }
-
-    /**
-     * Which server is this channel from?
-     */
-     public get server() {
-        return this._server;
-    }
-    private _server: Server;
-
-    /**
-     * Attempts to find an entity inside this channel by its ID
-     */
-    public get findEntity() {
-        return this._entities.findById.bind(this._entities);
     }
 
     /**
      * Configures the I/O queue of a channel to watch an entity for future updates
      */
-    public static setupProxy<ChannelType extends RawChannel, EntityType extends Entity>(channel: ChannelType, entity: EntityType) {
+    public static setupProxy<ChannelType extends RawChannel, EntityType extends Entity>(channel: ChannelType, entity: EntityType): EntityType {
         return WatchedObject(entity, {
-            write: ({ propertyName, previousValue, attemptedValue, value}) => {
+            write: ({ propertyName, previousValue, attemptedValue, value }) => {
                 // TO-DO: allow computed property binding
                 /*
                     const propertySchema = entity.schema.attributes[e.propertyName as EntityAttributeName<EntityType>];
-
+ 
                     for (const dependency of propertySchema.dependencies) {
-
+ 
                     }
                 */
 
                 /*
                     If the "set" mutator of the property alters the value that would be written into the property,
                     the server should also send to the author the new value.
-
+ 
                     Otherwise, it will be sent to everyone in the channel except for the author of the change in order
                     to avoid unnecessary latency issues, since they know the new value already.
                  */
@@ -108,6 +77,48 @@ class RawChannel extends HasId {
         });
     }
 
+    public get users() {
+        return this._users;
+    }
+    private _users: User[] = [];
+
+    public get entities() {
+        return this._entities;
+    }
+    private _entities: EntityList = new EntityList();
+
+    private _queue: Queue;
+
+    /**
+     * Entity class name
+     */
+    public get type() {
+        return this.constructor.name;
+    }
+
+    /**
+     * Which server is this channel from?
+     */
+    public get server() {
+        return this._server;
+    }
+    private _server: Server;
+
+    /**
+     * Channel's internal clock, responsible for calling the `$sync()` function periodically
+     */
+    public get $clock() {
+        return this._$clock;
+    }
+    private _$clock: Clock;
+
+    /**
+     * Attempts to find an entity inside this channel by its ID
+     */
+    public get findEntity() {
+        return this._entities.findById.bind(this._entities);
+    }
+
     constructor(config: ChannelConfig) {
         super("Channel");
 
@@ -122,6 +133,20 @@ class RawChannel extends HasId {
         } while (this.server.findChannel(newId));
 
         HasId.reset(this, newId, 16, "_");
+
+        this._$clock = new Clock(
+            () => { 
+                this.$sync(); 
+            }, 
+            config.syncRate ?? DEFAULT_SYNC_RATE
+        ).start(true);
+    }
+
+    /**
+     * This method is called periodically in order to synchronize this channel's entities state with the users connected.
+     */
+    public $sync() {
+        this._queue.sync();
     }
 
     public join(user: User) {

@@ -21,14 +21,8 @@ export interface ClientSchemaConfig {
 export interface ServerConfig {
     debug?: boolean;
     port?: number;
-
     wsOptions?: KeyValue;
-
-    /**
-     * How many times per second the server will synchronize its state with the clients connected? (default is 64)
-     */
-    syncRate?: number;
-
+    
     clientSchema?: ClientSchemaConfig;
 
     dummy?: boolean;

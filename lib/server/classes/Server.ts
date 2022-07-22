@@ -10,8 +10,6 @@ import { Router } from "./Router";
 import { EntityList } from "../../entity/classes/EntityList";
 
 const DEFAULT_PORT = 3000;
-const DEFAULT_SYNC_RATE = 64;
-
 class RawServer extends HasId {
     static current: Server;
 
@@ -75,21 +73,6 @@ class RawServer extends HasId {
     private _channels: KeyValue<ChannelList, string>;
 
     /**
-     * How many tick events will happen per second
-     */
-    public get syncRate() {
-        return this.config.syncRate ?? DEFAULT_SYNC_RATE;
-    }
-
-    /**
-     * Counts how many ticks have happened since the server started
-     */
-    public get ticks() {
-        return this._ticks;
-    }
-    private _ticks: number = 0;
-
-    /**
      * Measures the time (in seconds) elapsed since the last server tick
      */
     public get deltaTime() {
@@ -133,7 +116,6 @@ class RawServer extends HasId {
         this._router = new Router(this);
 
         config.port ??= DEFAULT_PORT;
-        config.syncRate ??= DEFAULT_SYNC_RATE;
         config.debug ??= false;
 
         this._config = ObjectTransform.clone(config);
@@ -141,27 +123,6 @@ class RawServer extends HasId {
 
     private log(message: any) {
         if (this._config.debug) console.log(message);
-    }
-
-    /**
-     * Finds a channel on this server by its ID. Returns `undefined` if it couldn't be found.
-     * @param id The ID to look for
-     */
-    findChannel<ChannelType extends Channel = Channel>(id: string): ChannelType|undefined {
-        const [_, type] = id.split("_");
-        const channelList = this.channels[type];
-
-        return channelList?.findById(id) as ChannelType;
-    }
-
-    /**
-     * Creates a new channel in this server
-     */
-    createChannel<ChannelType extends Channel = Channel>(type: ChannelConstructor<ChannelType>, config: Omit<ChannelConfig<ChannelType>, "server"> = {}): ChannelType {
-        return new type({
-            ...config,
-            server: this
-        })
     }
 
     /**
@@ -183,11 +144,6 @@ class RawServer extends HasId {
 
         this._serverStartTimestamp = this._lastTickTimestamp =
             new Date().getTime();
-
-        this.tickIntervalRef = setInterval(
-            () => this.sync(),
-            1000 / this.syncRate,
-        );
 
         wss.on("connection", (ws) => this.handleNewConnection(ws));
         wss.on("close", () => this.handleServerStop(wss));
@@ -215,6 +171,27 @@ class RawServer extends HasId {
     }
 
     /**
+     * Finds a channel on this server by its ID. Returns `undefined` if it couldn't be found.
+     * @param id The ID to look for
+     */
+    findChannel<ChannelType extends Channel = Channel>(id: string): ChannelType | undefined {
+        const [_, type] = id.split("_");
+        const channelList = this.channels[type];
+
+        return channelList?.findById(id) as ChannelType;
+    }
+
+    /**
+     * Creates a new channel in this server
+     */
+    createChannel<ChannelType extends Channel = Channel>(type: ChannelConstructor<ChannelType>, config: Omit<ChannelConfig<ChannelType>, "server"> = {}): ChannelType {
+        return new type({
+            ...config,
+            server: this
+        })
+    }
+
+    /**
      * Closes the server and disconnects all users
      */
     stop(): RawServer {
@@ -225,27 +202,13 @@ class RawServer extends HasId {
     }
 
     /**
-     * This function emits the tick event
-     */
-    private sync() {
-        this._ticks++;
-
-        this.emit("nextTick");
-        this.off("nextTick");
-
-        this.emit("tick");
-
-        this._lastTickTimestamp = new Date().getTime();
-    }
-
-    /**
      * This function is executed whenever a new client connects to the server
      */
     private handleNewConnection(ws: WS.WebSocket) {
         new Client(ws, this);
     }
 
-    public auth(client: Client, token: string|null) {
+    public auth(client: Client, token: string | null) {
         const user = User.auth(client, this, token) || new User(this, client);
 
         console.log("auth", token, user.id);
