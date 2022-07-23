@@ -1,4 +1,4 @@
-import { Channel, EntityConfig, Entity, Server, async, output, input, inputFor, User } from "../../lib";
+import { Channel, EntityConfig, Entity, Server, async, output, input, inputFor, User, shared, hidden } from "../../lib";
 import { EntityList } from "../../lib/entity/classes/EntityList";
 import { ChannelConfig } from "../../lib/server";
 class TestChannel extends Channel {
@@ -18,7 +18,7 @@ const server = new Server({
 
 class WatchTestEntity extends Entity {
     @output number = 0;
-    @output @inputFor("all") string = "wololo";
+    @shared string = "wololo";
     @output boolean = false;
 
     @input unchangedNumber = 0;
@@ -49,7 +49,7 @@ class WatchTestEntity extends Entity {
         this._computed = value / 2;
     }
 
-    @inputFor("all") method(whatever: any) {
+    @shared method(whatever: any) {
         console.log("method!", whatever);
         return 5;
     }

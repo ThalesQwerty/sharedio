@@ -23,11 +23,18 @@ function addUserRoles<EntityType extends Entity>(expression: string, schema: Ent
 }
 
 /**
- * Disables automatic synchronization with user clients for this property/method, which means they have to be imperatively outputted to the users by calling the entity's `$output` method
+ * Disables automatic synchronization with user clients for this property/method.
+ *
+ * **For properties:** When this property is changed, the new value won't be automatically synchronized with the user clients.
+ * It would have to be done manually by calling the entitiy's `$output()` method.
+ *
+ * **For methods:** User clients won't be able to listen to calls of this function, regardless of whether being able or not to call it themselves.
  *
  * This is useful for handling some edge cases, such as:
  * - Avoiding a computationally expensive getter from being calculated more often than necessary
  * - Creating a method that doesn't generate side effects on other users' clients
+ *
+ * *Shorthand for:* `@inputFor("owner")`
  */
  export function async<EntityType extends Entity>(
     entity: EntityType,
@@ -98,24 +105,11 @@ export function hiddenFor<Expression extends string[] = string[]>(
 }
 
 /**
- * Determines which user roles can read the value of this property or listen to calls of this method, and allows the owner of this entity to write values into this property or call this method.
+ * **For properties:** Allows only the entity owner to write values into this property and read its current value.
  *
- * Shorthand for:
+ * **For methods:** Allows only the entity owner to call this method and listen to calls of this method.
  *
- * `@outputFor(<expressions>) @inputFor("owner") `
- *
- * @param expressions List of roles, or boolean expression involving roles
- */
- export function sharedFor<Expression extends string[] = string[]>(
-    ...expressions: Expression
-) {
-    return outputFor(...expressions.map(expression => `!(${expression})`));
-}
-
-/**
- * Allows the owner of this entity to write values into this property or call this method
- *
- * Shorthand for: `@inputFor("owner")`
+ * *Shorthand for:* `@inputFor("owner")`
  */
 export function input<EntityType extends Entity>(
     entity: EntityType,
@@ -125,50 +119,44 @@ export function input<EntityType extends Entity>(
 };
 
 /**
- * Allows users to read the value of this property or listen to calls of this method.
+ * **For properties:** Allows all users to read its current value.
  *
- * In case of channel entities, this only applies for users who are inside the channel.
+ * **For methods:** Allows all users to listen to calls of this method.
  *
- * Shorthand for:
- *
- * `@outputFor("all")`, if normal entity
- *
- * `@outputFor("inside")`, if channel
+ * *Shorthand for:* `@outputFor("all")`
  */
 export function output<EntityType extends Entity>(
     entity: EntityType,
     attributeName: EntityAttributeName<EntityType>
 ) {
-    (entity instanceof Channel ? outputFor(BuiltinRoles.MEMBER) : outputFor(BuiltinRoles.USER))(entity, attributeName);
+    outputFor(BuiltinRoles.USER)(entity, attributeName);
 };
 
 /**
- * Prevents all users from viewing this property or method. It exists only in the server.
+ * **For properties:** Allows only the entity owner to read its current value.
  *
- * This is Shorthand for using no decorator at all.
+ * **For methods:** Allows only the entity owner to listen to calls of this method.
  *
- * `@hiddenFor("all")`
+ * *Shorthand for:* `@outputFor("only")`
  */
 export function hidden<EntityType extends Entity>(
     entity: EntityType,
     attributeName: EntityAttributeName<EntityType>
 ) {
-    hiddenFor(BuiltinRoles.USER)(entity, attributeName);
+    hiddenFor(BuiltinRoles.OWNER)(entity, attributeName);
 };
 
 /**
- * Allows the owner of this entity to write values into this property or call this method, and allows users to read the value of this property or listen to calls of this method.
+ * **For properties:** Allows all users to write values into this property and read its current value. (Not advised, since it can create conflicts related to network latency)
  *
- * Shorthand for:
+ * **For methods:** Allows all users to call this method and listen to calls of this method.
  *
- * `@inputFor("owner") @outputFor("all")`, if normal entity
- *
- * `@inputFor("owner") @outputFor("inside")`, if channel
+ * *Shorthand for:* `@inputFor("all")`
  */
  export function shared<EntityType extends Entity>(
     entity: EntityType,
     attributeName: EntityAttributeName<EntityType>
 ) {
-    input(entity, attributeName);
-    output(entity, attributeName);
-};
+    inputFor(BuiltinRoles.USER)(entity, attributeName);
+    outputFor(BuiltinRoles.USER)(entity, attributeName);
+}
