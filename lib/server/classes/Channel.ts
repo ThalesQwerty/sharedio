@@ -22,16 +22,16 @@ class RawChannel extends HasId {
                 // TO-DO: allow computed property binding
                 /*
                     const propertySchema = entity.schema.attributes[e.propertyName as EntityAttributeName<EntityType>];
- 
+
                     for (const dependency of propertySchema.dependencies) {
- 
+
                     }
                 */
 
                 /*
                     If the "set" mutator of the property alters the value that would be written into the property,
                     the server should also send to the author the new value.
- 
+
                     Otherwise, it will be sent to everyone in the channel except for the author of the change in order
                     to avoid unnecessary latency issues, since they know the new value already.
                  */
@@ -125,8 +125,8 @@ class RawChannel extends HasId {
         this._server = config.server;
         this._queue = new Queue(this);
 
-        this.server.channels[this.type] ??= new ChannelList<this>();
-        this.server.channels[this.type].push(this);
+        this.server.channelsByType[this.type] ??= new ChannelList<this>();
+        this.server.channelsByType[this.type].push(this);
 
         do {
             var newId = `Channel_${this.type}`;
@@ -135,9 +135,9 @@ class RawChannel extends HasId {
         HasId.reset(this, newId, 16, "_");
 
         this._$clock = new Clock(
-            () => { 
-                this.$sync(); 
-            }, 
+            () => {
+                this.$sync();
+            },
             config.syncRate ?? DEFAULT_SYNC_RATE
         ).start(true);
     }

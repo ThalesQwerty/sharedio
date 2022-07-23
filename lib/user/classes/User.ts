@@ -113,8 +113,18 @@ export class User extends HasId {
         )[0];
         if (!user) return null;
 
-        user._clients.add(client);
+        user.addClient(client);
         return user;
+    }
+
+    private addClient(client: Client) {
+        if (!this.clients.has(client)) {
+            this.clients.add(client);
+
+            for (const channel of this.channels) {
+                this.getChannelView(channel)?.forceUpdate(client);
+            }
+        }
     }
 
     /**
@@ -129,6 +139,13 @@ export class User extends HasId {
      */
     public in(channel: Channel) {
         return !!channel.users.find(user => user.is(this));
+    }
+
+    /**
+     * Gets the channels where this user is currently in
+     */
+    public get channels() {
+        return this.server.channels.filter(channel => this.in(channel));
     }
 
     /**

@@ -120,6 +120,9 @@ class RawEntity
 
         HasId.reset(this, newId, 16, "_");
 
+        const proxy = Channel.setupProxy(this.channel, this);
+        this._channel.entities.add(proxy);
+
         process.nextTick(() => {
             const created = this.exists !== false;
             if (!created) {
@@ -132,7 +135,7 @@ class RawEntity
             Channel.getIOQueue(this.channel).addEntity(this);
         });
 
-        return Channel.setupProxy(this.channel, this);
+        return proxy;
     }
 
     /**

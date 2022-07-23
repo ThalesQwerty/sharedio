@@ -67,10 +67,20 @@ class RawServer extends HasId {
     }
     private _users: User[] = [];
 
-    public get channels() {
-        return this._channels;
+    /**
+     * Lists all channels, separated by type, that exists in this server
+     */
+    public get channelsByType() {
+        return this._channelsByType;
     }
-    private _channels: KeyValue<ChannelList, string>;
+    private _channelsByType: KeyValue<ChannelList, string>;
+
+    /**
+     * Lists all channels that exists in this server
+     */
+    public get channels() {
+        return new ChannelList(...Object.keys(this.channelsByType).reduce<Channel[]>((list, type) => [...list, ...this.channelsByType[type]], []));
+    }
 
     /**
      * Measures the time (in seconds) elapsed since the last server tick
@@ -112,7 +122,7 @@ class RawServer extends HasId {
         super("RawServer");
 
         Server.current = this;
-        this._channels = {};
+        this._channelsByType = {};
         this._router = new Router(this);
 
         config.port ??= DEFAULT_PORT;
@@ -176,9 +186,8 @@ class RawServer extends HasId {
      */
     findChannel<ChannelType extends Channel = Channel>(id: string): ChannelType | undefined {
         const [_, type] = id.split("_");
-        const channelList = this.channels[type];
 
-        return channelList?.findById(id) as ChannelType;
+        return this.channelsByType[type]?.findById(id) as ChannelType;
     }
 
     /**

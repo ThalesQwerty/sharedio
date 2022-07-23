@@ -4,17 +4,10 @@ import { ChannelConfig } from "../../lib/server";
 class TestChannel extends Channel {
     constructor(config: ChannelConfig) {
         super(config);
-
-        const countUsers = () => {
-            console.log(`${this.users.length} users in the channel`);
-        }
-
-        this.on("join", countUsers);
-        this.on("leave", countUsers);
     }
 
     $sync() {
-        
+
     }
 }
 

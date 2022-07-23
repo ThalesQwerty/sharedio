@@ -50,6 +50,7 @@ export class View {
         for (const entity of _channel.entities) {
             this.render(entity);
         }
+
         this.update();
     }
 
@@ -102,8 +103,7 @@ export class View {
             data: {
                 changes: this.changes,
                 deleted: this.deleted
-            },
-            hidden: {}
+            }
         };
 
         for (const changedKey in this.changes) {
@@ -125,18 +125,27 @@ export class View {
             delete parent[childKey];
         }
 
-        if (clients.length) {
-            for (const client of clients) {
-                if (client.user?.is(this.user)) {
-                    client.send(output);
-                }
-            }
-        } else {
-            this.user.send(output);
-        }
+        this.user.send(output, ...clients);
 
         this._changes = {};
         this._deleted = [];
+    }
+
+    /**
+     * Sends the entire current view as a JSON to the user. This is a potentially expensive method, so it should only be called when a new client of this user connects and needs to be informed of the channel's current state.
+     * @param clients Should it send only to some specific user clients? If left blank, it will send to all user clients.
+     */
+    public forceUpdate(...clients: Client[]) {
+        console.log("view", this.current);
+
+        this.user.send({
+            type: "view",
+            channel: this.channel,
+            data: {
+                changes: this.current,
+                deleted: []
+            }
+        }, ...clients);
     }
 
     /**

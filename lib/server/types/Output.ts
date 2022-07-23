@@ -16,7 +16,7 @@ export interface SharedIOBaseOutput {
      */
     hidden?: {
         /**
-         * Specifies, if applicable,  a client that is responsible for the generation of this output.
+         * Specifies, if applicable, a client that is responsible for the generation of this output.
          */
         client?: Client;
 
