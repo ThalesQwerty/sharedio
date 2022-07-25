@@ -6,7 +6,7 @@ type ClockListener = (clock: Clock) => void;
 export class Clock {
     /**
      * How many ticks will happen per second
-     * 
+     *
      * Also known as frequency
      */
     public get tickRate() {
@@ -15,7 +15,7 @@ export class Clock {
 
     /**
      * The time interval, in seconds, between each tick
-     * 
+     *
      * Also known as period
      */
     public get tickDuration() {
@@ -83,7 +83,7 @@ export class Clock {
 
     /**
      * Restarts the clock and changes the tick rate
-     * 
+     *
      * @param _newTickRate The new wanted tick rate. If omitted, the current tick rate will remain unchanged.
      */
     public reset(newTickRate?: number) {
@@ -94,7 +94,7 @@ export class Clock {
 
     /**
      * Sets a function to be executed right after the next tick
-     * 
+     *
      * @param listener The function to be executed
      */
     public nextTick(listener: ClockListener) {
@@ -105,6 +105,7 @@ export class Clock {
      * Forces the clock to tick
      */
     public tick() {
+        this._ticks ++;
         this._listener(this);
 
         if (this._oneTimeListener) {
@@ -115,16 +116,18 @@ export class Clock {
 
     /**
      * Starts running the clock
-     * 
+     *
      * @param tickImmediately Should the clock do its first tick right now?
      */
     public start(tickImmediately: boolean = false) {
         this._firstTick = new Date().getTime();
-
         this._running = true;
-        this._timer = setInterval(() => {
-            this.tick();
-        }, Math.max(Math.round(this.tickDuration * 1000), 1));
+
+        if (this.tickRate > 0) {
+            this._timer = setInterval(() => {
+                this.tick();
+            }, Math.max(Math.round(this.tickDuration * 1000), 1));
+        }
 
         if (tickImmediately) this.tick();
 

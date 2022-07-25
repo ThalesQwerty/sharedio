@@ -1,4 +1,4 @@
-import { Client, Server } from "../../sharedio";
+import { Client, EntityConfig, EntityConstructor, Server } from "../../sharedio";
 import { Channel } from "../../sharedio";
 import { HasId, HasEvents, ObjectTransform } from "../../sharedio";
 import { KeyValue } from "../../sharedio";
@@ -7,6 +7,13 @@ import { PrintableEntity } from "../../sharedio";
 import { Entity } from "../../sharedio";
 
 export abstract class EntityStaticMembers extends HasId {
+    /**
+     * Creates a dummy entity exclusively for testing/mocking purposes.
+     */
+    public static dummy<EntityType extends Entity = Entity>(type?: EntityConstructor<EntityType>, config: Partial<EntityConfig> = {}) {
+        return new (type || Entity)({ ...config, channel: Channel.dummy(), dummy: true }) as EntityType;
+    }
+
     public static get lastClient() { return this._lastClient };
     public static set lastClient(newValue) {
         this._lastClient = newValue || null;
@@ -22,14 +29,27 @@ export abstract class EntityStaticMembers extends HasId {
      */
     public static get reservedAttributes(): EntityReservedAttributeName[] {
         if (!this._reservedAttributes) {
+            const getAllPropertyDescriptors = (obj: object): KeyValue => {
+                if (!obj) {
+                    return Object.create(null);
+                } else {
+                    const proto = Object.getPrototypeOf(obj);
+                    return {
+                        ...getAllPropertyDescriptors(proto),
+                        ...Object.getOwnPropertyDescriptors(obj)
+                    };
+                }
+            }
+
+            const dummyEntity = Entity.dummy();
             let array = [
-                ...Object.getOwnPropertyNames(
-                    new Entity({ channel: new Channel({ server: Server.dummy }), dummy: true }),
-                ),
+                ...Object.getOwnPropertyNames(dummyEntity),
+                ...Object.keys(getAllPropertyDescriptors(dummyEntity)),
                 ...Object.getOwnPropertyNames(new HasEvents()),
                 ...Object.getOwnPropertyNames(Entity.prototype),
                 ...Object.getOwnPropertyNames(HasId.prototype),
                 ...Object.getOwnPropertyNames(HasEvents.prototype),
+                "$proxy"
             ] as EntityReservedAttributeName[];
 
             array = array.filter((attributeName, index) => array.indexOf(attributeName) === index);

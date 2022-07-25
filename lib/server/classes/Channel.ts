@@ -1,6 +1,6 @@
 import { EntityAttributeName, EntityConstructor } from "../../entity";
 import { EntityList } from "../../entity/classes/EntityList";
-import { Entity, EntityConfig, EntitySchema, WatchedObject, EntityRolesInterface, HasId, Server, ChannelConfig, ChannelList, Clock } from "../../sharedio";
+import { Entity, EntityConfig, EntitySchema, WatchedObject, EntityRolesInterface, HasId, Server, ChannelConfig, ChannelList, Clock, ChannelConstructor } from "../../sharedio";
 import { ObjectTransform, HasEvents, Mixin } from "../../sharedio";
 import { KeyValue } from "../../sharedio";
 import { User } from "../../sharedio";
@@ -8,6 +8,13 @@ import { ChannelListenerOverloads, ChannelEmitterOverloads, Queue } from "../../
 
 const DEFAULT_SYNC_RATE = 64;
 class RawChannel extends HasId {
+
+    /**
+    * Creates a dummy channel exclusively for testing/mocking purposes.
+    */
+    public static dummy<ChannelType extends Channel = Channel>(type?: ChannelConstructor<ChannelType>, config: Partial<ChannelConfig> = {}) {
+        return new (type || Channel)({ ...config, server: Server.dummy(), dummy: true }) as ChannelType;
+    }
 
     public static getIOQueue<ChannelType extends RawChannel>(channel: ChannelType) {
         return channel._queue;
@@ -35,10 +42,11 @@ class RawChannel extends HasId {
                     Otherwise, it will be sent to everyone in the channel except for the author of the change in order
                     to avoid unnecessary latency issues, since they know the new value already.
                  */
+
                 const shouldSendToAuthor = (typeof value !== typeof attemptedValue) || (value instanceof Object ? !ObjectTransform.isEqual(value, attemptedValue) : value !== attemptedValue);
                 const schema = entity.schema.attributes[propertyName as EntityAttributeName<EntityType>];
 
-                if (!schema.async) {
+                if (schema && !schema.async) {
                     channel._queue.addOutput({
                         type: "write",
                         data: {
@@ -57,7 +65,7 @@ class RawChannel extends HasId {
             call: ({ methodName, parameters }) => {
                 const schema = entity.schema.attributes[methodName as EntityAttributeName<EntityType>];
 
-                if (!schema.async) {
+                if (schema && !schema.async) {
                     channel._queue.addOutput({
                         type: "call",
                         data: {
@@ -137,17 +145,22 @@ class RawChannel extends HasId {
         this._$clock = new Clock(
             () => {
                 this.$sync();
+                this._queue.sync();
             },
             config.syncRate ?? DEFAULT_SYNC_RATE
-        ).start(true);
+        );
+
+        if (!config.dummy) {
+            process.nextTick(() => {
+                this.$clock.start(true);
+            })
+        }
     }
 
     /**
-     * This method is called periodically in order to synchronize this channel's entities state with the users connected.
+     * This method is called immediately before the channel synchronizes its entities' state with the users connected.
      */
-    public $sync() {
-        this._queue.sync();
-    }
+    public $sync() {}
 
     public join(user: User) {
         if (!user.in(this)) {

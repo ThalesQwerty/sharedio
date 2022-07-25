@@ -6,7 +6,7 @@ export function ExtractDependencies(entityClass: typeof Entity, computedProperty
 
     if (!propertyDescriptor || !propertyDescriptor.get || Entity.isDefaultAttribute(computedPropertyName)) return [];
 
-    const dummy = new entityClass({channel: new Channel({ server: Server.dummy }), dummy: true});
+    const dummy = Entity.dummy(entityClass);
     const attributes = Entity.attributes(dummy);
 
     const dependencies: string[] = [];

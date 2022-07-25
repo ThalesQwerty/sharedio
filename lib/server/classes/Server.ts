@@ -14,14 +14,11 @@ class RawServer extends HasId {
     static current: Server;
 
     /**
-     * Returns a dummy server for testing/mocking purposes
+     * Creates a dummy server exclusively for testing/mocking purposes
      */
-    static get dummy() {
-        if (!this._dummy) this._dummy = new Server({ dummy: true });
-
-        return this._dummy;
+    static dummy(config?: Partial<ServerConfig>) {
+        return new Server({ ...config, dummy: true });
     }
-    private static _dummy?: Server;
 
     private wss?: WS.Server;
     private tickIntervalRef: any = undefined;

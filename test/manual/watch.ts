@@ -7,7 +7,7 @@ class TestChannel extends Channel {
     }
 
     $sync() {
-
+        if (this.$clock.ticks < 5) console.log("test");
     }
 }
 
@@ -53,12 +53,19 @@ class WatchTestEntity extends Entity {
         console.log("method!", whatever);
         return 5;
     }
+
+    protected $init(): void {
+        this.$delay(() => {
+            this.number++;
+
+            if (this.number > 20) this.$delete();
+        }, 1000, true);
+    }
 }
 
 const testChannel = server.createChannel(TestChannel);
 
 const testEntity = testChannel.createEntity<WatchTestEntity>(WatchTestEntity);
-testEntity.number = -1;
 
 server.start();
 

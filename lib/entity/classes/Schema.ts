@@ -21,7 +21,7 @@ export abstract class Schema {
     }
 
     static generate<EntityType extends Entity = Entity>(entityClass: typeof Entity) {
-        const dummy = new entityClass({ channel: new Channel({ server: Server.dummy }), dummy: true });
+        const dummy = Entity.dummy(entityClass);
         const attributeList = Entity.attributes(dummy);
 
         const getType = (object: any, attributeName: string): string | undefined => {

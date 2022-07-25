@@ -215,6 +215,6 @@ export class User extends HasId {
         const userRoleCombinationId = entity.roles.combinationId(this);
         const attributeSchema = entity.schema.attributes[attributeName];
 
-        return UserRoles.verifyCombination(action, userRoleCombinationId, attributeSchema);
+        return !!attributeSchema && UserRoles.verifyCombination(action, userRoleCombinationId, attributeSchema);
     }
 }

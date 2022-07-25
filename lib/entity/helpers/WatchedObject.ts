@@ -24,15 +24,15 @@ export function WatchedObject<ObjectType extends object>(object: ObjectType, eve
         else return true;
     }
 
-    return new Proxy(object, {
+    const proxy = new Proxy(object, {
         get(target: any, propertyName: string) {
             const value = target[propertyName];
             if (!shouldWatchKey(propertyName)) return value;
 
             if (value instanceof Function) {
-                return function (...args: any[]) {
+                return (...args: any[]) => {
                     eventHandlers.call?.({ methodName: getPath(propertyName).join("."), parameters: args });
-                    return value(...args);
+                    return (value as Function).call(proxy, ...args);
                 }
             } else if (value instanceof Array) {
                 return new Proxy(value, {
@@ -67,6 +67,8 @@ export function WatchedObject<ObjectType extends object>(object: ObjectType, eve
             }
         },
         set(target: any, propertyName: string, newValue: any) {
+            if (propertyName === "__proto__" || propertyName === "constructor") return false;
+
             const oldValue = target[propertyName];
 
             target[propertyName] = newValue;
@@ -84,4 +86,6 @@ export function WatchedObject<ObjectType extends object>(object: ObjectType, eve
             return true;
         }
     } as ProxyHandler<any>);
+
+    return proxy;
 }

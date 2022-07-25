@@ -112,7 +112,6 @@ export class Queue {
             return queue;
         }, [] as ChannelOutput[]);
 
-
         for (const output of reducedOutput) {
             if (output.hidden?.private) {
                 const user = output.hidden?.client?.user;

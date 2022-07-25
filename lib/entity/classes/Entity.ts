@@ -97,6 +97,11 @@ class RawEntity
         return (this.constructor as typeof RawEntity).schema as EntitySchema<this>;
     }
 
+    /**
+     * The proxy related to this entity
+     */
+    private readonly $proxy?: this;
+
     constructor({ channel, initialState, owner, dummy = false }: EntityConfig) {
         super("Entity", 8);
 
@@ -126,15 +131,17 @@ class RawEntity
         process.nextTick(() => {
             const created = this.exists !== false;
             if (!created) {
-                this.delete();
+                this.$delete();
                 return;
             }
 
             this._exists = true;
-
             Channel.getIOQueue(this.channel).addEntity(this);
+
+            proxy.$init();
         });
 
+        this.$proxy = proxy;
         return proxy;
     }
 
@@ -146,16 +153,37 @@ class RawEntity
     }
 
     /**
-     * Use this method to initialize the entity
+     * Called right after the entity is successfully created. Use this method if you want to call other methods upon the entity's initialization.
      */
-    public $init(config: EntityConfig) {}
+    protected $init() {}
+
+    /**
+     * Delays the execution of a method. Use this instead of `setTimeout` or `setInterval` to optimize JavaScript's garbage collection and avoid some weird bugs.
+     *
+     * Keep in mind that the method won't be called if the entity gets deleted before the delay ends.
+     *
+     * @param method The method to be executed after the delay
+     * @param delayInMilliseconds How many milliseconds will be waited until the execution
+     * @param loop Will it execute only once (`setTimeout`) or keep executing peridocally (`setInterval`)?
+     * @returns
+     */
+    protected $delay(method: Function, delayInMilliseconds: number = 0, loop: boolean = false) {
+        if (this.$proxy) {
+            const [ set, clear ] = loop ? [setInterval, clearInterval] : [setTimeout, clearTimeout];
+            const delay = set(() => {
+                if (this.exists) method.call(this.$proxy);
+                else clear(delay);
+            }, delayInMilliseconds);
+        }
+        return undefined;
+    }
 
     /**
      * Deletes this entity
      *
      * @param user Who is trying to delete? (`null`, if entity is being deleted by the server)
      */
-    public delete(user: User | null = null) {
+    public $delete(user: User | null = null) {
         if (this.exists !== false && this.emit("canDelete?", ({ entity: this, user }))) {
             this.channel.entities.remove(this);
             this._exists = false;
