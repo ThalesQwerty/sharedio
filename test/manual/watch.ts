@@ -5,10 +5,6 @@ class TestChannel extends Channel {
     constructor(config: ChannelConfig) {
         super(config);
     }
-
-    $sync() {
-        if (this.$clock.ticks < 5) console.log("test");
-    }
 }
 
 const server = new Server({

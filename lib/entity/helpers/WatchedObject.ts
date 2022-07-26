@@ -8,7 +8,10 @@ type WatchedObjectHandlers = {
 
 type WatchedObjectOptions<ObjectType extends object> = {
     include?: (keyof ObjectType)[],
-    exclude?: (keyof ObjectType)[]
+    exclude?: (keyof ObjectType)[],
+    special?: {
+        [key in keyof ObjectType]?: (target: any) => unknown
+    }
 };
 
 export function WatchedObject<ObjectType extends object>(object: ObjectType, eventHandlers: WatchedObjectHandlers, options: WatchedObjectOptions<ObjectType> = {}, previousPath: string[] = []): ObjectType {
@@ -24,10 +27,17 @@ export function WatchedObject<ObjectType extends object>(object: ObjectType, eve
         else return true;
     }
 
+    const specialCases = options.special;
+
     const proxy = new Proxy(object, {
         get(target: any, propertyName: string) {
             const value = target[propertyName];
             if (!shouldWatchKey(propertyName)) return value;
+
+            const specialCase = specialCases?.[propertyName as keyof ObjectType] as ((target: any) => unknown)|undefined;
+            if (specialCase) {
+                return specialCase(target);
+            }
 
             if (value instanceof Function) {
                 return (...args: any[]) => {

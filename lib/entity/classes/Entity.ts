@@ -1,4 +1,4 @@
-import { Client, EntityAttributeName, HasId, Server } from "../../sharedio";
+import { Client, EntityAttributeName, EntityReservedAttributeName, HasId, Server } from "../../sharedio";
 import { Channel } from "../../sharedio";
 import { HasEvents, Mixin } from "../../sharedio";
 import { SharedIOError } from "../../sharedio";
@@ -219,7 +219,17 @@ class RawEntity
 
 interface RawEntity extends HasEvents {
     on: EntityListenerOverloads,
-    emit: EntityEmitterOverloads
+    emit: EntityEmitterOverloads,
+
+    /**
+     * Gets this entity's custom methods and properties
+     */
+    _: Pick<this, EntityAttributeName<this>>,
+
+    /**
+     * Gets this entity's built-in methods and properties
+     */
+    $: Omit<this, EntityAttributeName<this>|"$"|"_">,
 }
 
 interface Entity extends HasEvents {

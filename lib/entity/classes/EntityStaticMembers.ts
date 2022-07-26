@@ -61,7 +61,7 @@ export abstract class EntityStaticMembers extends HasId {
     }
     private static _reservedAttributes?: EntityReservedAttributeName[] = undefined;
 
-    public static isDefaultAttribute(attributeName: string): boolean {
+    public static isAttributeReserved(attributeName: string): boolean {
         for (const reservedAttributeName of this.reservedAttributes) {
             if (attributeName === reservedAttributeName)
                 return true;
@@ -73,7 +73,7 @@ export abstract class EntityStaticMembers extends HasId {
      * Lists all custom attributes from an entity
      */
     public static attributes<EntityType extends Entity>(entity: EntityType) {
-        return Object.getOwnPropertyNames(entity).filter(name => !Entity.isDefaultAttribute(name));
+        return Object.getOwnPropertyNames(entity).filter(name => !Entity.isAttributeReserved(name));
     }
 
     /**
@@ -86,7 +86,7 @@ export abstract class EntityStaticMembers extends HasId {
         for (const propertyName in propertyDescriptors) {
             let propertyDescriptor = propertyDescriptors[propertyName];
 
-            if ((!!propertyDescriptor.get || !!propertyDescriptor.set) && !Entity.isDefaultAttribute(propertyName)) propertyNames.push(propertyName);
+            if ((!!propertyDescriptor.get || !!propertyDescriptor.set) && !Entity.isAttributeReserved(propertyName)) propertyNames.push(propertyName);
         }
         return propertyNames;
     }
@@ -101,7 +101,7 @@ export abstract class EntityStaticMembers extends HasId {
         for (const methodName in methodDescriptors) {
             let methodDescriptor = methodDescriptors[methodName];
 
-            if ((!methodDescriptor.get && !methodDescriptor.set) && !Entity.isDefaultAttribute(methodName)) methodNames.push(methodName);
+            if ((!methodDescriptor.get && !methodDescriptor.set) && !Entity.isAttributeReserved(methodName)) methodNames.push(methodName);
         }
         return methodNames;
     }

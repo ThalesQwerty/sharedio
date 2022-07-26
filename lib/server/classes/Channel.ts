@@ -24,7 +24,10 @@ class RawChannel extends HasId {
      * Configures the I/O queue of a channel to watch an entity for future updates
      */
     public static setupProxy<ChannelType extends RawChannel, EntityType extends Entity>(channel: ChannelType, entity: EntityType): EntityType {
-        return WatchedObject(entity, {
+        let customAttributesProxy: object;
+        let reservedAttributesProxy: object;
+
+        const proxy = WatchedObject(entity, {
             write: ({ propertyName, previousValue, attemptedValue, value }) => {
                 // TO-DO: allow computed property binding
                 /*
@@ -81,8 +84,52 @@ class RawChannel extends HasId {
                 }
             }
         }, {
-            exclude: Entity.reservedAttributes as (keyof EntityType)[]
-        });
+            exclude: Entity.reservedAttributes as (keyof EntityType)[],
+            special: {
+                "_": () => {
+                    if (customAttributesProxy) return customAttributesProxy;
+
+                    customAttributesProxy = {};
+
+                    for (const attributeName of Entity.attributes(entity)) {
+                        Object.defineProperty(customAttributesProxy, attributeName, {
+                            enumerable: true,
+                            configurable: true,
+                            get() {
+                                return (entity as any)[attributeName];
+                            },
+                            set(newValue: unknown) {
+                                (entity as any)[attributeName] = newValue;
+                            }
+                        });
+                    }
+
+                    return customAttributesProxy;
+                },
+                "$": () => {
+                    if (reservedAttributesProxy) return reservedAttributesProxy;
+
+                    reservedAttributesProxy = {};
+
+                    for (const attributeName of Entity.reservedAttributes) {
+                        Object.defineProperty(reservedAttributesProxy, attributeName, {
+                            enumerable: true,
+                            configurable: true,
+                            get() {
+                                return (entity as any)[attributeName];
+                            },
+                            set(newValue: unknown) {
+                                (entity as any)[attributeName] = newValue;
+                            }
+                        });
+                    }
+
+                    return reservedAttributesProxy;
+                },
+            }
+        }) as EntityType;
+
+        return proxy;
     }
 
     public get users() {
@@ -115,7 +162,7 @@ class RawChannel extends HasId {
     /**
      * Channel's internal clock, responsible for calling the `$sync()` function periodically
      */
-    public get $clock() {
+    protected get $clock() {
         return this._$clock;
     }
     private _$clock: Clock;
@@ -160,7 +207,7 @@ class RawChannel extends HasId {
     /**
      * This method is called immediately before the channel synchronizes its entities' state with the users connected.
      */
-    public $sync() {}
+    protected $sync() {}
 
     public join(user: User) {
         if (!user.in(this)) {
