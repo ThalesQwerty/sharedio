@@ -28,4 +28,4 @@ export type EntityInterface<EntityType extends Entity = Entity> = {
     [key in keyof EntityType]: EntityType[key]
 }
 
-export type EntityConstructor<EntityType extends Entity> = new (config: EntityConfig<EntityType>) => EntityType;
+export type EntityConstructor<EntityType extends Entity = Entity> = new (config: EntityConfig<EntityType>) => EntityType;

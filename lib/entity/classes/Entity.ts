@@ -77,7 +77,7 @@ class RawEntity
     public get exists() {
         return this._exists;
     }
-    private _exists: boolean|null = null;
+    private _exists: boolean | null = null;
 
     /**
      * The user who's curently using the entity
@@ -85,7 +85,7 @@ class RawEntity
     public get user() {
         return this._user;
     }
-    private _user: User|null = null;
+    private _user: User | null = null;
 
     private _roles: EntityRolesData = {
         lists: {},
@@ -129,16 +129,19 @@ class RawEntity
         this._channel.entities.add(proxy);
 
         process.nextTick(() => {
-            const created = this.exists !== false;
+            const created = proxy.$init() !== false;
             if (!created) {
                 this.$delete();
                 return;
+            } else {
+                this.emit("create", {
+                    user: owner,
+                    type: this.type
+                });
             }
 
             this._exists = true;
             Channel.getIOQueue(this.channel).addEntity(this);
-
-            proxy.$init();
         });
 
         this.$proxy = proxy;
@@ -153,9 +156,11 @@ class RawEntity
     }
 
     /**
-     * Called right after the entity is successfully created. Use this method if you want to call other methods upon the entity's initialization.
+     * Use this method to initialize the entity
+     *
+     * You can also deny its creation by returning `false`
      */
-    protected $init() {}
+    protected $init(): boolean | void { }
 
     /**
      * Delays the execution of a method. Use this instead of `setTimeout` or `setInterval` to optimize JavaScript's garbage collection and avoid some weird bugs.
@@ -169,7 +174,7 @@ class RawEntity
      */
     protected $delay(method: Function, delayInMilliseconds: number = 0, loop: boolean = false) {
         if (this.$proxy) {
-            const [ set, clear ] = loop ? [setInterval, clearInterval] : [setTimeout, clearTimeout];
+            const [set, clear] = loop ? [setInterval, clearInterval] : [setTimeout, clearTimeout];
             const delay = set(() => {
                 if (this.exists) method.call(this.$proxy);
                 else clear(delay);
@@ -233,4 +238,4 @@ interface Entity extends HasEvents {
 
 class Entity extends Mixin(RawEntity, [HasEvents]) { }
 
-export { Entity };
+export { Entity, RawEntity };

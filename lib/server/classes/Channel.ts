@@ -177,17 +177,23 @@ class RawChannel extends HasId {
     }
 
     /**
-     * Creates a new entity inside this channel
+     * Attempts to create a new entity inside this channel
      * @param type The class of the entity
      * @param config
      * @param props
      * @returns
      */
-    public createEntity<EntityType extends Entity = Entity>(type: EntityConstructor<EntityType>, config: Omit<EntityConfig<EntityType>, "channel"> = {}): EntityType {
-        return new type({
-            ...config,
-            channel: this
-        });
+    public $create<EntityType extends Entity = Entity>(type: EntityConstructor<EntityType>, config: Omit<EntityConfig<EntityType>, "channel"> = {}) {
+        return new Promise<EntityType>((resolve, reject) => {
+            const entity = new type({
+                ...config,
+                channel: this
+            });
+
+            process.nextTick(() => {
+                entity.exists ? resolve(entity) : reject();
+            });
+        })
     }
 }
 

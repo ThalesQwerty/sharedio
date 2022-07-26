@@ -21,4 +21,4 @@ export interface ChannelConfig<ChanenlType extends Channel = Channel> {
     dummy?: boolean
 }
 
-export type ChannelConstructor<ChannelType extends Channel> = new (config: ChannelConfig<ChannelType>) => ChannelType;
+export type ChannelConstructor<ChannelType extends Channel = Channel> = new (config: ChannelConfig<ChannelType>) => ChannelType;
