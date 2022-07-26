@@ -218,13 +218,13 @@ class RawEntity
 }
 
 interface RawEntity extends HasEvents {
-    on: EntityListenerOverloads<this>,
-    emit: EntityEmitterOverloads<this>
+    on: EntityListenerOverloads,
+    emit: EntityEmitterOverloads
 }
 
 interface Entity extends HasEvents {
-    on: EntityListenerOverloads<this>,
-    emit: EntityEmitterOverloads<this>,
+    on: EntityListenerOverloads,
+    emit: EntityEmitterOverloads,
 
     /**
      * User roles are used to determine how each user will be able to view and interact with entities.

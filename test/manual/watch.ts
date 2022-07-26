@@ -61,14 +61,14 @@ class WatchTestEntity extends Entity {
             if (this.number > 20) this.$delete();
         }, 1000, true);
 
-        return false;
+        return true;
     }
 }
 
 const testChannel = server.createChannel(TestChannel);
 
-testChannel.$create<WatchTestEntity>(WatchTestEntity).then(() => {
-    console.log("created entity");
+testChannel.$create(WatchTestEntity).then(entity => {
+    console.log("created " + entity.id);
 }).catch(() => {
     console.log("entity not created");
 })
