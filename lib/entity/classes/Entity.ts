@@ -1,4 +1,4 @@
-import { Client, EntityAttributeName, EntityReservedAttributeName, HasId, Server } from "../../sharedio";
+import { Client, EntityAttributeName, EntityFlagName, EntityReservedAttributeName, HasId, Server } from "../../sharedio";
 import { Channel } from "../../sharedio";
 import { HasEvents, Mixin } from "../../sharedio";
 import { SharedIOError } from "../../sharedio";
@@ -32,6 +32,34 @@ class RawEntity
         return entity.emit;
     }
 
+    /**
+     * Computates a number based on how many flags are currently active on an entity. Each number corresponds to an unique combination of flag values.
+     * 
+     * For instance, 0 means no flags are currently active, and 1 means that only the `owned` flag is currently active. 
+     * Other numbers may be possible if the entity has custom flags.
+     * @param entity The entity to be analised
+     * @param values Use this parameter if you want to simulate values for certain flags
+     * @returns 
+     */
+    public static computeFlagScore<EntityType extends Entity = Entity>(entity: EntityType, values: {[flagName in EntityFlagName<EntityType>]?: boolean} = {}): number {
+        const { flags } = entity.schema;
+
+        let score = 0;
+
+        for (const _flagName in flags) {
+            const flagName = _flagName as EntityFlagName<EntityType>;
+            const { value } = flags[flagName];
+
+            const result = !!(values[flagName] != null ? values[flagName] : entity[flagName]);
+
+            if (result) {
+                score += value;
+            }
+        }
+
+        return score;
+    }
+
     public static get schema(): EntitySchema {
         return this._schema ?? (this._schema = Schema.generate(this));
     }
@@ -44,7 +72,12 @@ class RawEntity
         return this.constructor.name;
     }
 
-    public readonly owned: undefined;
+    /**
+     * Built-in flag that is true if, and only if, the current user owns the entity
+     */
+    protected get owned(): boolean {
+        return !!this.user?.owns(this);
+    }
 
     /**
      * Returns the user who created this entity
@@ -82,7 +115,7 @@ class RawEntity
     /**
      * The user who's curently using the entity
      */
-    public get user() {
+    protected get user() {
         return this._user;
     }
     private _user: User | null = null;
@@ -229,7 +262,7 @@ interface RawEntity extends HasEvents {
     /**
      * Gets this entity's built-in methods and properties
      */
-    $: Omit<this, EntityAttributeName<this>|"$"|"_">,
+    $: Omit<this, EntityAttributeName<this>|"$"|"_">
 }
 
 interface Entity extends HasEvents {

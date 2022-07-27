@@ -1,6 +1,6 @@
 import { KeyValue } from "../../sharedio";
 import { User } from "../../sharedio";
-import { EntityBuiltinRoleName, EntityRolesData, EntityRolesInterface, EntityRoleBooleanExpression } from "../../sharedio";
+import { EntityBuiltinFlagName, EntityRolesData, EntityRolesInterface, EntityRoleBooleanExpression } from "../../sharedio";
 import { EntitySchemaAttribute } from "../../sharedio";
 import { Entity } from "../../sharedio";
 
@@ -11,34 +11,20 @@ export const BuiltinRoles = Object.freeze({
     /**
      * All users have this role
      */
-    USER: "all",
+    USER: "true",
 
     /**
      * Automatically assigned to the user who created this entity
      */
-    OWNER: "owner",
-
-    /**
-     * (Applies only for channels)
-     *
-     * Automatically assigned to whoever enters this channel
-     *
-     * Automatically revoked from whoever leaves this channel
-     */
-    MEMBER: "inside",
-
-    /**
-     * Equivalent to the owner of the channel this entity is in
-     */
-    HOST: "host",
-}) as Readonly<KeyValue<EntityBuiltinRoleName, "USER"|"OWNER"|"MEMBER"|"HOST">>;
+    OWNER: "owned",
+}) as Readonly<KeyValue<EntityBuiltinFlagName, "USER"|"OWNER">>;
 export class UserRoles {
     /**
      * Adds user roles to the entity
      */
     static apply(entity: Entity, {lists: roleLists, binary: binaryEncoded}: EntityRolesData): EntityRolesInterface<any> {
         return {
-            assign: (user: User, ...roles: EntityBuiltinRoleName[]) => {
+            assign: (user: User, ...roles: EntityBuiltinFlagName[]) => {
                 binaryEncoded[user.id] ??= 0;
 
                 for (const role of roles) {
@@ -54,7 +40,7 @@ export class UserRoles {
                 }
             },
 
-            revoke: (user: User, ...roles: EntityBuiltinRoleName[]) => {
+            revoke: (user: User, ...roles: EntityBuiltinFlagName[]) => {
                 for (const role of roles) {
                     const {value: roleValue} = entity.schema.userRoles[role];
                     roleLists[role] ??= [];
@@ -73,22 +59,22 @@ export class UserRoles {
             },
 
             list: (user: User) => {
-                const list: EntityBuiltinRoleName[] = [BuiltinRoles.USER];
+                const list: EntityBuiltinFlagName[] = [BuiltinRoles.USER];
 
                 for (const _role in roleLists) {
-                    const role = _role as EntityBuiltinRoleName;
+                    const role = _role as EntityBuiltinFlagName;
                     if (entity.roles.verify(user, role) && !list.includes(role)) list.push(role);
                 }
 
                 return list;
             },
 
-            users: (role: EntityBuiltinRoleName) => {
+            users: (role: EntityBuiltinFlagName) => {
                 roleLists[role] ??= [];
                 return roleLists[role];
             },
 
-            verify: (user: User|string[], role: EntityBuiltinRoleName) => {
+            verify: (user: User|string[], role: EntityBuiltinFlagName) => {
                 if (user instanceof Array) return user.includes(role);
 
                 switch (role) {

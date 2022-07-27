@@ -1,4 +1,4 @@
-import { Server } from "../../sharedio";
+import { EntityFlagName, Server, SharedIOError } from "../../sharedio";
 import { Channel } from "../../sharedio";
 import { ObjectTransform, StringTransform } from "../../sharedio";
 import { KeyValue } from "../../sharedio";
@@ -36,15 +36,32 @@ export abstract class Schema {
 
         const generatedSchema = {
             className: dummy.type,
-            userRoles: {
-                all: {
-                    name: BuiltinRoles.USER,
-                    value: 0
+            userRoles: {},  
+            flags: {
+                true: {
+                    name: "true",
+                    value: 0,
+                    declared: true,
+                    used: false,
+                    builtin: true   
+                },
+                false: {
+                    name: "false",
+                    value: 0,
+                    declared: true,
+                    used: false,
+                    builtin: true
+                },
+                owned: {
+                    name: "owned",
+                    value: 1,
+                    declared: true,
+                    used: false,
+                    builtin: true
                 }
             },
-            isChannel: dummy instanceof Channel,
             attributes: {} as any
-        };
+        } as EntitySchema;
 
         const defaultSchema: EntitySchemaAttribute<EntityType> = {
             name: "" as EntityAttributeName<EntityType>,
@@ -98,6 +115,15 @@ export abstract class Schema {
 
         // Can only execute after the entities' decorators have been executed
         process.nextTick(() => {
+            for (const flagName in generatedSchema.flags) {
+                const flag = generatedSchema.flags[flagName];
+                
+                if (!flag.builtin) {
+                    if (flag.used && !flag.declared) throw new SharedIOError("flagIsUndeclared", flagName, generatedSchema.className);
+                    if (!flag.used && flag.declared) console.warn(`Warning: ${new SharedIOError("flagIsUnused", flagName, generatedSchema.className).message}`);
+                }
+            }
+
             this.optimize(generatedSchema as EntitySchema<EntityType>);
         });
 
@@ -108,13 +134,13 @@ export abstract class Schema {
      * This function calculates beforehands the access level that each user role has on each property of an entity and then stores this information on its schema
      */
     private static optimize<EntityType extends Entity>(schema: EntitySchema<EntityType>) {
-        const numRoles = Object.keys(schema.userRoles).length - 1;
-        const numCombinations = Math.pow(2, numRoles);
+        const numFlags = Object.keys(schema.flags).length - 1;
+        const numCombinations = Math.pow(2, numFlags);
 
         const maxWhitelistLength = Math.max(1, Math.ceil(numCombinations / 2));
 
         /**
-         * It's not viable to verify roles everytime an user tries to view or interact with an entity,
+         * It may not be viable to compute flags everytime an user tries to view or interact with an entity,
          * since this computation might take some time.
          *
          * Therefore, SharedIO calculates all possible outcomes beforehand and store the values into the entity schema.
@@ -138,8 +164,9 @@ export abstract class Schema {
             for (let roleCombinationId = 0; roleCombinationId < numCombinations; roleCombinationId++) {
                 const currentRoles: string[] = [];
 
-                for (const role in schema.userRoles) {
-                    const { value, name } = schema.userRoles[role];
+                for (const _flagName in schema.flags) {
+                    const flagName = _flagName as EntityFlagName<EntityType>
+                    const { value, name } = schema.flags[flagName];
                     if ((roleCombinationId & value) === value) currentRoles.push(name);
                 }
 
@@ -151,8 +178,8 @@ export abstract class Schema {
             }
 
             /**
-             * If most roles don't have input/output access, the list can be shortened if instead
-             * of listing the allowed roles (whitelist), it lists the denied roles (blacklist)
+             * If most flags don't grant input/output access, the list can be shortened: 
+             * instead of listing the allowed flags (whitelist), it lists the denied flags (blacklist)
              */
             for (const key of ["input", "output"] as ("input" | "output")[]) {
                 attribute.binary[key] = whitelist[key].length <= maxWhitelistLength ? whitelist[key] : blacklist[key];
@@ -191,13 +218,6 @@ export abstract class Schema {
             readonly delete: () => void;
         }
 
-        interface Channel extends Entity {
-            readonly inside: boolean;
-
-            readonly join: () => void;
-            readonly leave: () => void;
-        }
-
         `;
 
         const schemaInterfaceMemberDeclarations: string[] = [];
@@ -206,61 +226,58 @@ export abstract class Schema {
         for (const entityName in schema) {
             const entitySchema = schema[entityName];
 
-            const userRoles = Object.keys(entitySchema.userRoles).filter(role => role !== BuiltinRoles.USER); // "all" is excluded beacuse it's impossible for an user to not have this role
+            const flags = Object.keys(entitySchema.flags).filter(flagName => entitySchema.flags[flagName].value); // excludes "true" and "false" built-in flags
 
             fileContent += `namespace ${entityName} {`;
 
-            const roleCombinations: string[] = [];
+            const flagCombinations: string[] = [];
 
             // 2^n possible combinations
-            for (let counter = 0; counter < Math.pow(2, userRoles.length); counter++) {
-                const includedRoles: string[] = [BuiltinRoles.USER];
-                let booleanRoleDeclarations = "";
+            for (let counter = 0; counter < Math.pow(2, flags.length); counter++) {
+                const includedFlags: string[] = [BuiltinRoles.USER];
+                let flagDeclarations = "";
 
                 /**
-                 * This code "secretly" converts the current counter value to binary, and associates each bit to an index on the role array, in reverse order.
-                 * If the current bit is 1, it will push the current role into the includedRoles array.
+                 * This code "secretly" converts the current counter value to binary, and associates each bit to an index on the flag array, in reverse order.
+                 * If the current bit is 1, it will push the current flag into the includedFlags array.
                  * If the current bit is 0, it will just ignore it.
                  *
                  * Examples:
-                 * When the counter is in 0 (0b0000), includedRoles = []
-                 * When the counter is in 1 (0b0001), includedRoles = [userRoles[0]]
-                 * When the counter is in 2 (0b0010), includedRoles = [userRoles[1]]
-                 * When the counter is in 3 (0b0011), includedRoles = [userRoles[0], userRoles[1]]
-                 * When the counter is in 4 (0b0100), includedRoles = [userRoles[2]]
-                 * When the counter is in 5 (0b0101), includedRoles = [userRoles[0], userRoles[2]]
-                 * When the counter is in 6 (0b0110), includedRoles = [userRoles[1], userRoles[2]]
-                 * When the counter is in 7 (0b0111), includedRoles = [userRoles[0], userRoles[1], userRoles[2]]
+                 * When the counter is in 0 (0b0000), includedFlags = []
+                 * When the counter is in 1 (0b0001), includedFlags = [flags[0]]
+                 * When the counter is in 2 (0b0010), includedFlags = [flags[1]]
+                 * When the counter is in 3 (0b0011), includedFlags = [flags[0], flags[1]]
+                 * When the counter is in 4 (0b0100), includedFlags = [flags[2]]
+                 * When the counter is in 5 (0b0101), includedFlags = [flags[0], flags[2]]
+                 * When the counter is in 6 (0b0110), includedFlags = [flags[1], flags[2]]
+                 * When the counter is in 7 (0b0111), includedFlags = [flags[0], flags[1], flags[2]]
                  * ... and so on
                  */
-                for (let index = 0; index < userRoles.length; index++) {
-                    const currentRole = userRoles[index];
+                for (let index = 0; index < flags.length; index++) {
+                    const currentFlag = flags[index];
                     const binaryValue = Math.pow(2, index);
 
-                    entitySchema.userRoles[currentRole].value = binaryValue;
+                    entitySchema.flags[currentFlag].value = binaryValue;
 
-                    if ((counter & binaryValue) === binaryValue && !includedRoles.includes(currentRole)) {
-                        booleanRoleDeclarations += `${currentRole}: true;`
-                        includedRoles.push(currentRole);
+                    if ((counter & binaryValue) === binaryValue && !includedFlags.includes(currentFlag)) {
+                        flagDeclarations += `readonly ${currentFlag}: true;`
+                        includedFlags.push(currentFlag);
                     } else {
-                        booleanRoleDeclarations += `${currentRole}: false;`
+                        flagDeclarations += `readonly ${currentFlag}: false;`
                     }
                 }
 
-                const interfaceName = includedRoles.length > 1 ? includedRoles.map(role => role === BuiltinRoles.USER ? "" : StringTransform.capitalize(role)).join("") : "Default";
-                roleCombinations.push(interfaceName);
+                const interfaceName = includedFlags.length > 1 ? includedFlags.map(role => role === BuiltinRoles.USER ? "" : StringTransform.capitalize(role)).join("") : "Default";
+                flagCombinations.push(interfaceName);
 
-                fileContent += `export interface ${interfaceName} extends ${entitySchema.isChannel ? "Channel" : "Entity"} {
-                    readonly owned: ${includedRoles.includes(BuiltinRoles.OWNER)}; ${entitySchema.isChannel ? `readonly inside: ${includedRoles.includes(BuiltinRoles.MEMBER)};` : ""}
-                    readonly roles: {
-                        ${booleanRoleDeclarations}
-                    }
+                fileContent += `export interface ${interfaceName} extends Entity {
+                    ${flagDeclarations}
                 `;
 
                 for (const attributeName in entitySchema.attributes) {
                     const { name, type, input, output, binary } = entitySchema.attributes[attributeName];
 
-                    const accessType: "input" | "output" | "hidden" = UserRoles.test(includedRoles, input) ? "input" : UserRoles.test(includedRoles, output) ? "output" : "hidden";
+                    const accessType: "input" | "output" | "hidden" = UserRoles.test(includedFlags, input) ? "input" : UserRoles.test(includedFlags, output) ? "output" : "hidden";
 
                     if (accessType !== "hidden") {
                         if (type === "function") {
@@ -277,7 +294,7 @@ export abstract class Schema {
 
             fileContent += `}
 
-            export type ${entityName} = ${roleCombinations.map(name => `${entityName}.${name}`).join("|")};
+            export type ${entityName} = ${flagCombinations.map(name => `${entityName}.${name}`).join("|")};
 
             `;
 

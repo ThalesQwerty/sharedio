@@ -10,17 +10,16 @@ import { Entity } from "../../sharedio";
  * @inside All users who are inside the entity (only applies if the entity is a channel)
  * @all All users who may interact with the entity
  */
- export type EntityBuiltinRoleName =
- | "owner"
- | "host"
- | "inside"
- | "all";
+ export type EntityBuiltinFlagName =
+ | "owned"
+ | "true"
+ | "false";
 
 type PartialKeyOf<ObjectType, ValueType> = { [KeyName in keyof ObjectType]: ObjectType[KeyName] extends ValueType ? KeyName : never }[keyof ObjectType];
 
 export type EntityCustomRoleName<Roles extends string[]> = Roles[number];
 
-export type EntityRoleName<Roles extends string[] = []> = EntityCustomRoleName<Roles>|EntityBuiltinRoleName;
+export type EntityRoleName<Roles extends string[] = []> = EntityCustomRoleName<Roles>|EntityBuiltinFlagName;
 
 type EntityRoleBooleanOperator = "&"|"|";
 type OP = EntityRoleBooleanOperator|` ${EntityRoleBooleanOperator} `;

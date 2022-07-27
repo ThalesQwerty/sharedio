@@ -29,6 +29,14 @@ const errors: KeyValue<(...args: any[]) => string, string> = {
 
     serverAndChannelUndefined() {
         return `"server" and "channel" attributes cannot be both undefined on EntityConfig`
+    },
+
+    flagIsUndeclared(flagName: string, entityType: string) {
+        return `Flag "${flagName}" does not exist on entity ${entityType}. Please declare this flag in the entity using the @flag decorator.`
+    },
+
+    flagIsUnused(flagName: string, entityType: string) {
+        return `Flag "${flagName}" declared on entity ${entityType} is useless. Please remove it or use the flag somewhere on the entity.`;
     }
 }
 
@@ -38,8 +46,10 @@ export class SharedIOError extends Error {
     constructor(type: "noConcreteUserAndAbstractEntity");
     constructor(type: "minGreaterThanMax", min: number, max: number);
     constructor(type: "circularPropertyDepedency", propertyName: string);
-    constructor(type: "entityAttributesNotFound", entityName: string, attributeNames: string|string[])
-    constructor(type: "serverAndChannelUndefined")
+    constructor(type: "entityAttributesNotFound", entityName: string, attributeNames: string|string[]);
+    constructor(type: "serverAndChannelUndefined");
+    constructor(type: "flagIsUndeclared", flagName: string, entityType: string);
+    constructor(type: "flagIsUnused", flagName: string, entityType: string);
 
     constructor(type?: string, ...args: any[]) {
         if (!type) super();

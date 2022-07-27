@@ -1,9 +1,9 @@
-import { Entity } from "../../sharedio"
+import { Entity, EntityFlagName } from "../../sharedio"
 import { EntityAttributeName } from "../../sharedio"
-import { EntityRoleBooleanExpression } from "../../sharedio"
+import { EntityRoleBooleanExpression } from "../../sharedio";
 
-export type EntitySchemaAttribute<EntityType extends Entity> = {
-    name: EntityAttributeName<EntityType>,
+export type EntitySchemaAttribute<EntityType extends Entity, name extends string = EntityAttributeName<EntityType>> = {
+    name: name,
     type: string,
     initialValue: any,
     input: EntityRoleBooleanExpression<string[]>,
@@ -17,6 +17,14 @@ export type EntitySchemaAttribute<EntityType extends Entity> = {
         output: number[]
     }
 }
+
+export type EntityFlag<EntityType extends Entity = Entity, name extends string = EntityFlagName<EntityType>> = {
+    name: name,
+    value: number,
+    builtin: boolean,
+    declared: boolean,
+    used: boolean
+}
 export interface EntitySchema<EntityType extends Entity = any> {
     className: string,
     userRoles: {
@@ -25,6 +33,8 @@ export interface EntitySchema<EntityType extends Entity = any> {
             value: number
         }
     },
-    isChannel: boolean,
-    attributes: {[name in EntityAttributeName<EntityType>]: EntitySchemaAttribute<EntityType>}
+    flags: {
+        [name in EntityFlagName<EntityType>]: EntityFlag<EntityType>
+    },
+    attributes: { [name in EntityAttributeName<EntityType>]: EntitySchemaAttribute<EntityType, name> }
 }

@@ -212,9 +212,9 @@ export class User extends HasId {
      * @returns `true` if action would be allowed. `false` otherwise.
      */
     public can<EntityType extends Entity>(action: "input" | "output", entity: EntityType, attributeName: EntityAttributeName<EntityType>) {
-        const userRoleCombinationId = entity.roles.combinationId(this);
+        const flagScore = Entity.computeFlagScore(entity);
         const attributeSchema = entity.schema.attributes[attributeName];
 
-        return !!attributeSchema && UserRoles.verifyCombination(action, userRoleCombinationId, attributeSchema);
+        return !!attributeSchema && UserRoles.verifyCombination(action, flagScore, attributeSchema);
     }
 }

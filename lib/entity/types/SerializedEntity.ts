@@ -1,7 +1,7 @@
 import { id } from "../../sharedio";
 import { KeyValue } from "../../sharedio";
 import { Entity } from "../../sharedio";
-import { EntityReservedAttributeName, EntityBuiltinRoleName } from "../../sharedio";
+import { EntityReservedAttributeName, EntityBuiltinFlagName } from "../../sharedio";
 
 export interface SerializedEntity {
     id: string;

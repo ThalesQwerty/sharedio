@@ -1,4 +1,5 @@
-import { Channel, EntityConfig, Entity, Server, async, output, input, inputFor, User, shared, hidden } from "../../lib";
+import { Channel, EntityConfig, Entity, Server, async, output, input, inputIf, User, shared, hidden } from "../../lib";
+import { EntityFlagName, flag, outputIf } from "../../lib/entity";
 import { EntityList } from "../../lib/entity/classes/EntityList";
 import { ChannelConfig } from "../../lib/server";
 class TestChannel extends Channel {
@@ -10,15 +11,24 @@ class TestChannel extends Channel {
 const server = new Server({
     port: 8080,
     debug: true,
+    clientSchema: {
+        path: "../client/src/sharedio",
+        fileName: "testSchema.ts"
+    }
 });
 
 class WatchTestEntity extends Entity {
-    @output number = 0;
+    @flag get ally() {
+        return true;
+    }
+
+    @input number = 0;
     @shared string = "wololo";
     @output boolean = false;
 
     @input unchangedNumber = 0;
-    unchangedString = "unchanged";
+    @inputIf("ally") unchangedString = "unchanged";
+
     unchangedBoolean = false;
     object = {
         a: 1,
@@ -65,6 +75,8 @@ const testChannel = server.createChannel(TestChannel);
 
 testChannel.$create(WatchTestEntity).then(entity => {
     console.log("created " + entity.id);
+    console.log(entity.schema.flags);
+    console.log(Entity.computeFlagScore(entity));
 }).catch(() => {
     console.log("entity not created");
 })

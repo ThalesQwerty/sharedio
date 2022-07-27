@@ -1,4 +1,4 @@
-import { Channel } from "../../sharedio";
+import { Channel, EntityFlag, EntityFlagName } from "../../sharedio";
 import { Entity } from "../../sharedio";
 import { BuiltinRoles } from "../../sharedio";
 import { EntityAttributeName } from "../../sharedio";
@@ -22,6 +22,57 @@ function addUserRoles<EntityType extends Entity>(expression: string, schema: Ent
     })
 }
 
+function addFlags<EntityType extends Entity>(expression: string, schema: EntitySchema<EntityType>) {
+    const flags = expression.replace(/\W+/g, " ").replace(/\s+/g, " ").trim().split(" ");
+
+    const invalidCharacters = expression.replace(/\w+/g, "").replace(/\s+/g, "").replace(/\!|\||\&|\?|\:|\(|\)|\$/g, "").trim();
+
+    if (invalidCharacters.length) {
+        throw new Error(`Flag expression "${expression}" on entity ${schema.className} has invalid characters: ${invalidCharacters.split("").join(" ")}`);
+    }
+
+    console.log("flags found", flags);
+
+    flags.forEach(_flagName => {
+        const flagName = _flagName as EntityFlagName<EntityType>;
+
+        schema.flags[flagName] ??= newFlag(schema, flagName);
+        schema.flags[flagName].used = true;
+
+    })
+}
+
+function newFlag<EntityType extends Entity = Entity>(schema: EntitySchema<EntityType>, name: EntityFlagName<EntityType>): EntityFlag<EntityType> {
+    const constantFlagCount = (
+        Object.keys(schema.flags) as EntityFlagName<EntityType>[]
+    ).reduce((count, flagName) => count + (schema.flags[flagName].value ? 0 : 1), 0);
+
+    return {
+        name,
+        value: Math.pow(2, Object.keys(schema.flags).length - constantFlagCount),
+        used: false,
+        declared: false,
+        builtin: false,
+    };
+}
+
+/**
+ * Declares a boolean flag for this entity. 
+ * 
+ * Flags can be used to alter the entity's property behavior by using the `inputIf`, `outputIf` and `hiddenIf` decorators along with boolean expressions envolving the flags' values.
+ * @param entity 
+ * @param flagName 
+ */
+export function flag<EntityType extends Entity>(
+    entity: EntityType,
+    flagName: EntityFlagName<EntityType>
+): void {
+    const schema = getSchema(entity) as EntitySchema<EntityType>;
+
+    schema.flags[flagName] ??= newFlag(schema, flagName);
+    schema.flags[flagName].declared = true;
+}
+
 /**
  * Disables automatic synchronization with user clients for this property/method.
  *
@@ -34,9 +85,9 @@ function addUserRoles<EntityType extends Entity>(expression: string, schema: Ent
  * - Avoiding a computationally expensive getter from being calculated more often than necessary
  * - Creating a method that doesn't generate side effects on other users' clients
  *
- * *Shorthand for:* `@inputFor("owner")`
+ * *Shorthand for:* `@inputIf("owned")`
  */
- export function async<EntityType extends Entity>(
+export function async<EntityType extends Entity>(
     entity: EntityType,
     attributeName: EntityAttributeName<EntityType>
 ) {
@@ -50,7 +101,7 @@ function addUserRoles<EntityType extends Entity>(expression: string, schema: Ent
  * Determines which user roles can write values into this property or call this method
  * @param expressions List of roles, or boolean expression involving roles
  */
-export function inputFor<Expression extends string[] = string[]>(
+export function inputIf<Expression extends string[] = string[]>(
     ...expressions: Expression
 ) {
     return function <EntityType extends Entity>(
@@ -64,6 +115,7 @@ export function inputFor<Expression extends string[] = string[]>(
 
         const expression = expressions.map(expression => `(${expression})`).join("|");
         addUserRoles(expression, schema);
+        addFlags(expression, schema);
 
         if (!attributeSchema.input) attributeSchema.input = expression;
         else attributeSchema.input = `${attributeSchema.input} | (${expression})`;
@@ -74,7 +126,7 @@ export function inputFor<Expression extends string[] = string[]>(
  * Determines which user roles can read the value of this property or listen to calls of this method
  * @param expressions List of roles, or boolean expression involving roles
  */
-export function outputFor<Expression extends string[] = string[]>(
+export function outputIf<Expression extends string[] = string[]>(
     ...expressions: Expression
 ) {
     return function <EntityType extends Entity>(
@@ -88,6 +140,7 @@ export function outputFor<Expression extends string[] = string[]>(
 
         const expression = expressions.map(expression => `(${expression})`).join("|");
         addUserRoles(expression, schema);
+        addFlags(expression, schema);
 
         if (!attributeSchema.output) attributeSchema.output = expression;
         else attributeSchema.output = `${attributeSchema.output} | (${expression})`;
@@ -98,10 +151,10 @@ export function outputFor<Expression extends string[] = string[]>(
  * Determines which user roles won't be able to view this property or this method
  * @param expressions List of roles, or boolean expression involving roles
  */
-export function hiddenFor<Expression extends string[] = string[]>(
+export function hiddenIf<Expression extends string[] = string[]>(
     ...expressions: Expression
 ) {
-    return outputFor(...expressions.map(expression => `!(${expression})`));
+    return outputIf(...expressions.map(expression => `!(${expression})`));
 }
 
 /**
@@ -109,13 +162,13 @@ export function hiddenFor<Expression extends string[] = string[]>(
  *
  * **For methods:** Allows only the entity owner to call this method and listen to calls of this method.
  *
- * *Shorthand for:* `@inputFor("owner")`
+ * *Shorthand for:* `@inputIf("owned")`
  */
 export function input<EntityType extends Entity>(
     entity: EntityType,
     attributeName: EntityAttributeName<EntityType>
 ) {
-    inputFor(BuiltinRoles.OWNER)(entity, attributeName);
+    inputIf(BuiltinRoles.OWNER)(entity, attributeName);
 };
 
 /**
@@ -123,13 +176,13 @@ export function input<EntityType extends Entity>(
  *
  * **For methods:** Allows all users to listen to calls of this method.
  *
- * *Shorthand for:* `@outputFor("all")`
+ * *Shorthand for:* `@outputIf("true")`
  */
 export function output<EntityType extends Entity>(
     entity: EntityType,
     attributeName: EntityAttributeName<EntityType>
 ) {
-    outputFor(BuiltinRoles.USER)(entity, attributeName);
+    outputIf(BuiltinRoles.USER)(entity, attributeName);
 };
 
 /**
@@ -137,13 +190,13 @@ export function output<EntityType extends Entity>(
  *
  * **For methods:** Allows only the entity owner to listen to calls of this method.
  *
- * *Shorthand for:* `@outputFor("only")`
+ * *Shorthand for:* `@outputIf("owned")`
  */
 export function hidden<EntityType extends Entity>(
     entity: EntityType,
     attributeName: EntityAttributeName<EntityType>
 ) {
-    hiddenFor(BuiltinRoles.OWNER)(entity, attributeName);
+    hiddenIf(BuiltinRoles.OWNER)(entity, attributeName);
 };
 
 /**
@@ -151,12 +204,12 @@ export function hidden<EntityType extends Entity>(
  *
  * **For methods:** Allows all users to call this method and listen to calls of this method.
  *
- * *Shorthand for:* `@inputFor("all")`
+ * *Shorthand for:* `@inputIf("true")`
  */
- export function shared<EntityType extends Entity>(
+export function shared<EntityType extends Entity>(
     entity: EntityType,
     attributeName: EntityAttributeName<EntityType>
 ) {
-    inputFor(BuiltinRoles.USER)(entity, attributeName);
-    outputFor(BuiltinRoles.USER)(entity, attributeName);
+    inputIf(BuiltinRoles.USER)(entity, attributeName);
+    outputIf(BuiltinRoles.USER)(entity, attributeName);
 }

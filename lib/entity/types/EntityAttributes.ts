@@ -1,4 +1,4 @@
-import { Channel } from "../../sharedio";
+import { Channel, EntityBuiltinFlagName } from "../../sharedio";
 import { HasId } from "../../sharedio";
 import { KeyValue } from "../../sharedio";
 import { Entity } from "../../sharedio";
@@ -19,9 +19,15 @@ export type EntityAttributeName<EntityType extends Entity> = Exclude<
     EntityReservedAttributeName | number | symbol
 >;
 
-export type EntityAttributeType = "any"|"number"|"string"|"boolean"|"array"|"object"|"function";
+export type EntityFlagName<EntityType extends Entity = Entity> = Exclude<{
+        [key in keyof EntityType]: EntityType[key] extends boolean ? key : never
+    }[keyof EntityType],
+    EntityReservedAttributeName | number | symbol
+>|EntityBuiltinFlagName;
 
-export type EntitySetAcessorName<EntityType extends Entity> = `_${EntityAttributeName<EntityType>}`|`set${Capitalize<EntityAttributeName<EntityType>>}`;
+export type EntityAttributeType = "any" | "number" | "string" | "boolean" | "array" | "object" | "function";
+
+export type EntitySetAcessorName<EntityType extends Entity> = `_${EntityAttributeName<EntityType>}` | `set${Capitalize<EntityAttributeName<EntityType>>}`;
 
 export type EntityClassName = typeof Entity | string;
 
